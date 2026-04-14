@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #fffaeb;
+  --surface: #fff0c2;
+  --surface-strong: #ffe295;
+  --ink: #1f1f1f;
+  --accent: #fa520f;
+  --shadow: rgba(127, 99, 21, 0.12) -8px 16px 39px, rgba(127, 99, 21, 0.1) -33px 64px 72px;
+  font-family: Arial, "Helvetica Neue", sans-serif;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.panel {
+  border: 1px solid rgba(31, 31, 31, 0.08);
+  background: rgba(255, 250, 235, 0.88);
+  padding: 1.5rem;
+  box-shadow: var(--shadow);
+}
+
+@media (min-width: 1024px) {
+  .panel {
+    padding: 2rem;
+  }
+}
+
+.kicker {
+  margin-bottom: 0.75rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: rgba(31, 31, 31, 0.6);
+}
+
+.button-dark,
+.button-cream {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.8rem 1rem;
+  border: 0;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.button-dark {
+  background: #1f1f1f;
+  color: white;
+}
+
+.button-cream {
+  background: #fff0c2;
+  color: #1f1f1f;
+}
+
+input,
+select,
+button,
+textarea {
+  font: inherit;
+}

@@ -4,12 +4,30 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "echo 'admin app scaffold is not implemented yet'",
-    "build": "echo 'admin app scaffold is not implemented yet'",
+    "predev": "pnpm --filter @relaynews/shared build",
+    "dev": "vite",
+    "prebuild": "pnpm --filter @relaynews/shared build",
+    "build": "vite build",
+    "preview": "vite preview",
+    "pretypecheck": "pnpm --filter @relaynews/shared build",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "echo 'admin tests are not implemented yet'"
   },
+  "dependencies": {
+    "@relaynews/shared": "workspace:*",
+    "clsx": "2.1.1",
+    "react": "19.2.5",
+    "react-dom": "19.2.5",
+    "react-router-dom": "7.14.1",
+    "tailwind-merge": "3.5.0"
+  },
   "devDependencies": {
-    "typescript": "6.0.2"
+    "@tailwindcss/vite": "4.2.2",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.1",
+    "tailwindcss": "4.2.2",
+    "typescript": "6.0.2",
+    "vite": "8.0.8"
   }
 }
