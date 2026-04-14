@@ -39,6 +39,7 @@ package.json
 pnpm-workspace.yaml
 tsconfig.base.json
 playwright.config.ts
+.env.example
 docs/
   ARCHITECTURE.md
   DATABASE_SCHEMA.md
@@ -54,6 +55,7 @@ apps/
     db/
       migrations/
 e2e/
+ops/
 packages/
   shared/
 scripts/
@@ -72,6 +74,7 @@ scripts/
 - Issue tracker for unresolved design gaps: `docs/OPEN_DESIGN_ISSUES.md`
 - Agent collaboration guide: `AGENTS.md`
 - Database migration notes: `apps/origin/db/README.md`
+- Origin deployment ops guide: `ops/README.md`
 
 ## Working Agreements
 
@@ -89,8 +92,11 @@ Use `docs/DEVELOPMENT_PLAN.md` as the canonical phased build order.
 ## Local Commands
 
 - install workspace dependencies: `pnpm install`
+- bootstrap a local env file: `cp .env.example .env`
 - start the public app: `pnpm dev:web`
 - start the admin app: `pnpm dev:admin`
 - start the origin API: `pnpm dev:origin`
 - run type checks: `pnpm typecheck`
 - run Playwright acceptance tests: `pnpm test:e2e`
+- inspect remote origin deployment paths: `./ops/manage.sh path`
+- deploy the remote origin service: `./ops/manage.sh deploy`
