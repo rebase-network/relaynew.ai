@@ -1,0 +1,74 @@
+# relaynews.ai
+
+`relaynews.ai` is a public website for API relay monitoring, latency tracking, service
+health, pricing comparison, and leaderboard discovery.
+
+## Product Scope
+
+The site is planned to provide:
+- public leaderboards for relay and model combinations
+- relay detail pages with health, latency, and price history
+- a self-check probe tool for user-supplied relay endpoints
+- methodology pages that explain ranking and scoring
+- submit and sponsor flows that stay separate from natural rankings
+
+## Current Architecture
+
+- Frontend: `React Router v7 + TypeScript + Tailwind + shadcn/ui`
+- Frontend runtime: `Cloudflare Workers`
+- Backend: `Node.js + Fastify + TypeScript`
+- Database: `PostgreSQL`
+- Query layer: `Kysely`
+- Validation: `Zod`
+- Scheduling: `node-cron`
+- Cache strategy: `Cloudflare CDN cache` for public read APIs
+
+## Domains
+
+- Public site: `relaynews.ai`
+- Public API: `api.relaynews.ai`
+- Admin site: `admin.relaynews.ai`
+
+## Repository Layout
+
+```txt
+DESIGN.md
+README.md
+AGENTS.md
+docs/
+  ARCHITECTURE.md
+  DATABASE_SCHEMA.md
+  API_CONTRACT_V1.md
+  DEVELOPMENT_PLAN.md
+  PROBE_SECURITY.md
+  ROUTES.md
+apps/
+  origin/
+    db/
+      migrations/
+```
+
+## Document Index
+
+- Product visual direction: `DESIGN.md`
+- System architecture: `docs/ARCHITECTURE.md`
+- Database schema: `docs/DATABASE_SCHEMA.md`
+- Public API contract: `docs/API_CONTRACT_V1.md`
+- Development plan: `docs/DEVELOPMENT_PLAN.md`
+- Public probe safety model: `docs/PROBE_SECURITY.md`
+- Route map and rendering strategy: `docs/ROUTES.md`
+- Issue tracker for unresolved design gaps: `docs/OPEN_DESIGN_ISSUES.md`
+- Agent collaboration guide: `AGENTS.md`
+- Database migration notes: `apps/origin/db/README.md`
+
+## Working Agreements
+
+- use TypeScript across frontend and backend
+- do not introduce `Next.js`, `KV`, `R2`, or `Redis` into the MVP without discussion
+- public pages read snapshots or aggregate tables, not raw probe tables
+- sponsor placement and natural ranking must remain separate
+- user-supplied API keys should not be persisted by default
+
+## Execution Order
+
+Use `docs/DEVELOPMENT_PLAN.md` as the canonical phased build order.

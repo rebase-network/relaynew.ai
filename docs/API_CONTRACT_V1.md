@@ -1,0 +1,491 @@
+# API Contract V1
+
+This document defines the initial public API contract for `relaynews.ai`.
+
+## Scope
+
+This version is intentionally narrow. It only locks the public endpoints needed to build:
+- homepage
+- leaderboard pages
+- relay detail pages
+- methodology page
+
+Internal and admin APIs are intentionally not frozen here. They can evolve during backend
+implementation as long as they stay consistent with `docs/ARCHITECTURE.md`.
+The public probe endpoint is documented separately in `docs/PROBE_SECURITY.md`
+because it has a different threat model and is not part of this read-only content contract.
+
+## Contract Rules
+
+- JSON field names use `camelCase`
+- all timestamps are ISO 8601 strings in UTC
+- numeric ratios use decimal values between `0` and `1`
+- scores use decimal values between `0` and `100`
+- the content endpoints in this file are read-only `GET` requests
+- the content endpoints in this file should be safe for CDN caching
+
+## Shared Enums
+
+### Relay Status
+
+```txt
+healthy
+degraded
+down
+paused
+unknown
+```
+
+### Badge
+
+```txt
+low-latency
+high-stability
+high-value
+sample-size-low
+under-observation
+```
+
+### Region
+
+```txt
+global
+```
+
+The first version only guarantees `global`. Region-specific variants can be added later.
+
+## State Naming
+
+Public payloads should avoid the generic field name `status` when they refer to
+runtime health. This contract uses:
+
+- `healthStatus` for measured relay health shown on public pages
+
+The broader system still contains:
+- `catalogStatus` for relay listing lifecycle
+- `supportStatus` for relay-model support lifecycle
+
+## Common Shapes
+
+### Relay Summary
+
+```json
+{
+  "slug": "sample-relay",
+  "name": "Sample Relay"
+}
+```
+
+### Score Summary
+
+```json
+{
+  "availability": 98.4,
+  "latency": 92.1,
+  "consistency": 96.0,
+  "value": 88.3,
+  "stability": 94.6,
+  "total": 94.1
+}
+```
+
+### Incident Summary
+
+```json
+{
+  "id": "incident_01",
+  "relay": {
+    "slug": "sample-relay",
+    "name": "Sample Relay"
+  },
+  "startedAt": "2026-04-15T08:10:00Z",
+  "endedAt": null,
+  "severity": "degraded",
+  "title": "Elevated latency",
+  "summary": "Latency exceeded the degradation threshold for multiple probe windows."
+}
+```
+
+## Public Endpoints
+
+### GET /public/home-summary
+
+Returns homepage modules that are already aggregated and ready to render.
+
+Response:
+```json
+{
+  "hero": {
+    "totalRelays": 42,
+    "healthyRelays": 38,
+    "degradedRelays": 3,
+    "downRelays": 1,
+    "measuredAt": "2026-04-15T10:00:00Z"
+  },
+  "leaderboards": [
+    {
+      "modelKey": "openai-gpt-4.1",
+      "modelName": "GPT-4.1",
+      "measuredAt": "2026-04-15T10:00:00Z",
+      "rows": [
+        {
+          "rank": 1,
+          "relay": {
+            "slug": "sample-relay",
+            "name": "Sample Relay"
+          },
+          "score": 96.2,
+          "availability24h": 0.998,
+          "latencyP50Ms": 820,
+          "latencyP95Ms": 1540,
+          "healthStatus": "healthy",
+          "badges": ["low-latency"]
+        }
+      ]
+    }
+  ],
+  "highlights": [
+    {
+      "slug": "sample-relay",
+      "name": "Sample Relay",
+      "healthStatus": "healthy",
+      "badge": "high-stability"
+    }
+  ],
+  "latestIncidents": [
+    {
+      "id": "incident_01",
+      "relay": {
+        "slug": "sample-relay",
+        "name": "Sample Relay"
+      },
+      "startedAt": "2026-04-15T08:10:00Z",
+      "endedAt": null,
+      "severity": "degraded",
+      "title": "Elevated latency",
+      "summary": "Latency exceeded the degradation threshold for multiple probe windows."
+    }
+  ],
+  "measuredAt": "2026-04-15T10:00:00Z"
+}
+```
+
+Required fields:
+- `hero`
+- `leaderboards`
+- `highlights`
+- `latestIncidents`
+- `measuredAt`
+
+Notes:
+- homepage modules should already be shaped for rendering
+- `latestIncidents` can be an empty array in the first version
+- when non-empty, `latestIncidents[]` uses the `Incident Summary` shape
+
+### GET /public/leaderboard/:modelKey
+
+Returns the latest leaderboard for one model.
+
+Query params:
+- `region` optional, default `global`
+- `limit` optional, default `20`
+
+Response:
+```json
+{
+  "model": {
+    "key": "openai-gpt-4.1",
+    "name": "GPT-4.1",
+    "vendor": "openai"
+  },
+  "region": "global",
+  "measuredAt": "2026-04-15T10:00:00Z",
+  "rows": [
+    {
+      "rank": 1,
+      "relay": {
+        "slug": "sample-relay",
+        "name": "Sample Relay"
+      },
+      "score": 96.2,
+      "availability24h": 0.998,
+      "latencyP50Ms": 820,
+      "latencyP95Ms": 1540,
+      "inputPricePer1M": 0.8,
+      "outputPricePer1M": 3.2,
+      "sampleCount24h": 1440,
+      "healthStatus": "healthy",
+      "badges": ["low-latency", "high-stability"]
+    }
+  ]
+}
+```
+
+Required row fields:
+- `rank`
+- `relay`
+- `score`
+- `availability24h`
+- `latencyP50Ms`
+- `latencyP95Ms`
+- `inputPricePer1M`
+- `outputPricePer1M`
+- `sampleCount24h`
+- `healthStatus`
+- `badges`
+
+Notes:
+- this is the primary read contract for leaderboard pages
+- rows should already be sorted by `rank`
+- `inputPricePer1M` and `outputPricePer1M` may be `null` when price data is unknown
+
+### GET /public/relay/:slug/overview
+
+Returns the summary block needed for relay detail first paint.
+
+Response:
+```json
+{
+  "relay": {
+    "slug": "sample-relay",
+    "name": "Sample Relay",
+    "baseUrl": "https://relay.sample-provider.ai/v1",
+    "websiteUrl": "https://sample-provider.ai"
+  },
+  "healthStatus": "healthy",
+  "availability24h": 0.998,
+  "latencyP50Ms": 820,
+  "latencyP95Ms": 1540,
+  "incidents7d": 1,
+  "supportedModelsCount": 12,
+  "startingInputPricePer1M": 0.8,
+  "startingOutputPricePer1M": 3.2,
+  "scoreSummary": {
+    "availability": 98.4,
+    "latency": 92.1,
+    "consistency": 96.0,
+    "value": 88.3,
+    "stability": 94.6,
+    "total": 94.1
+  },
+  "badges": ["low-latency"],
+  "measuredAt": "2026-04-15T10:00:00Z"
+}
+```
+
+Required fields:
+- `relay`
+- `healthStatus`
+- `availability24h`
+- `latencyP50Ms`
+- `latencyP95Ms`
+- `incidents7d`
+- `supportedModelsCount`
+- `scoreSummary`
+- `badges`
+- `measuredAt`
+
+Notes:
+- `startingInputPricePer1M` and `startingOutputPricePer1M` may be `null` when price
+  data is unknown
+
+### GET /public/relay/:slug/history
+
+Returns chart buckets for one relay.
+
+Query params:
+- `window` required, one of `24h`, `7d`, `30d`
+- `region` optional, default `global`
+- `model` optional
+
+Response:
+```json
+{
+  "window": "24h",
+  "region": "global",
+  "modelKey": null,
+  "points": [
+    {
+      "bucketStart": "2026-04-15T09:00:00Z",
+      "availability": 1.0,
+      "latencyP50Ms": 780,
+      "latencyP95Ms": 1430
+    }
+  ],
+  "measuredAt": "2026-04-15T10:00:00Z"
+}
+```
+
+Required point fields:
+- `bucketStart`
+- `availability`
+- `latencyP50Ms`
+- `latencyP95Ms`
+
+Notes:
+- this endpoint returns chart-ready aggregate data only
+- it must not expose raw probe rows
+
+### GET /public/relay/:slug/models
+
+Returns the supported models list for one relay.
+
+Response:
+```json
+{
+  "relay": {
+    "slug": "sample-relay",
+    "name": "Sample Relay"
+  },
+  "rows": [
+    {
+      "modelKey": "openai-gpt-4.1",
+      "modelName": "GPT-4.1",
+      "vendor": "openai",
+      "supportStatus": "active",
+      "supportsStream": true,
+      "supportsTools": false,
+      "supportsVision": false,
+      "supportsReasoning": false,
+      "lastVerifiedAt": "2026-04-15T10:00:00Z"
+    }
+  ],
+  "measuredAt": "2026-04-15T10:00:00Z"
+}
+```
+
+Required row fields:
+- `modelKey`
+- `modelName`
+- `vendor`
+- `supportStatus`
+- `supportsStream`
+- `supportsTools`
+- `supportsVision`
+- `supportsReasoning`
+
+### GET /public/relay/:slug/pricing-history
+
+Returns price change points for one relay.
+
+Query params:
+- `model` optional
+
+Response:
+```json
+{
+  "relay": {
+    "slug": "sample-relay",
+    "name": "Sample Relay"
+  },
+  "rows": [
+    {
+      "modelKey": "openai-gpt-4.1",
+      "currency": "USD",
+      "inputPricePer1M": 0.8,
+      "outputPricePer1M": 3.2,
+      "effectiveFrom": "2026-04-01T00:00:00Z",
+      "source": "manual"
+    }
+  ],
+  "measuredAt": "2026-04-15T10:00:00Z"
+}
+```
+
+Required row fields:
+- `modelKey`
+- `currency`
+- `inputPricePer1M`
+- `outputPricePer1M`
+- `effectiveFrom`
+- `source`
+
+Notes:
+- `inputPricePer1M` and `outputPricePer1M` may be `null` when a relay exposes only
+  one side of the price schedule
+
+### GET /public/relay/:slug/incidents
+
+Returns timeline-ready incident records for one relay.
+
+Query params:
+- `window` optional, default `7d`
+
+Response:
+```json
+{
+  "relay": {
+    "slug": "sample-relay",
+    "name": "Sample Relay"
+  },
+  "rows": [
+    {
+      "id": "incident_01",
+      "startedAt": "2026-04-15T08:10:00Z",
+      "endedAt": "2026-04-15T08:42:00Z",
+      "severity": "degraded",
+      "title": "Elevated latency",
+      "summary": "Latency exceeded the degradation threshold for multiple probe windows."
+    }
+  ],
+  "measuredAt": "2026-04-15T10:00:00Z"
+}
+```
+
+Required row fields:
+- `id`
+- `startedAt`
+- `endedAt`
+- `severity`
+- `title`
+- `summary`
+
+Notes:
+- `endedAt` is nullable and is `null` while an incident is still active
+- incident severity is negative-only in MVP: `degraded`, `down`, `paused`, `unknown`
+
+## Relay Detail Boundary
+
+First-paint critical contract:
+- `GET /public/relay/:slug/overview`
+
+Secondary contract, safe to load after hydration:
+- `GET /public/relay/:slug/history`
+- `GET /public/relay/:slug/models`
+- `GET /public/relay/:slug/pricing-history`
+- `GET /public/relay/:slug/incidents`
+
+### GET /public/methodology
+
+Returns the public explanation for ranking and scoring.
+
+Response:
+```json
+{
+  "weights": {
+    "availability": 35,
+    "latency": 20,
+    "consistency": 20,
+    "value": 15,
+    "stability": 10
+  },
+  "healthStatuses": ["healthy", "degraded", "down", "paused", "unknown"],
+  "badges": [
+    "low-latency",
+    "high-stability",
+    "high-value",
+    "sample-size-low",
+    "under-observation"
+  ],
+  "notes": [
+    "Natural ranking and sponsor placement are separate.",
+    "Sample size influences confidence and badge display."
+  ],
+  "measuredAt": "2026-04-15T10:00:00Z"
+}
+```
+
+## Versioning Guidance
+
+This contract should stay stable enough for frontend implementation. If a breaking change is
+needed, update this file first and then align route docs, shared types, and backend handlers.

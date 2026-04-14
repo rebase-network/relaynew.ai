@@ -1,0 +1,90 @@
+# Routes
+
+This document lists the planned route structure for `relaynews.ai`, the rendering mode
+for each route, and the primary data source that should back it.
+
+## Rendering Rules
+
+- use SSR or pre-render for public routes that benefit SEO, sharing, and fast first paint
+- use CSR for interactive tools, admin surfaces, and post-load chart enhancements
+- keep page data reads on snapshots or aggregate tables when possible
+
+## Public Routes
+
+| Route | Purpose | Render | Primary Data Source |
+|---|---|---|---|
+| `/` | Homepage with status summary, model leaderboard previews, and recent updates | SSR / pre-render | `GET /public/home-summary` |
+| `/leaderboard/:modelKey` | Main leaderboard for a model | SSR / pre-render | `GET /public/leaderboard/:modelKey` |
+| `/relay/:slug` | Relay detail page with overview and trend charts | SSR shell + CSR chart enhancement | `GET /public/relay/:slug/overview`, `GET /public/relay/:slug/history`, `GET /public/relay/:slug/models`, `GET /public/relay/:slug/pricing-history`, `GET /public/relay/:slug/incidents` |
+| `/methodology` | Ranking and scoring explanation | SSR / pre-render | static content or `GET /public/methodology` |
+| `/submit` | Relay submission and sponsor inquiry entry point | SSR / pre-render | static content, optional form metadata API |
+
+## Tooling Routes
+
+| Route | Purpose | Render | Primary Data Source |
+|---|---|---|---|
+| `/probe` | User self-check probe flow | CSR | `POST /public/probe/check` |
+| `/admin` | Admin dashboard landing page | CSR | admin APIs |
+| `/admin/relays` | Relay review and metadata management | CSR | `GET /admin/relays` |
+| `/admin/submissions` | Submission review queue | CSR | `GET /admin/submissions` |
+| `/admin/sponsors` | Sponsor placement management | CSR | `GET /admin/sponsors` |
+
+## Homepage Modules
+
+The homepage is expected to include:
+- hero summary with total relay count and current health snapshot
+- featured model leaderboard blocks
+- latest incident or degradation events
+- highlighted relays or curated picks
+- methodology and trust signals
+
+For MVP, homepage data should be built and served as one atomic page-shaped snapshot
+payload rather than independently refreshed module fragments.
+When `latestIncidents` is non-empty, it should use the incident summary shape defined
+in `docs/API_CONTRACT_V1.md`.
+
+## Leaderboard Page Modules
+
+The leaderboard page is expected to include:
+- model header and last measured time
+- ranked table with score, availability, latency, and price
+- filters for region and result limits
+- sponsor placement section separated from natural rankings
+- methodology link and ranking notes
+
+## Relay Detail Page Modules
+
+The relay detail page is expected to include:
+- relay identity and endpoint summary
+- current health snapshot
+- 24h and 7d latency and availability charts
+- supported models list
+- pricing summary and history
+- incident timeline
+- explanatory badges and score summary
+
+### Relay Detail Loading Boundary
+
+First-paint critical:
+- overview identity and endpoint summary
+- current `healthStatus`
+- 24h summary metrics
+- score summary and badges
+
+Hydration or secondary loads:
+- history chart buckets
+- supported models list
+- pricing history
+- incident timeline
+
+## Data Contract Notes
+
+- `/public/home-summary` should return homepage modules that are already aggregated
+- `/public/leaderboard/:modelKey` should return a ready-to-render row list
+- `/public/relay/:slug/overview` should return a single summary payload for first paint
+- `/public/relay/:slug/history` should return chart buckets, not raw probe rows
+- `/public/relay/:slug/models` should return supported model rows only
+- `/public/relay/:slug/pricing-history` should return price change points or chart-ready buckets
+- `/public/relay/:slug/incidents` should return timeline-ready incident records
+- `/probe` must only call the public-safe probe endpoint described in `docs/PROBE_SECURITY.md`
+- admin routes should never rely on CDN-cached responses

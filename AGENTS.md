@@ -1,0 +1,53 @@
+# AGENTS
+
+This repository is for `relaynews.ai`, a public relay monitoring and leaderboard site.
+
+## Read First
+
+Before making changes, review:
+- `DESIGN.md`
+- `docs/ARCHITECTURE.md`
+- `docs/DATABASE_SCHEMA.md`
+- `docs/API_CONTRACT_V1.md`
+- `docs/DEVELOPMENT_PLAN.md`
+- `docs/PROBE_SECURITY.md`
+- `docs/ROUTES.md`
+
+Review `docs/OPEN_DESIGN_ISSUES.md` only when active unresolved design gaps exist.
+
+## Current Stack
+
+- frontend runtime: `Cloudflare Workers`
+- frontend app: `React Router v7 + TypeScript + Tailwind + shadcn/ui`
+- backend: `Node.js + Fastify + TypeScript`
+- database: `PostgreSQL`
+- query layer: `Kysely`
+
+## Current MVP Constraints
+
+- do not add `Next.js`
+- do not add `Cloudflare KV`
+- do not add `Cloudflare R2`
+- do not add `Redis`
+- do not split into microservices yet
+- keep public pages on snapshot or aggregate reads
+
+## Product Rules
+
+- sponsor placement must stay clearly separate from natural ranking
+- probe and ranking methodology should remain explainable
+- user-supplied probe keys should not be persisted by default
+- public pages should favor SSR or pre-render when they benefit SEO
+- admin and probe tooling can remain CSR
+
+## Code Change Guidance
+
+- prefer small, explicit changes
+- update documentation when architectural decisions change
+- keep naming neutral and product-specific to `relaynews.ai`
+- avoid introducing new infrastructure without documenting why it is needed
+- when adding APIs, separate `public`, `internal`, and `admin` responsibilities
+
+## Near-Term Priorities
+
+Use `docs/DEVELOPMENT_PLAN.md` as the source for phased execution order.
