@@ -11,11 +11,9 @@ cleanup() {
 
 trap cleanup EXIT INT TERM
 
-if ! docker inspect "$CONTAINER_NAME" >/dev/null 2>&1; then
-  docker run --name "$CONTAINER_NAME" -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=relaynews -p "${DATABASE_PORT}:5432" -d postgres:17 >/dev/null
-else
-  docker start "$CONTAINER_NAME" >/dev/null
-fi
+# Always start from a fresh database so repeated Playwright runs stay deterministic.
+cleanup
+docker run --name "$CONTAINER_NAME" -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=relaynews -p "${DATABASE_PORT}:5432" -d postgres:17 >/dev/null
 
 for _ in $(seq 1 30); do
   if docker exec "$CONTAINER_NAME" pg_isready -U postgres -d relaynews >/dev/null 2>&1; then
