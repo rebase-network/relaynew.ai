@@ -8,14 +8,29 @@ import {
 } from "./common";
 
 const internalIdSchema = z.string().min(1);
+const trimString = (value: unknown) => (typeof value === "string" ? value.trim() : value);
+const emptyStringToUndefined = (value: unknown) => {
+  const trimmed = trimString(value);
+  return trimmed === "" ? undefined : trimmed;
+};
+const emptyStringToNull = (value: unknown) => {
+  const trimmed = trimString(value);
+  return trimmed === "" ? null : trimmed;
+};
+const requiredUrlSchema = z.preprocess(trimString, z.url());
+const optionalUrlSchema = z.preprocess(emptyStringToUndefined, z.url().optional());
+const nullableUrlSchema = z.preprocess(emptyStringToNull, z.url().nullable());
+const optionalNonEmptyStringSchema = z.preprocess(emptyStringToUndefined, z.string().min(1).optional());
+const optionalEmailSchema = z.preprocess(emptyStringToUndefined, z.email().optional());
+const nullableNonEmptyStringSchema = z.preprocess(emptyStringToNull, z.string().min(1).nullable());
 
 export const publicSubmissionRequestSchema = z.object({
   relayName: z.string().min(1),
-  baseUrl: z.url(),
-  websiteUrl: z.url().optional(),
-  submitterName: z.string().min(1).optional(),
-  submitterEmail: z.email().optional(),
-  notes: z.string().min(1).optional(),
+  baseUrl: requiredUrlSchema,
+  websiteUrl: optionalUrlSchema,
+  submitterName: optionalNonEmptyStringSchema,
+  submitterEmail: optionalEmailSchema,
+  notes: optionalNonEmptyStringSchema,
 });
 
 export const publicSubmissionResponseSchema = z.object({
@@ -38,9 +53,9 @@ export const adminRelaySchema = z.object({
   id: internalIdSchema,
   slug: z.string().min(1),
   name: z.string().min(1),
-  baseUrl: z.url(),
+  baseUrl: requiredUrlSchema,
   providerName: z.string().nullable(),
-  websiteUrl: z.url().nullable(),
+  websiteUrl: nullableUrlSchema,
   catalogStatus: catalogStatusSchema,
   isFeatured: z.boolean(),
   isSponsored: z.boolean(),
@@ -54,22 +69,22 @@ export const adminRelaysResponseSchema = z.object({
 export const adminRelayUpsertSchema = z.object({
   slug: z.string().min(1),
   name: z.string().min(1),
-  baseUrl: z.url(),
-  providerName: z.string().min(1).nullable().optional(),
-  websiteUrl: z.url().nullable().optional(),
+  baseUrl: requiredUrlSchema,
+  providerName: nullableNonEmptyStringSchema.optional(),
+  websiteUrl: nullableUrlSchema.optional(),
   catalogStatus: catalogStatusSchema.default("active"),
   isFeatured: z.boolean().default(false),
   isSponsored: z.boolean().default(false),
-  description: z.string().nullable().optional(),
-  docsUrl: z.url().nullable().optional(),
-  notes: z.string().nullable().optional(),
+  description: nullableNonEmptyStringSchema.optional(),
+  docsUrl: nullableUrlSchema.optional(),
+  notes: nullableNonEmptyStringSchema.optional(),
 });
 
 export const adminSubmissionSchema = z.object({
   id: internalIdSchema,
   relayName: z.string().min(1),
-  baseUrl: z.url(),
-  websiteUrl: z.url().nullable(),
+  baseUrl: requiredUrlSchema,
+  websiteUrl: nullableUrlSchema,
   submitterName: z.string().nullable(),
   submitterEmail: z.string().email().nullable(),
   notes: z.string().nullable(),

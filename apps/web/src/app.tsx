@@ -257,6 +257,18 @@ function getProbeFailureGuidance(result: PublicProbeResponse) {
   };
 }
 
+type ApiErrorPayload = {
+  message?: string | string[];
+};
+
+function formatApiErrorPayload(payload: ApiErrorPayload | null) {
+  if (!payload?.message) {
+    return null;
+  }
+
+  return Array.isArray(payload.message) ? payload.message.join("; ") : payload.message;
+}
+
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
@@ -267,11 +279,76 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
+    const contentType = response.headers.get("content-type") ?? "";
+
+    if (contentType.includes("application/json")) {
+      const payload = (await response.json()) as ApiErrorPayload;
+      throw new Error(formatApiErrorPayload(payload) ?? `Request failed with ${response.status}`);
+    }
+
     const text = await response.text();
     throw new Error(text || `Request failed with ${response.status}`);
   }
 
   return (await response.json()) as T;
+}
+
+function isValidHttpUrl(value: string) {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+type SubmitFormState = {
+  relayName: string;
+  baseUrl: string;
+  websiteUrl: string;
+  submitterEmail: string;
+};
+
+type SubmitFormErrors = Partial<Record<keyof SubmitFormState, string>>;
+
+function validateSubmitForm(state: SubmitFormState) {
+  const errors: SubmitFormErrors = {};
+  const relayName = state.relayName.trim();
+  const baseUrl = state.baseUrl.trim();
+  const websiteUrl = state.websiteUrl.trim();
+  const submitterEmail = state.submitterEmail.trim();
+
+  if (!relayName) {
+    errors.relayName = "Relay name is required.";
+  }
+
+  if (!baseUrl) {
+    errors.baseUrl = "Base URL is required.";
+  } else if (!isValidHttpUrl(baseUrl)) {
+    errors.baseUrl = "Enter a full base URL such as https://relay.example.ai/v1.";
+  }
+
+  if (websiteUrl && !isValidHttpUrl(websiteUrl)) {
+    errors.websiteUrl = "Enter a valid website URL such as https://relay.example.ai.";
+  }
+
+  if (submitterEmail && !isValidEmail(submitterEmail)) {
+    errors.submitterEmail = "Enter a valid contact email address.";
+  }
+
+  return {
+    errors,
+    payload: {
+      relayName,
+      baseUrl,
+      websiteUrl: websiteUrl || undefined,
+      submitterEmail: submitterEmail || undefined,
+    },
+  };
 }
 
 function useLoadable<T>(loader: () => Promise<T>, deps: unknown[]) {
@@ -785,29 +862,62 @@ function MethodologyPage() {
 }
 
 function SubmitPage() {
-  const [state, setState] = useState({ relayName: "", baseUrl: "", websiteUrl: "", submitterEmail: "" });
+  const [state, setState] = useState<SubmitFormState>({ relayName: "", baseUrl: "", websiteUrl: "", submitterEmail: "" });
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<PublicSubmissionResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<SubmitFormErrors>({});
   const fields = [
-    ["Relay name", "relayName"],
-    ["Base URL", "baseUrl"],
-    ["Website URL", "websiteUrl"],
-    ["Contact email", "submitterEmail"],
+    {
+      label: "Relay name",
+      key: "relayName",
+      type: "text",
+      required: true,
+      placeholder: "Northwind Relay",
+    },
+    {
+      label: "Base URL",
+      key: "baseUrl",
+      type: "url",
+      required: true,
+      placeholder: "https://northwind.example.ai/v1",
+    },
+    {
+      label: "Website URL",
+      key: "websiteUrl",
+      type: "url",
+      required: false,
+      placeholder: "https://northwind.example.ai",
+    },
+    {
+      label: "Contact email",
+      key: "submitterEmail",
+      type: "email",
+      required: false,
+      placeholder: "ops@example.com",
+    },
   ] as const;
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSubmitting(true);
     setError(null);
     setResult(null);
+    const { errors, payload } = validateSubmitForm(state);
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      setError("Please fix the highlighted fields before submitting.");
+      return;
+    }
+
+    setSubmitting(true);
     try {
       const response = await fetchJson<PublicSubmissionResponse>("/public/submissions", {
         method: "POST",
-        body: JSON.stringify(state),
+        body: JSON.stringify(payload),
       });
       setResult(response);
       setState({ relayName: "", baseUrl: "", websiteUrl: "", submitterEmail: "" });
+      setFieldErrors({});
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Unable to submit relay.");
     } finally {
@@ -822,16 +932,24 @@ function SubmitPage() {
         <h1 className="text-5xl leading-[0.92] tracking-[-0.06em]">Nominate a relay for monitoring, ranking, or sponsor intake.</h1>
         <p className="mt-5 max-w-xl text-black/70">Use the intake form to put a relay into review. Operational approval and sponsor placement are reviewed separately from natural ranking.</p>
       </div>
-      <form className="panel space-y-4" onSubmit={handleSubmit}>
-        {fields.map(([label, key]) => (
+      <form className="panel space-y-4" noValidate onSubmit={handleSubmit}>
+        {fields.map(({ label, key, type, required, placeholder }) => (
           <label key={key} className="block text-sm uppercase tracking-[0.14em] text-black/65">
             {label}
             <input
               className="mt-2 w-full border border-black/15 bg-white px-4 py-3"
+              type={type}
+              placeholder={placeholder}
               value={state[key]}
-              onChange={(event) => setState((current) => ({ ...current, [key]: event.target.value }))}
-              required={key === "relayName" || key === "baseUrl"}
+              onChange={(event) => {
+                const nextValue = event.target.value;
+                setState((current) => ({ ...current, [key]: nextValue }));
+                setFieldErrors((current) => ({ ...current, [key]: undefined }));
+                setError(null);
+              }}
+              required={required}
             />
+            {fieldErrors[key] ? <span className="mt-2 block text-xs normal-case tracking-normal text-[#a33a16]">{fieldErrors[key]}</span> : null}
           </label>
         ))}
         <button className="button-dark" disabled={submitting} type="submit">{submitting ? "Submitting..." : "Submit relay"}</button>

@@ -165,3 +165,32 @@ test("public submission and admin relay inputs parse", () => {
   assert.equal(submission.relayName, "Northwind Relay");
   assert.equal(relay.slug, "northwind-relay");
 });
+
+test("public submission and admin relay inputs normalize blank optional fields", () => {
+  const submission = publicSubmissionRequestSchema.parse({
+    relayName: "Northwind Relay",
+    baseUrl: " https://northwind.example.ai/v1 ",
+    websiteUrl: "",
+    submitterEmail: "",
+    notes: "   ",
+  });
+
+  const relay = adminRelayUpsertSchema.parse({
+    slug: "northwind-relay",
+    name: "Northwind Relay",
+    baseUrl: " https://northwind.example.ai/v1 ",
+    providerName: "",
+    websiteUrl: "",
+    docsUrl: "",
+    notes: "",
+  });
+
+  assert.equal(submission.baseUrl, "https://northwind.example.ai/v1");
+  assert.equal(submission.websiteUrl, undefined);
+  assert.equal(submission.submitterEmail, undefined);
+  assert.equal(relay.baseUrl, "https://northwind.example.ai/v1");
+  assert.equal(relay.providerName, null);
+  assert.equal(relay.websiteUrl, null);
+  assert.equal(relay.docsUrl, null);
+  assert.equal(relay.notes, null);
+});

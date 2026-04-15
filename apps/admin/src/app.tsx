@@ -29,6 +29,18 @@ type MutationState = {
   success: string | null;
 };
 
+type ApiErrorPayload = {
+  message?: string | string[];
+};
+
+function formatApiErrorPayload(payload: ApiErrorPayload | null) {
+  if (!payload?.message) {
+    return null;
+  }
+
+  return Array.isArray(payload.message) ? payload.message.join("; ") : payload.message;
+}
+
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
@@ -39,6 +51,13 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
+    const contentType = response.headers.get("content-type") ?? "";
+
+    if (contentType.includes("application/json")) {
+      const payload = (await response.json()) as ApiErrorPayload;
+      throw new Error(formatApiErrorPayload(payload) ?? `Request failed with ${response.status}`);
+    }
+
     const text = await response.text();
     throw new Error(text || `Request failed with ${response.status}`);
   }

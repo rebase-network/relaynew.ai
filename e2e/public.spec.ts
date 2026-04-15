@@ -57,6 +57,21 @@ test("submit flow works from the public site", async ({ page }) => {
   await expect(page.getByText("Submission created:")).toBeVisible();
 });
 
+test("submit flow validates malformed relay URLs before sending", async ({ page }) => {
+  await page.goto("/submit");
+  await page.getByLabel("Relay name").fill("Broken Relay");
+  await page.getByLabel("Base URL").fill("relay.example.ai");
+  await page.getByLabel("Website URL").fill("not-a-url");
+  await page.getByLabel("Contact email").fill("ops@");
+  await page.getByRole("button", { name: "Submit relay" }).click();
+
+  await expect(page.getByText("Please fix the highlighted fields before submitting.")).toBeVisible();
+  await expect(page.getByText("Enter a full base URL such as https://relay.example.ai/v1.")).toBeVisible();
+  await expect(page.getByText("Enter a valid website URL such as https://relay.example.ai.")).toBeVisible();
+  await expect(page.getByText("Enter a valid contact email address.")).toBeVisible();
+  await expect(page.getByText("Submission created:")).toHaveCount(0);
+});
+
 test("public probe flow returns a diagnostic result", async ({ page }) => {
   test.skip(!probeConfigured, "Probe E2E requires API_URL and API_KEY in .env.");
   const probeModel = process.env.LLM_MODEL ?? "openai-gpt-4.1";
