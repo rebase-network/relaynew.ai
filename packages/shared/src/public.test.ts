@@ -6,7 +6,10 @@ import {
   homeSummaryResponseSchema,
   leaderboardQuerySchema,
   methodologyResponseSchema,
+  probeCompatibilityModeSchema,
+  probeResolvedCompatibilityModeSchema,
   publicProbeRequestSchema,
+  publicProbeResponseSchema,
   publicSubmissionRequestSchema,
   relayHistoryQuerySchema,
 } from "./index";
@@ -81,6 +84,40 @@ test("probe request requires https", () => {
 
   assert.equal(success.success, true);
   assert.equal(failure.success, false);
+});
+
+test("probe compatibility defaults and response diagnostics parse", () => {
+  const request = publicProbeRequestSchema.parse({
+    baseUrl: "https://relay.example.ai/v1",
+    apiKey: "sk-live",
+    model: "gpt-5.1",
+  });
+
+  const response = publicProbeResponseSchema.parse({
+    ok: true,
+    targetHost: "relay.example.ai",
+    model: "gpt-5.1",
+    connectivity: {
+      ok: true,
+      latencyMs: 320,
+    },
+    protocol: {
+      ok: true,
+      healthStatus: "healthy",
+      httpStatus: 200,
+    },
+    compatibilityMode: "openai-responses",
+    detectionMode: "auto",
+    usedUrl: "https://relay.example.ai/v1/responses",
+    attemptedModes: ["openai-responses"],
+    measuredAt: "2026-04-15T10:00:00.000Z",
+  });
+
+  assert.equal(request.compatibilityMode, "auto");
+  assert.equal(response.compatibilityMode, "openai-responses");
+  assert.equal(response.attemptedModes[0], "openai-responses");
+  assert.equal(probeCompatibilityModeSchema.safeParse("auto").success, true);
+  assert.equal(probeResolvedCompatibilityModeSchema.safeParse("auto").success, false);
 });
 
 test("methodology payload parses", () => {

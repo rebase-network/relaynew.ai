@@ -3,12 +3,20 @@ import { lookup } from "node:dns/promises";
 import {
   publicProbeRequestSchema,
   publicProbeResponseSchema,
+  type ProbeDetectionMode,
   type PublicProbeRequest,
   type PublicProbeResponse,
 } from "@relaynews/shared";
 import ipaddr from "ipaddr.js";
 
 import { config } from "../config";
+import {
+  buildProbeAttempts,
+  probeAdapterRegistry,
+  probeCompatibilityModeLabels,
+  type ProbeAttempt,
+  type ProbeAttemptResult,
+} from "./probe-registry";
 
 const BLOCKED_CIDRS = [
   "127.0.0.0/8",
@@ -27,19 +35,6 @@ const BLOCKED_CIDRS = [
 const MAX_RESPONSE_BYTES = 256 * 1024;
 const REQUEST_TIMEOUT_MS = 8_000;
 const RETRIABLE_HTTP_STATUSES = new Set([400, 404, 405, 415]);
-
-type ProbeAttempt = {
-  method: "GET" | "POST";
-  url: URL;
-  body?: string;
-};
-
-type ProbeAttemptResult = {
-  response: Response;
-  latencyMs: number;
-  body: string;
-  contentType: string;
-};
 
 function sanitizeMessage(value: unknown) {
   if (value instanceof Error) {
@@ -124,89 +119,35 @@ function successHealthStatus(statusCode: number) {
   return "down" as const;
 }
 
-function joinPath(basePath: string, suffix: string) {
-  const normalizedBase = basePath === "/" ? "" : basePath.replace(/\/$/, "");
-  const normalizedSuffix = suffix.startsWith("/") ? suffix : `/${suffix}`;
-  return normalizedBase ? `${normalizedBase}${normalizedSuffix}` : normalizedSuffix;
+function detectionModeFromRequest(input: PublicProbeRequest): ProbeDetectionMode {
+  return input.compatibilityMode === "auto" ? "auto" : "manual";
 }
 
-function buildPathVariants(targetUrl: URL) {
-  const basePath = targetUrl.pathname === "/" ? "" : targetUrl.pathname.replace(/\/$/, "");
-  const variants = new Set<string>();
+function uniqueAttemptedModes(attempts: ProbeAttempt[]) {
+  return [...new Set(attempts.map((attempt) => attempt.mode))];
+}
 
-  if (basePath.endsWith("/v1")) {
-    variants.add(basePath);
-    variants.add(basePath.slice(0, -3) || "");
-  } else {
-    variants.add(joinPath(basePath, "/v1"));
-    variants.add(basePath);
+function shouldReplaceFailure(current: ProbeAttemptResult | null, next: ProbeAttemptResult) {
+  if (!current) {
+    return true;
   }
 
-  return [...variants];
-}
+  if (current.response.status === 404 && next.response.status !== 404) {
+    return true;
+  }
 
-function withPath(targetUrl: URL, pathname: string) {
-  const nextUrl = new URL(targetUrl.toString());
-  nextUrl.pathname = pathname || "/";
-  return nextUrl;
-}
+  if (current.response.status === 405 && ![404, 405].includes(next.response.status)) {
+    return true;
+  }
 
-function buildProbeAttempts(targetUrl: URL, parsed: PublicProbeRequest): ProbeAttempt[] {
-  const responsesBody = JSON.stringify({
-    model: parsed.model,
-    input: [
-      {
-        role: "user",
-        content: [
-          {
-            type: "input_text",
-            text: "ping",
-          },
-        ],
-      },
-    ],
-    stream: true,
-    max_output_tokens: 1,
-  });
-
-  const chatCompletionsBody = JSON.stringify({
-    model: parsed.model,
-    messages: [
-      {
-        role: "user",
-        content: "ping",
-      },
-    ],
-    stream: true,
-    max_tokens: 1,
-  });
-
-  return buildPathVariants(targetUrl).flatMap((basePath) => [
-    {
-      method: "POST" as const,
-      url: withPath(targetUrl, joinPath(basePath, "/responses")),
-      body: responsesBody,
-    },
-    {
-      method: "POST" as const,
-      url: withPath(targetUrl, joinPath(basePath, "/chat/completions")),
-      body: chatCompletionsBody,
-    },
-    {
-      method: "GET" as const,
-      url: withPath(targetUrl, joinPath(basePath, "/models")),
-    },
-    {
-      method: "GET" as const,
-      url: withPath(targetUrl, basePath),
-    },
-  ]);
+  return false;
 }
 
 async function executeProbeAttempt(attempt: ProbeAttempt, apiKey: string): Promise<ProbeAttemptResult> {
   const startedAt = Date.now();
   const requestInit: RequestInit = {
     method: attempt.method,
+    body: attempt.body,
     redirect: "manual",
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     headers: {
@@ -214,12 +155,9 @@ async function executeProbeAttempt(attempt: ProbeAttempt, apiKey: string): Promi
       accept: "text/event-stream,application/json,text/plain;q=0.9,*/*;q=0.8",
       "content-type": "application/json",
       "user-agent": "relaynews-public-probe/0.1",
+      ...(attempt.headers ?? {}),
     },
   };
-
-  if (attempt.body) {
-    requestInit.body = attempt.body;
-  }
 
   const response = await fetch(attempt.url, requestInit);
   const latencyMs = Date.now() - startedAt;
@@ -227,6 +165,7 @@ async function executeProbeAttempt(attempt: ProbeAttempt, apiKey: string): Promi
   const contentType = response.headers.get("content-type") ?? "";
 
   return {
+    attempt,
     response,
     latencyMs,
     body,
@@ -238,16 +177,19 @@ export async function runPublicProbe(input: PublicProbeRequest): Promise<PublicP
   const parsed = publicProbeRequestSchema.parse(input);
   const measuredAt = new Date().toISOString();
   const targetUrl = new URL(parsed.baseUrl);
+  const detectionMode = detectionModeFromRequest(parsed);
+  const attempts = buildProbeAttempts(targetUrl, parsed);
+  const attemptedModes = uniqueAttemptedModes(attempts);
 
   try {
     await validateTarget(targetUrl);
     let bestFailure: ProbeAttemptResult | null = null;
 
-    for (const attempt of buildProbeAttempts(targetUrl, parsed)) {
+    for (const attempt of attempts) {
       const result = await executeProbeAttempt(attempt, parsed.apiKey);
-      const protocolOk = result.response.ok && (result.body.length > 0 || result.contentType.length > 0);
+      const adapter = probeAdapterRegistry[result.attempt.mode];
 
-      if (result.response.ok && protocolOk) {
+      if (adapter.matches(result)) {
         return publicProbeResponseSchema.parse({
           ok: true,
           targetHost: targetUrl.hostname,
@@ -261,16 +203,16 @@ export async function runPublicProbe(input: PublicProbeRequest): Promise<PublicP
             healthStatus: successHealthStatus(result.response.status),
             httpStatus: result.response.status,
           },
+          compatibilityMode: result.attempt.mode,
+          detectionMode,
+          usedUrl: result.attempt.url.toString(),
+          attemptedModes,
           message: null,
           measuredAt,
         });
       }
 
-      if (
-        !bestFailure
-        || (bestFailure.response.status === 404 && result.response.status !== 404)
-        || (bestFailure.response.status === 405 && ![404, 405].includes(result.response.status))
-      ) {
+      if (shouldReplaceFailure(bestFailure, result)) {
         bestFailure = result;
       }
 
@@ -296,7 +238,11 @@ export async function runPublicProbe(input: PublicProbeRequest): Promise<PublicP
         healthStatus: successHealthStatus(bestFailure.response.status),
         httpStatus: bestFailure.response.status,
       },
-      message: `Upstream returned ${bestFailure.response.status}`,
+      compatibilityMode: bestFailure.attempt.mode,
+      detectionMode,
+      usedUrl: bestFailure.attempt.url.toString(),
+      attemptedModes,
+      message: `Upstream returned ${bestFailure.response.status} while testing ${probeCompatibilityModeLabels[bestFailure.attempt.mode]}`,
       measuredAt,
     });
   } catch (error) {
@@ -312,6 +258,10 @@ export async function runPublicProbe(input: PublicProbeRequest): Promise<PublicP
         ok: false,
         healthStatus: "unknown",
       },
+      compatibilityMode: null,
+      detectionMode,
+      usedUrl: null,
+      attemptedModes,
       message: sanitizeMessage(error),
       measuredAt,
     });
