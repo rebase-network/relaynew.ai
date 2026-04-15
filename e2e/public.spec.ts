@@ -1,10 +1,23 @@
 import { expect, test } from "@playwright/test";
 
+const isDeployedRun = process.env.E2E_DEPLOYED === "1";
+
 test("public site renders the main discovery flow", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByText("Watch relay health, latency, price pressure, and trust signals")).toBeVisible();
-  await expect(page.getByText("Featured leaderboards")).toBeVisible();
 
+  if (isDeployedRun) {
+    await page.getByRole("link", { name: "Methodology" }).click();
+    await expect(page).toHaveURL(/\/methodology$/);
+    await expect(page.getByText("Methodology")).toBeVisible();
+
+    await page.getByRole("link", { name: "Probe" }).click();
+    await expect(page).toHaveURL(/\/probe$/);
+    await expect(page.getByText("Self-check probe")).toBeVisible();
+    return;
+  }
+
+  await expect(page.getByText("Featured leaderboards")).toBeVisible();
   await page.getByRole("link", { name: "Open leaderboard" }).click();
   await expect(page).toHaveURL(/leaderboard\/openai-gpt-4\.1/);
   await expect(page.getByRole("heading", { name: "GPT-4.1" })).toBeVisible();
@@ -16,6 +29,7 @@ test("public site renders the main discovery flow", async ({ page }) => {
 });
 
 test("submit flow works from the public site", async ({ page }) => {
+  test.skip(isDeployedRun, "Submission creation is a local-only test to avoid mutating deployed data.");
   const relayName = `Beacon Relay ${Date.now()}`;
 
   await page.goto("/submit");

@@ -24,6 +24,8 @@
     "typecheck": "pnpm -r run typecheck",
     "test": "pnpm -r run test",
     "test:e2e": "playwright test",
+    "test:e2e:deployed": "env E2E_DEPLOYED=1 WEB_BASE_URL=https://relaynew.ai ADMIN_BASE_URL=https://admin.relaynew.ai playwright test",
+    "test:e2e:deployed:headed": "env E2E_DEPLOYED=1 WEB_BASE_URL=https://relaynew.ai ADMIN_BASE_URL=https://admin.relaynew.ai playwright test --headed",
     "test:e2e:headed": "playwright test --headed"
   },
   "devDependencies": {
