@@ -5,6 +5,7 @@ const isDeployedRun = process.env.E2E_DEPLOYED === "1";
 test("public site renders the main discovery flow", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByText("Watch relay health, latency, price pressure, and trust signals")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Admin" })).toHaveCount(0);
 
   if (isDeployedRun) {
     await page.getByRole("link", { name: "Methodology" }).click();
