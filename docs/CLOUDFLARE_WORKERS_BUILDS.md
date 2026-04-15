@@ -73,24 +73,27 @@ These commands work because:
 
 ## Build Variables
 
-Add the same build variables to both Workers:
+Add these build variables to both Workers:
 
 ```txt
 SKIP_DEPENDENCY_INSTALL=1
 NODE_VERSION=22.16.0
 PNPM_VERSION=10.33.0
-VITE_API_BASE_URL=https://api.relaynew.ai
-VITE_PUBLIC_SITE_URL=https://relaynew.ai
-VITE_ADMIN_SITE_URL=https://admin.relaynew.ai
 ```
 
 Notes:
 
 - `SKIP_DEPENDENCY_INSTALL=1` avoids a default install in the app subdirectory,
   which is not what this pnpm workspace needs
-- `VITE_*` values are build-time frontend values, not secrets
 - if Cloudflare later changes the default Node or pnpm version, these variables
   keep the build image aligned with the repo
+- production frontend URLs are now baked into the repository build scripts:
+  - `pnpm run build:web:prod`
+  - `pnpm run build:admin:prod`
+- this keeps `relaynew.ai`, `admin.relaynew.ai`, and `api.relaynew.ai` out of the
+  Cloudflare dashboard configuration for normal production deploys
+- if you later want a staging frontend domain, add separate staging build scripts
+  instead of editing the production ones in the dashboard
 
 ## Build Watch Paths
 
@@ -142,9 +145,11 @@ These are the scripts Cloudflare will call.
 cf:build:web
 cf:deploy:web
 cf:preview:web
+build:web:prod
 cf:build:admin
 cf:deploy:admin
 cf:preview:admin
+build:admin:prod
 ```
 
 ### App-Level Wrappers

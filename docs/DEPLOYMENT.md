@@ -253,16 +253,18 @@ Recommended build variables for both Workers:
 SKIP_DEPENDENCY_INSTALL=1
 NODE_VERSION=22.16.0
 PNPM_VERSION=10.33.0
-VITE_API_BASE_URL=https://api.relaynew.ai
-VITE_PUBLIC_SITE_URL=https://relaynew.ai
-VITE_ADMIN_SITE_URL=https://admin.relaynew.ai
 ```
 
 Notes:
 
 - `SKIP_DEPENDENCY_INSTALL=1` keeps Workers Builds from doing a default dependency
   install inside the app subdirectory before our monorepo-aware build command runs
-- `VITE_*` values are build-time values for the static frontends, not runtime secrets
+- production frontend URLs are provided by repository scripts instead of Cloudflare
+  dashboard variables:
+  - `pnpm run build:web:prod`
+  - `pnpm run build:admin:prod`
+- this reduces dashboard drift and avoids rebuilding the public or admin frontend
+  against `127.0.0.1` by mistake
 - Cloudflare can create and manage a build API token automatically, so a custom
   `CLOUDFLARE_API_TOKEN` is optional unless you want to manage it yourself
 

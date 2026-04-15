@@ -5,9 +5,11 @@
   "packageManager": "pnpm@10.33.0",
   "scripts": {
     "build": "pnpm -r run build",
+    "build:admin:prod": "VITE_API_BASE_URL=https://api.relaynew.ai VITE_PUBLIC_SITE_URL=https://relaynew.ai VITE_ADMIN_SITE_URL=https://admin.relaynew.ai pnpm --filter @relaynews/admin run build",
     "build:edge": "bash ops/manage-edge.sh build all",
-    "cf:build:admin": "pnpm install --frozen-lockfile && pnpm --filter @relaynews/admin run build",
-    "cf:build:web": "pnpm install --frozen-lockfile && pnpm --filter @relaynews/web run build",
+    "build:web:prod": "VITE_API_BASE_URL=https://api.relaynew.ai VITE_PUBLIC_SITE_URL=https://relaynew.ai pnpm --filter @relaynews/web run build",
+    "cf:build:admin": "pnpm install --frozen-lockfile && pnpm run build:admin:prod",
+    "cf:build:web": "pnpm install --frozen-lockfile && pnpm run build:web:prod",
     "cf:deploy:admin": "pnpm exec wrangler deploy --config apps/admin/wrangler.jsonc",
     "cf:deploy:web": "pnpm exec wrangler deploy --config apps/web/wrangler.jsonc",
     "cf:preview:admin": "pnpm exec wrangler versions upload --config apps/admin/wrangler.jsonc",
