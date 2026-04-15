@@ -297,29 +297,46 @@ function AdminShell({ children }: { children: ReactNode }) {
   ] as const;
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] text-white">
-      <header className="border-b border-white/10 bg-[linear-gradient(180deg,rgba(255,161,16,0.15),transparent)]">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-6 lg:flex-row lg:items-center lg:justify-between lg:px-10">
-          <div>
-            <p className="text-xs uppercase tracking-[0.22em] text-white/60">relaynew.ai admin</p>
-            <h1 className="mt-2 text-3xl tracking-[-0.05em]">Operate the relay catalog, sponsorships, and pricing lanes.</h1>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            {items.map(([to, label]) => (
-              <NavLink
-                key={to}
-                to={to}
-                end={to === "/"}
-                className={({ isActive }) => clsx("pill", isActive ? "pill-active" : "pill-idle")}
-              >
-                {label}
-              </NavLink>
-            ))}
-            <a className="pill pill-ghost" href={PUBLIC_SITE_URL} target="_blank" rel="noreferrer">Public site</a>
+    <div className="admin-shell min-h-screen bg-[var(--bg)] text-white">
+      <header className="admin-header">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
+          <div className="admin-header-bar">
+            <div className="space-y-4">
+              <div className="admin-brand">
+                <div className="admin-brand-mark">
+                  <span className="bg-[#ffd900]" />
+                  <span className="bg-[#ffa110]" />
+                  <span className="bg-[#fb6424]" />
+                  <span className="bg-[#fa520f]" />
+                </div>
+                relaynew.ai admin
+              </div>
+              <div>
+                <h1 className="text-3xl tracking-[-0.05em] md:text-4xl">Operate the relay catalog, sponsorships, and pricing lanes.</h1>
+                <p className="mt-3 max-w-2xl text-sm leading-7 text-white/60">
+                  Review relay inventory, approve inbound submissions, and keep sponsor and pricing operations on a dedicated control deck.
+                </p>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div className="admin-nav">
+                {items.map(([to, label]) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    end={to === "/"}
+                    className={({ isActive }) => clsx("pill", isActive ? "pill-active" : "pill-idle")}
+                  >
+                    {label}
+                  </NavLink>
+                ))}
+              </div>
+              <a className="pill pill-ghost" href={PUBLIC_SITE_URL} target="_blank" rel="noreferrer">Public site</a>
+            </div>
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-7xl px-6 py-8 lg:px-10">{children}</main>
+      <main className="admin-main mx-auto max-w-7xl px-6 lg:px-10">{children}</main>
     </div>
   );
 }
@@ -435,7 +452,7 @@ function RelaysPage() {
           {relays.data.rows.map((relay) => (
             <button
               key={relay.id}
-              className="w-full border border-white/10 bg-white/5 p-4 text-left transition hover:bg-white/8"
+              className="admin-list-card w-full border border-white/10 bg-white/5 p-4 text-left transition hover:bg-white/8"
               onClick={() => {
                 setEditingId(relay.id);
                 setForm({
@@ -548,7 +565,7 @@ function SubmissionsPage() {
     <Card title="Submission queue" kicker="Review lane">
       <div className="space-y-4">
         {submissions.data.rows.map((row) => (
-          <div key={row.id} className="border border-white/10 bg-white/5 p-4">
+          <div key={row.id} className="admin-list-card border border-white/10 bg-white/5 p-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <p className="text-xl tracking-[-0.03em]">{row.relayName}</p>
@@ -611,7 +628,7 @@ function SponsorsPage() {
       <Card title="Sponsor placements" kicker="Active windows">
         <div className="space-y-3">
           {sponsors.data.rows.map((row) => (
-            <div key={row.id} className="border border-white/10 bg-white/5 p-4">
+            <div key={row.id} className="admin-list-card border border-white/10 bg-white/5 p-4">
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="text-xl tracking-[-0.03em]">{row.name}</p>
@@ -683,7 +700,7 @@ function PricesPage() {
       <Card title="Price history" kicker="Recorded schedules">
         <div className="space-y-3">
           {prices.data.rows.map((row) => (
-            <div key={row.id} className="border border-white/10 bg-white/5 p-4">
+            <div key={row.id} className="admin-list-card border border-white/10 bg-white/5 p-4">
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="text-xl tracking-[-0.03em]">{row.relay.name}</p>

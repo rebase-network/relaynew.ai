@@ -402,69 +402,83 @@ function AppShell({ children }: { children: React.ReactNode }) {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] text-[var(--ink)]">
-      <div className="absolute inset-x-0 top-0 -z-10 h-[32rem] bg-[radial-gradient(circle_at_top,_rgba(255,217,0,0.36),_transparent_55%),linear-gradient(180deg,_rgba(255,240,194,0.96),_rgba(255,250,235,0.96))]" />
-      <header className="mx-auto max-w-7xl px-6 py-6 lg:px-10">
-        <div className="flex items-center justify-between gap-4">
-          <Link to="/" className="flex items-center gap-3 text-sm uppercase tracking-[0.25em]">
-            <div className="flex shadow-[var(--shadow)]">
-              <span className="h-4 w-4 bg-[#ffd900]" />
-              <span className="h-4 w-4 bg-[#ffa110]" />
-              <span className="h-4 w-4 bg-[#fb6424]" />
-              <span className="h-4 w-4 bg-[#fa520f]" />
-            </div>
-            relaynew.ai
-          </Link>
-          <button
-            aria-controls="mobile-primary-nav"
-            aria-expanded={mobileNavOpen}
-            className="border border-black/10 bg-white/70 px-3 py-2 text-xs uppercase tracking-[0.18em] md:hidden"
-            onClick={() => setMobileNavOpen((current) => !current)}
-            type="button"
-          >
-            {mobileNavOpen ? "Close" : "Menu"}
-          </button>
-          <nav className="hidden items-center gap-5 md:flex">
-            {navItems.map(([to, label]) => (
-              <NavLink
-                key={to}
-                to={to}
-                className={({ isActive }) =>
-                  clsx(
-                    "text-sm uppercase tracking-[0.18em] transition-opacity",
-                    isActive ? "opacity-100" : "opacity-65 hover:opacity-100",
-                  )
-                }
-              >
-                {label}
-              </NavLink>
-            ))}
-          </nav>
+    <div className="site-shell min-h-screen bg-[var(--bg)] text-[var(--ink)]">
+      <header className="site-header">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
+          <div className="site-header-bar">
+            <Link to="/" className="site-brand">
+              <div className="site-brand-mark">
+                <span className="bg-[#ffd900]" />
+                <span className="bg-[#ffa110]" />
+                <span className="bg-[#fb6424]" />
+                <span className="bg-[#fa520f]" />
+              </div>
+              <div>
+                <span className="block">relaynew.ai</span>
+                <span className="hidden text-[0.6rem] tracking-[0.2em] text-black/44 md:block">
+                  relay health, latency, pricing, and trust signals
+                </span>
+              </div>
+            </Link>
+            <button
+              aria-controls="mobile-primary-nav"
+              aria-expanded={mobileNavOpen}
+              className="mobile-nav-toggle md:hidden"
+              onClick={() => setMobileNavOpen((current) => !current)}
+              type="button"
+            >
+              {mobileNavOpen ? "Close" : "Menu"}
+            </button>
+            <nav className="site-nav hidden md:flex md:flex-wrap md:items-center">
+              {navItems.map(([to, label]) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  className={({ isActive }) =>
+                    clsx("site-nav-link", isActive && "site-nav-link-active")
+                  }
+                >
+                  {label}
+                </NavLink>
+              ))}
+            </nav>
+          </div>
         </div>
-        {mobileNavOpen ? (
-          <nav className="panel mt-4 grid gap-2 md:hidden" id="mobile-primary-nav">
-            {navItems.map(([to, label]) => (
-              <NavLink
-                key={to}
-                to={to}
-                className={({ isActive }) =>
-                  clsx(
-                    "border border-black/8 px-4 py-3 text-sm uppercase tracking-[0.18em] transition-colors",
-                    isActive ? "bg-[#1f1f1f] text-white" : "bg-white/80 hover:bg-white",
-                  )
-                }
-              >
-                {label}
-              </NavLink>
-            ))}
-          </nav>
-        ) : null}
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
+          {mobileNavOpen ? (
+            <nav className="site-mobile-nav panel mt-3 md:hidden" id="mobile-primary-nav">
+              {navItems.map(([to, label]) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  className={({ isActive }) =>
+                    clsx(
+                      "site-nav-link",
+                      "justify-center text-center",
+                      isActive && "site-nav-link-active",
+                    )
+                  }
+                >
+                  {label}
+                </NavLink>
+              ))}
+            </nav>
+          ) : null}
+        </div>
       </header>
-      <main className="mx-auto max-w-7xl px-6 pb-24 lg:px-10">{children}</main>
-      <footer className="border-t border-black/10 bg-[linear-gradient(180deg,rgba(255,161,16,0.15),rgba(31,31,31,1))] px-6 py-10 text-white lg:px-10">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 text-sm uppercase tracking-[0.18em] md:flex-row md:items-center md:justify-between">
-          <span>Relay monitoring, pricing, and ranking.</span>
-          <span className="opacity-75">Natural ranking and sponsor placement stay separate.</span>
+      <main className="site-main mx-auto max-w-7xl px-6 lg:px-10">{children}</main>
+      <footer className="site-footer px-6 py-10 lg:px-10">
+        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+          <div className="space-y-3">
+            <p className="kicker !text-white/55">Relay intelligence</p>
+            <p className="max-w-xl text-2xl leading-tight tracking-[-0.04em] text-white">
+              Relay monitoring, pricing, and ranking stay in one warm signal surface.
+            </p>
+          </div>
+          <div className="grid gap-3 text-sm uppercase tracking-[0.18em] text-white/78 md:grid-cols-2">
+            <span>Public discovery and probe tooling.</span>
+            <span>Natural ranking and sponsor placement stay separate.</span>
+          </div>
         </div>
       </footer>
     </div>
@@ -503,7 +517,7 @@ function StatusDot({ status }: { status: string }) {
           ? "bg-red-500"
           : "bg-zinc-400";
 
-  return <span className={clsx("inline-block h-2.5 w-2.5", tone)} />;
+  return <span className={clsx("status-dot inline-block h-2.5 w-2.5", tone)} />;
 }
 
 function MetricGrid({
@@ -525,7 +539,7 @@ function MetricGrid({
       {items.map((item) => (
         <div
           key={item.label}
-          className={clsx("border border-black/10 bg-white/75 p-4 transition-colors", item.cardClassName)}
+          className={clsx("metric-card transition-colors", item.cardClassName)}
         >
           <p className="kicker">{item.label}</p>
           <p
@@ -549,8 +563,8 @@ function HomePage() {
 
   return (
     <div className="space-y-8">
-      <section className="grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
-        <div className="panel bg-[linear-gradient(135deg,rgba(255,217,0,0.7),rgba(250,82,15,0.9))] text-[#1f1f1f]">
+      <section className="grid gap-6 xl:grid-cols-[1.18fr_0.82fr]">
+        <div className="panel hero-panel">
           <p className="kicker text-black/70">Relay intelligence</p>
           <h1 className="max-w-4xl text-5xl leading-[0.9] tracking-[-0.07em] md:text-7xl xl:text-[5.3rem]">
             Watch relay health, latency, price pressure, and trust signals in one warm control tower.
@@ -562,35 +576,58 @@ function HomePage() {
             <Link className="button-dark" to="/leaderboard/openai-gpt-4.1">Open leaderboard</Link>
             <Link className="button-cream" to="/probe">Run self-check probe</Link>
           </div>
+          <div className="mt-10 grid gap-3 sm:grid-cols-3">
+            <div className="surface-card p-4">
+              <p className="kicker !text-black/52">Ranking lane</p>
+              <p className="text-sm leading-6 text-black/72">Model-specific leaderboards keep quality and price pressure in the same frame.</p>
+            </div>
+            <div className="surface-card p-4">
+              <p className="kicker !text-black/52">Probe lane</p>
+              <p className="text-sm leading-6 text-black/72">Operators can reproduce the exact compatibility path that the public check selected.</p>
+            </div>
+            <div className="surface-card p-4">
+              <p className="kicker !text-black/52">Promo lane</p>
+              <p className="text-sm leading-6 text-black/72">Sponsored placements stay visible while remaining separate from natural ranking logic.</p>
+            </div>
+          </div>
         </div>
-        <Panel title="Current market pulse" kicker="Hero snapshot">
-          <MetricGrid
-            items={[
-              { label: "Total relays", value: data.hero.totalRelays },
-              { label: "Healthy", value: data.hero.healthyRelays },
-              { label: "Degraded", value: data.hero.degradedRelays },
-              { label: "Measured", value: new Date(data.hero.measuredAt).toLocaleTimeString() },
-            ]}
-          />
-        </Panel>
+        <div className="space-y-6">
+          <Panel title="Current market pulse" kicker="Hero snapshot" className="panel-soft">
+            <MetricGrid
+              items={[
+                { label: "Total relays", value: data.hero.totalRelays },
+                { label: "Healthy", value: data.hero.healthyRelays },
+                { label: "Degraded", value: data.hero.degradedRelays },
+                { label: "Measured", value: new Date(data.hero.measuredAt).toLocaleTimeString() },
+              ]}
+            />
+          </Panel>
+          <div className="panel surface-card">
+            <p className="kicker">Sponsor boundary</p>
+            <p className="text-3xl leading-[0.95] tracking-[-0.04em]">Promotion can be visible without contaminating natural board order.</p>
+            <p className="mt-4 text-sm leading-7 text-black/68">
+              The site keeps ranking inputs, public probe diagnostics, and sponsor intake in separate operating lanes so trust signals stay readable.
+            </p>
+          </div>
+        </div>
       </section>
 
       <Panel title="Featured leaderboards" kicker="Top model lanes">
         <div className="grid gap-6 lg:grid-cols-2">
           {data.leaderboards.map((board) => (
-            <div key={board.modelKey} className="border border-black/10 bg-white/80 p-5">
+            <div key={board.modelKey} className="surface-card p-5">
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="kicker">{board.modelKey}</p>
                   <h3 className="text-2xl tracking-[-0.04em]">{board.modelName}</h3>
                 </div>
-                <Link className="text-sm uppercase tracking-[0.16em] opacity-70 hover:opacity-100" to={`/leaderboard/${board.modelKey}`}>
+                <Link className="signal-chip" to={`/leaderboard/${board.modelKey}`}>
                   Full board
                 </Link>
               </div>
               <div className="mt-5 space-y-3">
                 {board.rows.map((row) => (
-                  <Link key={row.relay.slug} to={`/relay/${row.relay.slug}`} className="flex items-center justify-between gap-4 border border-black/8 bg-[var(--surface)] p-4 transition-transform hover:-translate-y-0.5">
+                  <Link key={row.relay.slug} to={`/relay/${row.relay.slug}`} className="surface-link flex items-center justify-between gap-4 p-4">
                     <div>
                       <p className="text-xs uppercase tracking-[0.16em] text-black/55">#{row.rank}</p>
                       <p className="text-xl tracking-[-0.03em]">{row.relay.name}</p>
@@ -611,10 +648,10 @@ function HomePage() {
         <Panel title="Relays to watch" kicker="Highlights">
           <div className="space-y-4">
             {data.highlights.map((relay) => (
-              <Link key={relay.slug} to={`/relay/${relay.slug}`} className="flex items-center justify-between gap-4 border border-black/10 bg-white/70 p-4">
+              <Link key={relay.slug} to={`/relay/${relay.slug}`} className="surface-link flex items-center justify-between gap-4 p-4">
                 <div>
                   <p className="text-xl tracking-[-0.03em]">{relay.name}</p>
-                  <p className="text-sm uppercase tracking-[0.16em] text-black/60">{relay.badge}</p>
+                  <p className="mt-2"><span className="signal-chip">{relay.badge}</span></p>
                 </div>
                 <div className="flex items-center gap-2 text-sm uppercase tracking-[0.12em]"><StatusDot status={relay.healthStatus} /> {relay.healthStatus}</div>
               </Link>
@@ -627,7 +664,7 @@ function HomePage() {
               <p className="text-sm text-black/65">No incidents recorded in the current snapshot.</p>
             ) : (
               data.latestIncidents.map((incident) => (
-                <div key={incident.id} className="border border-black/10 bg-white/80 p-4">
+                <div key={incident.id} className="surface-card p-4">
                   <div className="flex items-center justify-between gap-4">
                     <p className="text-xl tracking-[-0.03em]">{incident.title}</p>
                     <div className="flex items-center gap-2 text-sm uppercase tracking-[0.16em]"><StatusDot status={incident.severity} /> {incident.severity}</div>
@@ -665,10 +702,10 @@ function LeaderboardPage() {
             <h1 className="text-5xl leading-[0.92] tracking-[-0.06em]">{data.model.name}</h1>
             <p className="mt-3 text-sm uppercase tracking-[0.16em] text-black/60">Measured at {new Date(data.measuredAt).toLocaleString()}</p>
           </div>
-          <label className="text-sm uppercase tracking-[0.16em] text-black/70">
+          <label className="form-field max-w-[9rem]">
             Rows
             <select
-              className="mt-2 block border border-black/15 bg-white px-3 py-2"
+              className="input-shell mt-2 block"
               value={limit}
               onChange={(event) => setSearchParams({ limit: event.target.value })}
             >
@@ -680,10 +717,10 @@ function LeaderboardPage() {
         </div>
       </section>
       <Panel title="Ranked relay rows" kicker="Natural ranking">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] border-collapse text-left">
+        <div className="data-table">
+          <table className="w-full text-left">
             <thead>
-              <tr className="border-b border-black/10 text-xs uppercase tracking-[0.16em] text-black/55">
+              <tr className="border-b border-black/10">
                 <th className="pb-3">Rank</th>
                 <th className="pb-3">Relay</th>
                 <th className="pb-3">Health</th>
@@ -696,12 +733,12 @@ function LeaderboardPage() {
             </thead>
             <tbody>
               {data.rows.map((row) => (
-                <tr key={row.relay.slug} className="border-b border-black/8 align-top">
+                <tr key={row.relay.slug} className="align-top">
                   <td className="py-4 text-2xl tracking-[-0.04em]">#{row.rank}</td>
                   <td className="py-4">
                     <Link to={`/relay/${row.relay.slug}`} className="text-xl tracking-[-0.03em] hover:underline">{row.relay.name}</Link>
                     <div className="mt-2 flex flex-wrap gap-2 text-xs uppercase tracking-[0.14em] text-black/55">
-                      {row.badges.map((badge) => <span key={badge}>{badge}</span>)}
+                      {row.badges.map((badge) => <span key={badge} className="signal-chip">{badge}</span>)}
                     </div>
                   </td>
                   <td className="py-4 text-sm uppercase tracking-[0.14em]"><span className="inline-flex items-center gap-2"><StatusDot status={row.healthStatus} /> {row.healthStatus}</span></td>
@@ -752,7 +789,7 @@ function RelayPage() {
             <h1 className="mt-4 text-5xl leading-[0.92] tracking-[-0.06em]">{overview.data.relay.name}</h1>
             <p className="mt-4 max-w-2xl text-black/70">{overview.data.relay.baseUrl}</p>
             <div className="mt-6 flex flex-wrap gap-2 text-xs uppercase tracking-[0.14em] text-black/65">
-              {overview.data.badges.map((badge) => <span key={badge}>{badge}</span>)}
+              {overview.data.badges.map((badge) => <span key={badge} className="signal-chip">{badge}</span>)}
             </div>
           </div>
           <MetricGrid
@@ -782,7 +819,7 @@ function RelayPage() {
           {models.loading || !models.data ? <p className="text-sm text-black/60">Loading models...</p> : (
             <div className="space-y-3">
               {models.data.rows.map((row) => (
-                <div key={row.modelKey} className="border border-black/10 bg-white/80 p-4">
+                <div key={row.modelKey} className="surface-card p-4">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-xl tracking-[-0.03em]">{row.modelName}</p>
                     <p className="text-xs uppercase tracking-[0.16em] text-black/55">{row.supportStatus}</p>
@@ -797,7 +834,7 @@ function RelayPage() {
           {pricing.loading || !pricing.data ? <p className="text-sm text-black/60">Loading pricing...</p> : (
             <div className="space-y-3">
               {pricing.data.rows.map((row) => (
-                <div key={`${row.modelKey}-${row.effectiveFrom}`} className="border border-black/10 bg-white/80 p-4 text-sm">
+                <div key={`${row.modelKey}-${row.effectiveFrom}`} className="surface-card p-4 text-sm">
                   <p className="text-lg tracking-[-0.03em]">{row.modelKey}</p>
                   <p className="mt-2">Input {row.inputPricePer1M ?? "-"} · Output {row.outputPricePer1M ?? "-"}</p>
                   <p className="mt-2 text-xs uppercase tracking-[0.14em] text-black/50">{row.source} · {new Date(row.effectiveFrom).toLocaleDateString()}</p>
@@ -810,7 +847,7 @@ function RelayPage() {
           {incidents.loading || !incidents.data ? <p className="text-sm text-black/60">Loading incidents...</p> : (
             <div className="space-y-3">
               {incidents.data.rows.length === 0 ? <p className="text-sm text-black/60">No incidents in the selected window.</p> : incidents.data.rows.map((row) => (
-                <div key={row.id} className="border border-black/10 bg-white/80 p-4">
+                <div key={row.id} className="surface-card p-4">
                   <div className="flex items-center gap-2 text-sm uppercase tracking-[0.14em]"><StatusDot status={row.severity} /> {row.severity}</div>
                   <p className="mt-3 text-xl tracking-[-0.03em]">{row.title}</p>
                   <p className="mt-2 text-sm text-black/70">{row.summary}</p>
@@ -834,7 +871,7 @@ function MethodologyPage() {
       <Panel title="Methodology" kicker="Ranking anatomy">
         <div className="grid gap-4 md:grid-cols-5">
           {Object.entries(data.weights).map(([label, value]) => (
-            <div key={label} className="border border-black/10 bg-white/80 p-4">
+            <div key={label} className="metric-card">
               <p className="kicker">{label}</p>
               <p className="mt-3 text-4xl tracking-[-0.05em]">{value}</p>
             </div>
@@ -845,7 +882,7 @@ function MethodologyPage() {
         <Panel title="Health state language" kicker="Public taxonomy">
           <div className="space-y-3">
             {data.healthStatuses.map((status) => (
-              <div key={status} className="flex items-center gap-3 border border-black/10 bg-white/80 p-4 text-sm uppercase tracking-[0.14em]">
+              <div key={status} className="surface-card flex items-center gap-3 p-4 text-sm uppercase tracking-[0.14em]">
                 <StatusDot status={status} /> {status}
               </div>
             ))}
@@ -927,17 +964,31 @@ function SubmitPage() {
 
   return (
     <section className="grid gap-6 lg:grid-cols-[1fr_0.9fr]">
-      <div className="panel bg-[#fff0c2]">
+      <div className="panel hero-panel min-h-0">
         <p className="kicker">Submit a relay</p>
         <h1 className="text-5xl leading-[0.92] tracking-[-0.06em]">Nominate a relay for monitoring, ranking, or sponsor intake.</h1>
         <p className="mt-5 max-w-xl text-black/70">Use the intake form to put a relay into review. Operational approval and sponsor placement are reviewed separately from natural ranking.</p>
+        <div className="mt-8 grid gap-3 sm:grid-cols-3">
+          <div className="surface-card p-4">
+            <p className="kicker !text-black/52">Review first</p>
+            <p className="text-sm leading-6 text-black/72">Every relay enters an operator review lane before it appears anywhere public.</p>
+          </div>
+          <div className="surface-card p-4">
+            <p className="kicker !text-black/52">Natural board</p>
+            <p className="text-sm leading-6 text-black/72">Ranking stays tied to observed quality, not to sponsor placement decisions.</p>
+          </div>
+          <div className="surface-card p-4">
+            <p className="kicker !text-black/52">Fast intake</p>
+            <p className="text-sm leading-6 text-black/72">URL and contact checks happen in-browser first so the write path stays clean.</p>
+          </div>
+        </div>
       </div>
-      <form className="panel space-y-4" noValidate onSubmit={handleSubmit}>
+      <form className="panel form-shell" noValidate onSubmit={handleSubmit}>
         {fields.map(({ label, key, type, required, placeholder }) => (
-          <label key={key} className="block text-sm uppercase tracking-[0.14em] text-black/65">
+          <label key={key} className="form-field">
             {label}
             <input
-              className="mt-2 w-full border border-black/15 bg-white px-4 py-3"
+              className="input-shell mt-2"
               type={type}
               placeholder={placeholder}
               value={state[key]}
@@ -949,12 +1000,12 @@ function SubmitPage() {
               }}
               required={required}
             />
-            {fieldErrors[key] ? <span className="mt-2 block text-xs normal-case tracking-normal text-[#a33a16]">{fieldErrors[key]}</span> : null}
+            {fieldErrors[key] ? <span className="field-error">{fieldErrors[key]}</span> : null}
           </label>
         ))}
         <button className="button-dark" disabled={submitting} type="submit">{submitting ? "Submitting..." : "Submit relay"}</button>
-        {result ? <p className="text-sm text-emerald-700">Submission created: {result.id}</p> : null}
-        {error ? <p className="text-sm text-[#a33a16]">{error}</p> : null}
+        {result ? <p className="text-sm form-feedback-success">Submission created: {result.id}</p> : null}
+        {error ? <p className="text-sm form-feedback-error">{error}</p> : null}
       </form>
     </section>
   );
@@ -1057,36 +1108,36 @@ function ProbePage() {
 
   return (
     <section className="grid gap-6 lg:grid-cols-[0.82fr_1.18fr] lg:items-start">
-      <div className="panel bg-[#fff0c2]">
+      <div className="panel hero-panel min-h-0">
         <p className="kicker">Self-check probe</p>
         <h1 className="text-5xl leading-[0.92] tracking-[-0.06em]">Run a bounded connectivity check against a relay endpoint.</h1>
         <p className="mt-5 text-black/70">The public probe uses a tightly controlled server-side request path. It never echoes your API key back into the UI.</p>
         <p className="mt-3 text-sm text-black/60">Most relays should work with automatic compatibility detection. Use the advanced override only when you already know the protocol shape.</p>
         <div className="mt-8 grid gap-3 sm:grid-cols-3">
-          <div className="border border-black/10 bg-white/65 p-3">
+          <div className="surface-card p-3">
             <p className="kicker">Request scope</p>
             <p className="text-sm leading-6 text-black/75">Single bounded check with no persistent key storage.</p>
           </div>
-          <div className="border border-black/10 bg-white/65 p-3">
+          <div className="surface-card p-3">
             <p className="kicker">Best default</p>
             <p className="text-sm leading-6 text-black/75">Start with auto detection, then override only when needed.</p>
           </div>
-          <div className="border border-black/10 bg-white/65 p-3">
+          <div className="surface-card p-3">
             <p className="kicker">What you get</p>
             <p className="text-sm leading-6 text-black/75">Latency, protocol health, resolved endpoint, and adapter trace.</p>
           </div>
         </div>
       </div>
       <div className="space-y-6">
-        <form className="panel space-y-4" onSubmit={handleSubmit}>
-          <div className="border border-black/10 bg-white/65 px-4 py-3 text-sm leading-6 text-black/68">
+        <form className="panel form-shell" onSubmit={handleSubmit}>
+          <div className="form-note text-sm leading-6">
             Paste the same relay endpoint, key, and model you use in production. Start with auto detection unless you already know the upstream protocol family.
           </div>
           {fields.map(([label, key]) => (
-            <label key={key} className="block text-sm uppercase tracking-[0.14em] text-black/65">
+            <label key={key} className="form-field">
               {label}
               <input
-                className="mt-2 w-full border border-black/15 bg-white px-4 py-3"
+                className="input-shell mt-2"
                 type={key === "apiKey" ? "password" : "text"}
                 placeholder={PROBE_FIELD_META[key].placeholder}
                 value={state[key]}
@@ -1096,17 +1147,17 @@ function ProbePage() {
                 spellCheck={false}
                 required
               />
-              <span className="mt-2 block text-[0.74rem] normal-case tracking-normal text-black/55">
+              <span className="input-helper">
                 {PROBE_FIELD_META[key].helper}
               </span>
             </label>
           ))}
-          <details className="border border-black/10 bg-white/70 p-4">
-            <summary className="cursor-pointer text-sm uppercase tracking-[0.16em] text-black/70">Advanced</summary>
-            <label className="mt-4 block text-sm uppercase tracking-[0.14em] text-black/65">
+          <details className="surface-card p-4">
+            <summary className="cursor-pointer font-mono text-sm uppercase tracking-[0.16em] text-black/70">Advanced</summary>
+            <label className="form-field mt-4">
               Compatibility Mode
               <select
-                className="mt-2 w-full border border-black/15 bg-white px-4 py-3"
+                className="input-shell mt-2"
                 value={state.compatibilityMode}
                 onChange={(event) =>
                   setState((current) => ({
@@ -1182,11 +1233,11 @@ function ProbePage() {
             <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
               <div className="space-y-4">
                 {result.usedUrl ? (
-                  <div className="border border-black/10 bg-white/75 p-4">
+                  <div className="surface-card p-4">
                     <div className="flex items-start justify-between gap-3">
                       <p className="kicker">Used endpoint</p>
                       <button
-                        className="border border-black/10 bg-[var(--surface)] px-3 py-2 text-[0.7rem] uppercase tracking-[0.16em] transition-colors hover:bg-[var(--surface-strong)]"
+                        className="copy-button"
                         data-testid="probe-copy-endpoint-button"
                         onClick={handleCopyUsedUrl}
                         type="button"
@@ -1202,13 +1253,13 @@ function ProbePage() {
                       {result.usedUrl}
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2 text-[0.68rem] uppercase tracking-[0.16em] text-black/48">
-                      {usedEndpointPath ? <span className="border border-black/10 bg-[var(--surface)] px-2 py-1">{usedEndpointPath}</span> : null}
-                      <span className="border border-black/10 bg-[var(--surface)] px-2 py-1">{formatProbeRequestCount(attemptTrace.length)}</span>
+                      {usedEndpointPath ? <span className="signal-chip">{usedEndpointPath}</span> : null}
+                      <span className="signal-chip">{formatProbeRequestCount(attemptTrace.length)}</span>
                     </div>
                   </div>
                 ) : null}
                 {attemptTrace.length > 0 ? (
-                  <div className="border border-black/10 bg-white/75 p-4">
+                  <div className="surface-card p-4">
                     <div className="flex items-center justify-between gap-3">
                       <p className="kicker">Execution trace</p>
                       <p className="text-[0.7rem] uppercase tracking-[0.16em] text-black/45">
@@ -1218,7 +1269,7 @@ function ProbePage() {
                     <div className="space-y-3">
                       {attemptTrace.map((attempt, index) => (
                         <div
-                          className={clsx("border px-3 py-3", getTraceCardTone(attempt.httpStatus, attempt.matched))}
+                          className={clsx("trace-card border px-3 py-3", getTraceCardTone(attempt.httpStatus, attempt.matched))}
                           key={`${attempt.url}-${index}`}
                         >
                           <div className="flex items-center justify-between gap-3">
@@ -1246,7 +1297,7 @@ function ProbePage() {
                   </div>
                 ) : null}
                 {failureGuidance ? (
-                  <div className="border border-black/10 bg-white/75 p-4">
+                  <div className="surface-card p-4">
                     <p className="kicker">Failure interpretation</p>
                     <div className="space-y-3 text-sm leading-6 text-black/72">
                       <p><span className="font-medium text-black/90">Source:</span> {failureGuidance.source}</p>
