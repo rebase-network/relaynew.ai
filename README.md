@@ -46,6 +46,7 @@ docs/
   ARCHITECTURE.md
   DATABASE_SCHEMA.md
   API_CONTRACT_V1.md
+  CLOUDFLARE_WORKERS_BUILDS.md
   DEVELOPMENT_PLAN.md
   DEPLOYMENT.md
   TESTING_STRATEGY.md
@@ -72,6 +73,7 @@ scripts/
 - System architecture: `docs/ARCHITECTURE.md`
 - Database schema: `docs/DATABASE_SCHEMA.md`
 - Public API contract: `docs/API_CONTRACT_V1.md`
+- Cloudflare Workers Builds checklist: `docs/CLOUDFLARE_WORKERS_BUILDS.md`
 - Development plan: `docs/DEVELOPMENT_PLAN.md`
 - Deployment guide: `docs/DEPLOYMENT.md`
 - Testing strategy: `docs/TESTING_STRATEGY.md`

@@ -177,6 +177,9 @@ pnpm exec wrangler delete relaynews-api
 The public site and admin site can be connected directly to GitHub through Workers
 Builds so pushes to the production branch deploy automatically.
 
+For a shorter dashboard-oriented checklist, see
+`docs/CLOUDFLARE_WORKERS_BUILDS.md`.
+
 ### Recommended Worker Mapping
 
 - `relaynews-web` -> `apps/web/wrangler.jsonc` -> `relaynew.ai`
