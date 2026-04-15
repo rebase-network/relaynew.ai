@@ -107,9 +107,11 @@ Use `docs/DEVELOPMENT_PLAN.md` as the canonical phased build order.
 - start the backend API: `pnpm dev:api`
 - build the public production bundle: `pnpm run build:web:prod`
 - build the admin production bundle: `pnpm run build:admin:prod`
+- run the package-level verification set: `pnpm test`
 - run type checks: `pnpm typecheck`
 - run Playwright acceptance tests: `pnpm test:e2e`
 - run deployed smoke tests against `relaynew.ai`: `pnpm test:e2e:deployed`
+- run deployed end-to-end coverage with write paths enabled: `pnpm test:e2e:deployed:writes`
 - inspect remote API deployment paths: `./ops/manage.sh path`
 - bootstrap the remote API host: `./ops/manage.sh bootstrap`
 - deploy the remote API service: `./ops/manage.sh deploy`

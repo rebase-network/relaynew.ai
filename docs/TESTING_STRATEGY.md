@@ -73,6 +73,8 @@ The repository also supports a deployed smoke mode for `relaynew.ai` and
 - run `pnpm test:e2e:deployed` against the live frontends
 - keep this suite read-mostly and skip write-path checks that would mutate deployed
   data
+- run `pnpm test:e2e:deployed:writes` only for deliberate end-to-end verification
+  when deployed data mutation is acceptable
 - source probe credentials from `.env` so the browser can exercise the real public
   probe flow without hardcoding secrets in the repo
 
@@ -126,10 +128,14 @@ These tests help catch contract regressions earlier than full browser failures.
 
 - the browser acceptance suite lives in `e2e/`
 - Playwright is configured from `playwright.config.ts`
+- `pnpm test` runs the package-level verification layer: API tests plus frontend and
+  edge-worker typechecks
 - `pnpm test:e2e` starts an isolated PostgreSQL test container, seeds the API
   database, boots `api`, `web`, and `admin`, and then runs the browser suite
 - `pnpm test:e2e:deployed` reuses the same Playwright specs against
   `https://relaynew.ai` and `https://admin.relaynew.ai`
+- `pnpm test:e2e:deployed:writes` enables deployed write-path coverage and should be
+  used only when remote data mutation is acceptable
 - deployed runs intentionally skip relay creation, submission review, sponsor
   creation, and price creation so production data is not mutated during smoke tests
 
