@@ -27,7 +27,7 @@ The product should:
 - Frontend hosting/runtime: Cloudflare Workers Static Assets
 - API edge: Cloudflare Worker custom domain proxy
 - Backend: Node.js + Fastify + TypeScript
-- Origin deployment runtime: Docker Compose on the remote server
+- API deployment runtime: Docker Compose on the remote server
 - Database: PostgreSQL
 - Query layer: Kysely
 - Validation: Zod
@@ -58,13 +58,13 @@ Browser
         - product-owned hostname
         - request proxy to dedicated tunnel
         -> Cloudflare Tunnel
-           -> Origin API (remote server)
+           -> API Service (remote server)
               - public API
               - internal/admin API
               - probe scheduler
               - probe runner
               - aggregation jobs
-              - PostgreSQL
+              - dedicated PostgreSQL
 ```
 
 ## Runtime Responsibilities
@@ -82,7 +82,7 @@ It is not responsible for:
 - storing business state
 - running probe jobs
 - writing high-frequency monitoring data
-- replacing the origin API
+- replacing the backend API
 
 ### Cloudflare API Edge
 Cloudflare sits in front of `api.relaynew.ai` and handles:
@@ -101,8 +101,8 @@ Important note: Cloudflare proxy does not automatically cache JSON APIs in the d
 Public `GET` endpoints must be made cacheable with explicit cache rules and/or
 `Cloudflare-CDN-Cache-Control` headers.
 
-### Origin API
-The origin service runs on the remote server and is the core application backend.
+### API Service
+The API service runs on the remote server and is the core application backend.
 It is responsible for:
 - public read APIs for the website
 - a dedicated public-safe probe endpoint
@@ -150,13 +150,13 @@ The MVP currently uses a client-rendered SPA deployed on Cloudflare Workers Stat
 Assets.
 
 ### Current Route Model
-- public routes render through the SPA shell and fetch data from the origin API
+- public routes render through the SPA shell and fetch data from the backend API
 - admin routes render through the admin SPA shell
 - probe flows and chart modules stay client-rendered
 
 ### Forward Compatibility
 - keep public route data contracts explicit so edge rendering or pre-render can be
-  added later without changing the origin API shape
+  added later without changing the backend API shape
 - prefer route modules and page composition that can evolve toward SSR if SEO needs
   become stronger after the MVP
 
@@ -210,8 +210,8 @@ node-cron scheduler
 ```
 
 MVP assumption:
-- the origin deployment is single-instance while `node-cron` owns scheduling
-- if the origin deployment becomes multi-instance later, probe scheduling and
+- the API deployment is single-instance while `node-cron` owns scheduling
+- if the API deployment becomes multi-instance later, probe scheduling and
   snapshot rebuilds must use PostgreSQL-backed coordination such as advisory locks
   or leased job rows
 
@@ -249,7 +249,7 @@ apps/
   admin/     # admin frontend app
   api-edge/  # Cloudflare Worker for API custom domain proxy
   web/       # Cloudflare Workers Static Assets frontend app
-  origin/    # Fastify backend app
+  api/       # Fastify backend app
 packages/
   shared/    # shared types, schemas, constants
 ```

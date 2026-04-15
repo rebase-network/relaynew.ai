@@ -11,7 +11,7 @@ The following decisions are already in place and should be treated as the starti
 - public API contract v1: `docs/API_CONTRACT_V1.md`
 - routing and rendering split: `docs/ROUTES.md`
 - public probe safety model: `docs/PROBE_SECURITY.md`
-- initial PostgreSQL migration: `apps/origin/db/migrations/0001_initial.sql`
+- initial PostgreSQL migration: `apps/api/db/migrations/0001_initial.sql`
 
 ## Delivery Principles
 
@@ -27,7 +27,7 @@ The following decisions are already in place and should be treated as the starti
 ## Phase 1: Repository And Workspace Foundation
 
 Goal:
-- create a clean monorepo foundation for `web`, `admin`, `origin`, and `shared`
+- create a clean monorepo foundation for `web`, `admin`, `api`, and `shared`
 
 Work items:
 - initialize git repository
@@ -39,7 +39,7 @@ Work items:
 - create base directories
   - `apps/admin`
   - `apps/web`
-  - `apps/origin`
+  - `apps/api`
   - `packages/shared`
 
 Exit criteria:
@@ -79,11 +79,11 @@ Work items:
 
 Exit criteria:
 - `packages/shared` exports both TypeScript types and runtime validation schemas
-- `apps/web` and `apps/origin` consume the same shared contract package
+- `apps/web` and `apps/api` consume the same shared contract package
 - public API field names and validation rules are no longer implicit in implementation code
 - representative contract payloads parse successfully through shared runtime schemas
 
-## Phase 3: Origin API Foundation
+## Phase 3: API Service Foundation
 
 Goal:
 - stand up the backend service and connect it to PostgreSQL
@@ -138,7 +138,7 @@ Goal:
   producers become authoritative
 
 Work items:
-- implement origin endpoints
+- implement API endpoints
   - `GET /public/relay/:slug/history`
   - `GET /public/relay/:slug/models`
   - `GET /public/relay/:slug/pricing-history`
@@ -239,7 +239,7 @@ Goal:
 
 Work items:
 - deploy `apps/web` to Cloudflare Workers
-- deploy `apps/origin` to the remote server with Docker Compose
+- deploy `apps/api` to the remote server with Docker Compose
 - configure `relaynew.ai`, `api.relaynew.ai`, and `admin.relaynew.ai`
 - configure Cloudflare cache rules, WAF, and access control
 - finalize environment variable management
@@ -259,7 +259,7 @@ Exit criteria:
 - shared package created
 
 ### M2: First Public APIs
-- origin service running
+- API service running
 - home summary and leaderboard endpoints implemented
 
 ### M3: Public Site First Slice
@@ -284,7 +284,7 @@ The most efficient next implementation sequence is:
 1. initialize the monorepo foundation
 2. create `packages/shared`
 3. encode `docs/API_CONTRACT_V1.md` into shared TypeScript types and `Zod` schemas
-4. scaffold `apps/origin`
+4. scaffold `apps/api`
 5. implement `GET /public/home-summary`
 6. implement `GET /public/leaderboard/:modelKey`
 

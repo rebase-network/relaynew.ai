@@ -9,7 +9,7 @@ import { config } from "../config";
 async function main() {
   const candidates = [
     path.resolve(process.cwd(), "db/migrations"),
-    path.resolve(process.cwd(), "apps/origin/db/migrations"),
+    path.resolve(process.cwd(), "apps/api/db/migrations"),
   ];
   const migrationsDir = (
     await Promise.all(

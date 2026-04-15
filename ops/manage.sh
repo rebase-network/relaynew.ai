@@ -4,15 +4,15 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 REMOTE_HOST="${REMOTE_HOST:-rebase@rebase.network}"
-REMOTE_BASE_DIR="${REMOTE_BASE_DIR:-/home/rebase/apps/relaynews-origin}"
+REMOTE_BASE_DIR="${REMOTE_BASE_DIR:-/home/rebase/apps/relaynews-api}"
 REMOTE_RELEASES_DIR="${REMOTE_RELEASES_DIR:-${REMOTE_BASE_DIR}/releases}"
 REMOTE_SHARED_DIR="${REMOTE_SHARED_DIR:-${REMOTE_BASE_DIR}/shared}"
 REMOTE_CURRENT_LINK="${REMOTE_CURRENT_LINK:-${REMOTE_BASE_DIR}/current}"
-REMOTE_ENV_FILE="${REMOTE_ENV_FILE:-${REMOTE_SHARED_DIR}/origin.env}"
-REMOTE_COMPOSE_PROJECT="${REMOTE_COMPOSE_PROJECT:-relaynews-origin}"
-REMOTE_COMPOSE_FILE="${REMOTE_COMPOSE_FILE:-ops/docker-compose.origin.yml}"
-ORIGIN_HOST_PORT="${ORIGIN_HOST_PORT:-8787}"
-REMOTE_HEALTHCHECK_URL="${REMOTE_HEALTHCHECK_URL:-http://127.0.0.1:${ORIGIN_HOST_PORT}/health}"
+REMOTE_ENV_FILE="${REMOTE_ENV_FILE:-${REMOTE_SHARED_DIR}/api.env}"
+REMOTE_COMPOSE_PROJECT="${REMOTE_COMPOSE_PROJECT:-relaynews-api}"
+REMOTE_COMPOSE_FILE="${REMOTE_COMPOSE_FILE:-ops/docker-compose.api.yml}"
+API_HOST_PORT="${API_HOST_PORT:-8787}"
+REMOTE_HEALTHCHECK_URL="${REMOTE_HEALTHCHECK_URL:-http://127.0.0.1:${API_HOST_PORT}/health}"
 SSH_OPTS=("-o" "ServerAliveInterval=30" "-o" "StrictHostKeyChecking=accept-new")
 
 usage() {
@@ -23,17 +23,17 @@ Commands:
   help                     Show this help message
   ssh                      Open an interactive SSH session
   remote <cmd...>          Run an arbitrary command on the remote host
-  bootstrap                Create remote directories for Docker-based origin deploys
-  deploy                   Sync repo, build image, migrate DB, and restart origin
+  bootstrap                Create remote directories for Docker-based API deploys
+  deploy                   Sync repo, build image, migrate DB, and restart the API stack
   releases                 List remote release directories
-  rollback [release-id]    Point current to a prior release and restart origin
-  status                   Show current release and docker compose status
-  health                   Check the remote origin health endpoint
-  logs [lines]             Show recent docker compose logs (default: 100)
-  start                    Start the origin container
-  stop                     Stop the origin container
-  restart                  Restart the origin container
-  env-push [local-file]    Upload a local env file to the remote origin env path
+  rollback [release-id]    Point current to a prior release and restart the API stack
+  status                   Show current release and Docker Compose status
+  health                   Check the remote API health endpoint
+  logs [lines]             Show recent Docker Compose logs (default: 100)
+  start                    Start the API stack
+  stop                     Stop the API stack
+  restart                  Restart the API stack
+  env-push [local-file]    Upload a local env file to the remote API env path
   path                     Print the derived remote paths
 
 Overrides:
@@ -41,7 +41,7 @@ Overrides:
   REMOTE_BASE_DIR          Default: ${REMOTE_BASE_DIR}
   REMOTE_ENV_FILE          Default: ${REMOTE_ENV_FILE}
   REMOTE_COMPOSE_PROJECT   Default: ${REMOTE_COMPOSE_PROJECT}
-  ORIGIN_HOST_PORT         Default: ${ORIGIN_HOST_PORT}
+  API_HOST_PORT            Default: ${API_HOST_PORT}
 USAGE
 }
 
@@ -66,15 +66,30 @@ EOF_REMOTE
 
 compose_env_exports() {
   cat <<EOF_EXPORTS
-export ORIGIN_ENV_FILE='${REMOTE_ENV_FILE}'
+export API_ENV_FILE='${REMOTE_ENV_FILE}'
 export COMPOSE_PROJECT_NAME='${REMOTE_COMPOSE_PROJECT}'
-export ORIGIN_HOST_PORT='${ORIGIN_HOST_PORT}'
-if [ -f "\$ORIGIN_ENV_FILE" ]; then
+export API_HOST_PORT='${API_HOST_PORT}'
+if [ -f "\$API_ENV_FILE" ]; then
   set -a
-  . "\$ORIGIN_ENV_FILE"
+  . "\$API_ENV_FILE"
   set +a
 fi
 EOF_EXPORTS
+}
+
+wait_for_postgres_script() {
+  cat <<EOF_WAIT
+for _ in \$(seq 1 30); do
+  if docker compose -f '${REMOTE_COMPOSE_FILE}' exec -T postgres \
+    pg_isready -U "\${POSTGRES_USER:-relaynews}" -d "\${POSTGRES_DB:-relaynews}" >/dev/null 2>&1; then
+    break
+  fi
+  sleep 2
+done
+
+docker compose -f '${REMOTE_COMPOSE_FILE}' exec -T postgres \
+  pg_isready -U "\${POSTGRES_USER:-relaynews}" -d "\${POSTGRES_DB:-relaynews}" >/dev/null 2>&1
+EOF_WAIT
 }
 
 sync_release() {
@@ -111,7 +126,10 @@ if [ ! -f '${REMOTE_ENV_FILE}' ]; then
 NODE_ENV=production
 HOST=0.0.0.0
 PORT=8787
-DATABASE_URL=postgres://postgres:postgres@postgres:5432/relaynews
+POSTGRES_DB=relaynews
+POSTGRES_USER=relaynews
+POSTGRES_PASSWORD=change-me
+DATABASE_URL=postgres://relaynews:change-me@postgres:5432/relaynews
 ENABLE_SCHEDULER=true
 PUBLIC_PROBE_ALLOW_PRIVATE_HOSTS=false
 CLOUDFLARE_TUNNEL_TOKEN=
@@ -145,10 +163,12 @@ if [ ! -f '${REMOTE_ENV_FILE}' ]; then
 fi
 ln -sfn '${release_dir}' '${REMOTE_CURRENT_LINK}'
 cd '${REMOTE_CURRENT_LINK}'
-docker compose -f '${REMOTE_COMPOSE_FILE}' build origin
-docker compose -f '${REMOTE_COMPOSE_FILE}' run --rm origin tsx apps/origin/src/db/migrate.ts
-docker compose -f '${REMOTE_COMPOSE_FILE}' rm -sf origin cloudflared >/dev/null 2>&1 || true
-docker compose -f '${REMOTE_COMPOSE_FILE}' up -d origin cloudflared
+docker compose -f '${REMOTE_COMPOSE_FILE}' up -d postgres
+$(wait_for_postgres_script)
+docker compose -f '${REMOTE_COMPOSE_FILE}' build api
+docker compose -f '${REMOTE_COMPOSE_FILE}' run --rm api tsx apps/api/src/db/migrate.ts
+docker compose -f '${REMOTE_COMPOSE_FILE}' rm -sf api cloudflared >/dev/null 2>&1 || true
+docker compose -f '${REMOTE_COMPOSE_FILE}' up -d api cloudflared
 sleep 3
 curl --fail --silent --show-error '${REMOTE_HEALTHCHECK_URL}' >/dev/null
 docker image prune -f >/dev/null 2>&1 || true
@@ -199,9 +219,11 @@ fi
 
 ln -sfn \"\$target_dir\" '${REMOTE_CURRENT_LINK}'
 cd '${REMOTE_CURRENT_LINK}'
-docker compose -f '${REMOTE_COMPOSE_FILE}' build origin
-docker compose -f '${REMOTE_COMPOSE_FILE}' rm -sf origin cloudflared >/dev/null 2>&1 || true
-docker compose -f '${REMOTE_COMPOSE_FILE}' up -d origin cloudflared
+docker compose -f '${REMOTE_COMPOSE_FILE}' up -d postgres
+$(wait_for_postgres_script)
+docker compose -f '${REMOTE_COMPOSE_FILE}' build api
+docker compose -f '${REMOTE_COMPOSE_FILE}' rm -sf api cloudflared >/dev/null 2>&1 || true
+docker compose -f '${REMOTE_COMPOSE_FILE}' up -d api cloudflared
 sleep 3
 curl --fail --silent --show-error '${REMOTE_HEALTHCHECK_URL}' >/dev/null
 echo \"Rolled back to \$target_release\"
@@ -236,12 +258,12 @@ logs_remote() {
   run_remote_script "
 $(compose_env_exports)
 cd '${REMOTE_CURRENT_LINK}'
-docker compose -f '${REMOTE_COMPOSE_FILE}' logs --tail '${lines}' origin cloudflared
+docker compose -f '${REMOTE_COMPOSE_FILE}' logs --tail '${lines}' postgres api cloudflared
 "
 }
 
 push_env() {
-  local local_file="${1:-${ROOT_DIR}/ops/origin.env.example}"
+  local local_file="${1:-${ROOT_DIR}/ops/api.env.example}"
   if [ ! -f "$local_file" ]; then
     echo "Local env file not found: $local_file" >&2
     exit 1
@@ -259,13 +281,13 @@ $(compose_env_exports)
 cd '${REMOTE_CURRENT_LINK}'
 case '${action}' in
   start)
-    docker compose -f '${REMOTE_COMPOSE_FILE}' up -d origin cloudflared
+    docker compose -f '${REMOTE_COMPOSE_FILE}' up -d postgres api cloudflared
     ;;
   stop)
-    docker compose -f '${REMOTE_COMPOSE_FILE}' stop origin cloudflared
+    docker compose -f '${REMOTE_COMPOSE_FILE}' stop cloudflared api postgres
     ;;
   restart)
-    docker compose -f '${REMOTE_COMPOSE_FILE}' restart origin cloudflared
+    docker compose -f '${REMOTE_COMPOSE_FILE}' restart postgres api cloudflared
     ;;
 esac
 "
@@ -314,7 +336,7 @@ case "${1:-help}" in
     ;;
   env-push)
     shift || true
-    push_env "${1:-${ROOT_DIR}/ops/origin.env.example}"
+    push_env "${1:-${ROOT_DIR}/ops/api.env.example}"
     ;;
   path)
     cat <<EOF_PATH
@@ -327,7 +349,7 @@ REMOTE_ENV_FILE=${REMOTE_ENV_FILE}
 REMOTE_COMPOSE_PROJECT=${REMOTE_COMPOSE_PROJECT}
 REMOTE_COMPOSE_FILE=${REMOTE_COMPOSE_FILE}
 REMOTE_HEALTHCHECK_URL=${REMOTE_HEALTHCHECK_URL}
-ORIGIN_HOST_PORT=${ORIGIN_HOST_PORT}
+API_HOST_PORT=${API_HOST_PORT}
 EOF_PATH
     ;;
   *)

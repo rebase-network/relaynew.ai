@@ -1,11 +1,11 @@
 # Database
 
-This directory holds PostgreSQL schema migrations for the origin API.
+This directory holds PostgreSQL schema migrations for the backend API service.
 
 ## Apply the initial schema
 
 ```bash
-psql "$DATABASE_URL" -f apps/origin/db/migrations/0001_initial.sql
+psql "$DATABASE_URL" -f apps/api/db/migrations/0001_initial.sql
 ```
 
 ## What the initial migration includes

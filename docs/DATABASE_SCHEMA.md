@@ -42,7 +42,7 @@ For MVP, the intended catalog lifecycle values are:
 
 ## Initial Migration Notes
 
-The first executable migration lives at `apps/origin/db/migrations/0001_initial.sql`.
+The first executable migration lives at `apps/api/db/migrations/0001_initial.sql`.
 
 Concrete choices in that migration:
 - UUID primary keys use `gen_random_uuid()`, so the database enables `pgcrypto`
@@ -431,8 +431,8 @@ Recommended scheduled jobs:
 - daily: delete stale `probe_error_samples` according to policy
 
 MVP execution assumption:
-- the origin scheduler is single-instance
-- if the origin service is later scaled horizontally, scheduling and rebuild jobs
+- the API scheduler is single-instance
+- if the API service is later scaled horizontally, scheduling and rebuild jobs
   must use PostgreSQL-backed coordination such as advisory locks or job leases
 
 ## Public Read Mapping

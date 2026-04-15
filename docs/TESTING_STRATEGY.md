@@ -48,7 +48,7 @@ The browser suite should cover the critical operational flows:
 
 Local development should use:
 - local `web` app
-- local `origin` API
+- local `api` service
 - local `PostgreSQL`
 - deterministic seeded data for relays, models, incidents, prices, and snapshots
 
@@ -94,7 +94,7 @@ These checks are too security-sensitive to rely only on browser coverage.
 ### Shared Contract Smoke Tests
 
 - validate representative public payloads with the shared `Zod` schemas
-- verify that core request parsing rules do not drift between `web` and `origin`
+- verify that core request parsing rules do not drift between `web` and `api`
 
 These tests help catch contract regressions earlier than full browser failures.
 
@@ -111,8 +111,8 @@ These tests help catch contract regressions earlier than full browser failures.
 
 - the browser acceptance suite lives in `e2e/`
 - Playwright is configured from `playwright.config.ts`
-- `pnpm test:e2e` starts an isolated PostgreSQL test container, seeds the origin
-  database, boots `origin`, `web`, and `admin`, and then runs the browser suite
+- `pnpm test:e2e` starts an isolated PostgreSQL test container, seeds the API
+  database, boots `api`, `web`, and `admin`, and then runs the browser suite
 
 ## Non-Goals For The MVP
 

@@ -18,7 +18,7 @@ The site is planned to provide:
 - Frontend runtime: `Cloudflare Workers Static Assets`
 - API edge runtime: `Cloudflare Worker`
 - Backend: `Node.js + Fastify + TypeScript`
-- Origin deployment runtime: `Docker Compose` on the remote server
+- API deployment runtime: `Docker Compose` on the remote server
 - Database: `PostgreSQL`
 - Query layer: `Kysely`
 - Validation: `Zod`
@@ -55,12 +55,12 @@ apps/
   admin/
   api-edge/
   web/
-  origin/
+  api/
     db/
       migrations/
 e2e/
 ops/
-  docker-compose.origin.yml
+  docker-compose.api.yml
 packages/
   shared/
 scripts/
@@ -79,8 +79,8 @@ scripts/
 - Route map and rendering strategy: `docs/ROUTES.md`
 - Issue tracker for unresolved design gaps: `docs/OPEN_DESIGN_ISSUES.md`
 - Agent collaboration guide: `AGENTS.md`
-- Database migration notes: `apps/origin/db/README.md`
-- Origin deployment ops guide: `ops/README.md`
+- Database migration notes: `apps/api/db/README.md`
+- API deployment ops guide: `ops/README.md`
 
 ## Working Agreements
 
@@ -101,12 +101,12 @@ Use `docs/DEVELOPMENT_PLAN.md` as the canonical phased build order.
 - bootstrap a local env file: `cp .env.example .env`
 - start the public app: `pnpm dev:web`
 - start the admin app: `pnpm dev:admin`
-- start the origin API: `pnpm dev:origin`
+- start the backend API: `pnpm dev:api`
 - run type checks: `pnpm typecheck`
 - run Playwright acceptance tests: `pnpm test:e2e`
-- inspect remote origin deployment paths: `./ops/manage.sh path`
-- bootstrap the remote origin host: `./ops/manage.sh bootstrap`
-- deploy the remote origin service: `./ops/manage.sh deploy`
+- inspect remote API deployment paths: `./ops/manage.sh path`
+- bootstrap the remote API host: `./ops/manage.sh bootstrap`
+- deploy the remote API service: `./ops/manage.sh deploy`
 - inspect or update the dedicated Cloudflare Tunnel rule: `./ops/manage-tunnel.sh status`
 - preview Cloudflare frontend deploys: `./ops/manage-edge.sh preview all`
 - deploy Cloudflare frontend apps: `./ops/manage-edge.sh deploy all`

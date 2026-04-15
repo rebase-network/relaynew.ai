@@ -18,7 +18,7 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: "bash scripts/e2e-start-origin.sh",
+      command: "bash scripts/e2e-start-api.sh",
       url: "http://127.0.0.1:8787/health",
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,

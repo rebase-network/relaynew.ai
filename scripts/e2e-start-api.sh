@@ -22,8 +22,8 @@ for _ in $(seq 1 30); do
   sleep 1
 done
 
-DATABASE_URL="$DATABASE_URL" pnpm --filter @relaynews/origin run db:migrate >/dev/null
-DATABASE_URL="$DATABASE_URL" pnpm --filter @relaynews/origin run db:seed >/dev/null
-env DATABASE_URL="$DATABASE_URL" pnpm --filter @relaynews/origin run dev &
+DATABASE_URL="$DATABASE_URL" pnpm --filter @relaynews/api run db:migrate >/dev/null
+DATABASE_URL="$DATABASE_URL" pnpm --filter @relaynews/api run db:seed >/dev/null
+env DATABASE_URL="$DATABASE_URL" pnpm --filter @relaynews/api run dev &
 child_pid=$!
 wait "$child_pid"

@@ -4,11 +4,11 @@ This document describes the current deployment shape for the MVP.
 
 ## Runtime Split
 
-- `apps/origin` runs on the remote server through Docker Compose
+- `apps/api` runs on the remote server through Docker Compose
 - `apps/web` deploys to Cloudflare Workers Static Assets at `relaynew.ai`
 - `apps/api-edge` deploys a Cloudflare Worker custom domain at `api.relaynew.ai`
 - `apps/admin` deploys to Cloudflare Workers Static Assets at `admin.relaynew.ai`
-- a dedicated Cloudflare Tunnel in the product account carries origin traffic without sharing the legacy tunnel
+- a dedicated Cloudflare Tunnel in the product account carries API traffic without sharing the legacy tunnel
 
 ## Required Tooling
 
@@ -17,32 +17,30 @@ This document describes the current deployment shape for the MVP.
 - `pnpm`
 - `Docker` for local validation and E2E
 - `wrangler` for Cloudflare deploys
-- SSH access to `rebase@rebase.network` for origin operations
+- SSH access to `rebase@rebase.network` for API operations
 - Cloudflare account target: `5abb6d6f38eb7d3dabf8a5adf095c5f7`
 
-### Remote Origin Host
+### Remote API Host
 
 - Docker Engine
 - Docker Compose
-- PostgreSQL network access
 - `curl`
 - `rsync`
 
 ## Environment Inputs
 
-### Origin
+### API Service
 
-The origin service reads its runtime values from the remote file:
+The backend API reads its runtime values from the remote file:
 
-- `/home/rebase/apps/relaynews-origin/shared/origin.env`
+- `/home/rebase/apps/relaynews-api/shared/api.env`
 
-Start from `ops/origin.env.example` and fill in the production database URL and any
-other runtime values before the first deploy.
+Start from `ops/api.env.example` and fill in the production database URL,
+PostgreSQL credentials, and tunnel token before the first deploy.
 
-The current origin deployment joins the shared `rebase-production_default` Docker
-network so it can reach the existing PostgreSQL container at `postgres:5432`.
-The product-owned `cloudflared` sidecar runs in the same Compose project and
-connects only to the dedicated product tunnel.
+The remote Docker Compose stack now includes a dedicated `postgres` container and a
+project-local Docker volume. That keeps this product isolated from any pre-existing
+PostgreSQL service on the same machine while preserving data across restarts.
 
 ### Frontend Builds
 
@@ -59,7 +57,7 @@ These values are injected into the Vite builds as:
 - `VITE_PUBLIC_SITE_URL`
 - `VITE_ADMIN_SITE_URL`
 
-## Origin Deploy Flow
+## API Service Deploy Flow
 
 1. Bootstrap the remote host once:
 
@@ -70,7 +68,7 @@ These values are injected into the Vite builds as:
 2. Upload the production env file:
 
    ```bash
-   ./ops/manage.sh env-push /path/to/origin.env
+   ./ops/manage.sh env-push /path/to/api.env
    ```
 
 3. Deploy the latest release:
@@ -102,7 +100,7 @@ Before the first production deploy, make sure:
 - the `relaynew.ai` zone already exists in Cloudflare account `5abb6d6f38eb7d3dabf8a5adf095c5f7`
 - `relaynew.ai`, `api.relaynew.ai`, and `admin.relaynew.ai` are intended to run behind Cloudflare proxy
 - the dedicated product tunnel has been created in the same Cloudflare account
-- the tunnel token has been stored in the remote origin env file as `CLOUDFLARE_TUNNEL_TOKEN`
+- the tunnel token has been stored in the remote API env file as `CLOUDFLARE_TUNNEL_TOKEN`
 - the dedicated tunnel ingress rule is present:
 
   ```bash
@@ -131,7 +129,7 @@ Before the first production deploy, make sure:
    ./ops/manage-edge.sh deploy admin
    ```
 
-Or deploy both together:
+Or deploy all Cloudflare apps together:
 
 ```bash
 ./ops/manage-edge.sh deploy all
@@ -143,8 +141,8 @@ Or deploy both together:
   Workers Static Assets with SPA fallback routing.
 - The API hostname is implemented as a small Cloudflare Worker proxy so the site,
   custom domain, and tunnel stay in the same account without modifying the legacy tunnel.
-- The API Worker reaches the origin through a VPC network binding to the dedicated tunnel,
-  so the tunnel itself does not need a public product hostname or shared DNS changes.
+- The API Worker reaches the backend service through a VPC network binding to the
+  dedicated tunnel, so the tunnel itself does not need a public product hostname or shared DNS changes.
 - Public and admin builds intentionally use explicit absolute URLs so cross-domain
   links stay correct after deployment.
-- The origin service remains the only write-capable application runtime in the MVP.
+- The API service remains the only write-capable application runtime in the MVP.

@@ -67,7 +67,7 @@ importers:
         specifier: 6.0.2
         version: 6.0.2
 
-  apps/origin:
+  apps/api:
     dependencies:
       '@fastify/cors':
         specifier: 11.2.0

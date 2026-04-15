@@ -3,12 +3,12 @@ interface VpcNetworkBinding {
 }
 
 interface Env {
-  ORIGIN_TUNNEL: VpcNetworkBinding;
+  API_TUNNEL: VpcNetworkBinding;
 }
 
 function buildUpstreamUrl(request: Request) {
   const incomingUrl = new URL(request.url);
-  return new URL(`${incomingUrl.pathname}${incomingUrl.search}`, "http://origin:8787");
+  return new URL(`${incomingUrl.pathname}${incomingUrl.search}`, "http://api:8787");
 }
 
 export default {
@@ -27,6 +27,6 @@ export default {
       redirect: "manual",
     });
 
-    return env.ORIGIN_TUNNEL.fetch(upstreamRequest);
+    return env.API_TUNNEL.fetch(upstreamRequest);
   },
 };

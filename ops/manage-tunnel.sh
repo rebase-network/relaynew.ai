@@ -5,7 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 CF_TUNNEL_ACCOUNT_ID="${CF_TUNNEL_ACCOUNT_ID:-5abb6d6f38eb7d3dabf8a5adf095c5f7}"
 CF_TUNNEL_ID="${CF_TUNNEL_ID:-0c4e23ef-b334-44cd-a77b-4bf4d8015013}"
-CF_TUNNEL_SERVICE="${CF_TUNNEL_SERVICE:-http://origin:8787}"
+CF_TUNNEL_SERVICE="${CF_TUNNEL_SERVICE:-http://api:8787}"
 
 usage() {
   cat <<USAGE
@@ -38,17 +38,13 @@ get_api_token() {
 }
 
 api_url() {
-  printf "https://api.cloudflare.com/client/v4/accounts/%s/cfd_tunnel/%s/configurations" \
-    "$CF_TUNNEL_ACCOUNT_ID" \
-    "$CF_TUNNEL_ID"
+  printf "https://api.cloudflare.com/client/v4/accounts/%s/cfd_tunnel/%s/configurations"     "$CF_TUNNEL_ACCOUNT_ID"     "$CF_TUNNEL_ID"
 }
 
 fetch_config() {
   local token
   token="$(get_api_token)"
-  curl -fsS \
-    -H "Authorization: Bearer ${token}" \
-    "$(api_url)"
+  curl -fsS     -H "Authorization: Bearer ${token}"     "$(api_url)"
 }
 
 show_status() {
@@ -67,7 +63,7 @@ apply_config() {
   payload="$(mktemp)"
   trap 'rm -f "${payload:-}"' EXIT
 
-  python3 - "$payload" <<'PY'
+  python3 - "$payload" <<'PY_TUNNEL'
 import json
 import os
 import sys
@@ -88,15 +84,9 @@ payload = {
 
 with open(sys.argv[1], "w", encoding="utf-8") as handle:
     json.dump(payload, handle)
-PY
+PY_TUNNEL
 
-  curl -fsS \
-    -X PUT \
-    -H "Authorization: Bearer ${token}" \
-    -H "Content-Type: application/json" \
-    "$(api_url)" \
-    --data "@${payload}" \
-    >/dev/null
+  curl -fsS     -X PUT     -H "Authorization: Bearer ${token}"     -H "Content-Type: application/json"     "$(api_url)"     --data "@${payload}"     >/dev/null
 
   echo "Updated dedicated tunnel ingress for ${CF_TUNNEL_SERVICE}"
   show_status
