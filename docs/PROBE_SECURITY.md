@@ -1,11 +1,20 @@
 # Probe Security
 
-This document defines the security model for the public self-check probe flow.
+This document defines the security model and diagnostic contract for the public
+self-check probe flow.
 
 ## Scope
 
-The public probe flow lets a user supply a relay URL, API key, and model so the site can
-run a tightly controlled connectivity and protocol check.
+The public probe flow lets a user supply a relay URL, API key, and target model so the
+site can run a tightly controlled connectivity and protocol check.
+
+The default product experience should stay simple:
+- `Base URL`
+- `API Key`
+- `Target Model`
+
+The UI may also expose an advanced `Compatibility Mode` selector, but it should default
+to `auto` and remain optional.
 
 Because this feature causes server-side outbound requests to user-supplied destinations,
 it must be treated as a high-risk surface.
@@ -38,7 +47,8 @@ Suggested request shape:
 {
   "baseUrl": "https://relay.example.ai/v1",
   "apiKey": "sk-...",
-  "model": "openai-gpt-4.1"
+  "model": "openai-gpt-4.1",
+  "compatibilityMode": "auto"
 }
 ```
 
@@ -48,19 +58,50 @@ Rules:
 - do not allow arbitrary request methods, arbitrary paths, arbitrary headers, or
   arbitrary payload forwarding from the client
 - use a fixed probe plan controlled by the server
+- prefer a dropdown-backed compatibility enum rather than arbitrary free-text input
+
+Suggested MVP compatibility values:
+
+```txt
+auto
+openai-responses
+openai-chat-completions
+anthropic-messages
+```
+
+Behavior rules:
+- `auto` means the server chooses an ordered set of candidate adapters from the target
+  model family
+- an explicit compatibility mode means the server should only use the corresponding
+  bounded adapter path
+- the client must not be able to invent a new protocol label that changes server behavior
 
 ## Allowed Probe Behavior
 
-The public endpoint should run a fixed sequence only:
-- optional lightweight model discovery check
-- one non-stream chat completion check
-- one stream check only if explicitly enabled later
+The public endpoint should run a fixed sequence only.
+
+In `auto` mode:
+- infer a candidate model family from the submitted target model
+- select a small ordered list of server-defined protocol adapters
+- issue only the minimum bounded requests needed to identify a working compatibility mode
+- stop once a valid adapter match is confirmed
+
+In explicit compatibility mode:
+- run only the selected adapter
+- do not fan out to unrelated protocols
 
 The public endpoint must not:
 - fetch arbitrary user-selected URLs beyond the normalized relay base
 - proxy arbitrary request headers
 - replay arbitrary request bodies
 - follow arbitrary redirect chains without validation
+
+Adapter rules:
+- adapters should be implemented as server-owned probe profiles, not as client-defined
+  request templates
+- each adapter should define its own allowed method, path variants, body shape, and
+  success criteria
+- adapter payloads should stay minimal and deterministic so the probe remains bounded
 
 ## Network Controls
 
@@ -133,8 +174,13 @@ Suggested response shape:
   },
   "protocol": {
     "ok": true,
-    "healthStatus": "healthy"
+    "healthStatus": "healthy",
+    "httpStatus": 200
   },
+  "compatibilityMode": "openai-chat-completions",
+  "detectionMode": "auto",
+  "usedUrl": "https://relay.example.ai/v1/chat/completions",
+  "attemptedModes": ["openai-responses", "openai-chat-completions"],
   "measuredAt": "2026-04-15T10:00:00Z"
 }
 ```
@@ -143,6 +189,23 @@ Rules:
 - do not echo the API key back to the client
 - do not include raw upstream authorization headers in responses
 - keep upstream error bodies truncated and sanitized
+- keep `compatibilityMode`, `detectionMode`, and `usedUrl` explainable so users can
+  understand why a probe passed or failed
+- do not return arbitrary upstream payload fragments just to aid debugging
+
+## Detection Strategy
+
+The public probe should use model-driven protocol inference rather than making users
+manually classify every relay.
+
+Suggested flow:
+- treat `model` as the primary hint
+- map the model to a small candidate family such as OpenAI-compatible or Anthropic-style
+- try only the adapters that belong to that family, in a deterministic order
+- expose the chosen compatibility mode in the response
+
+This keeps the form simple for most users while preserving a safe manual override path
+for advanced cases.
 
 ## Storage Policy
 
@@ -152,6 +215,9 @@ For the public endpoint:
 - failure reason categories may be stored without secrets
 - if product requirements later call for saving a probe result, it must be explicit,
   opt-in, and pass secret redaction before storage
+- if the platform later stores detected compatibility metadata for catalog relays, it
+  should store only the derived mode, confidence, and selected endpoint, not the
+  user-supplied secret
 
 ## Operational Guidance
 
@@ -159,6 +225,7 @@ For the public endpoint:
 - use separate route handlers, rate limits, and logging rules from platform-run probes
 - add targeted tests for URL validation, DNS/IP classification, redirect handling,
   and log redaction
+- add adapter-level tests so automatic compatibility detection does not regress silently
 - review this document before exposing the route publicly
 
 ## Relationship To Other Docs

@@ -88,6 +88,16 @@ Notes:
 - public paid placement rendering should read from `sponsors`
 - `status` should represent listing lifecycle only, not measured runtime health
 
+Planned follow-up metadata for compatibility-aware probes:
+- `compatibility_mode` text null
+- `compatibility_mode_source` text null  # auto_detected, manual_override, admin_set
+- `compatibility_mode_confidence` numeric(5,2) null
+- `compatibility_detected_at` timestamptz null
+- `compatibility_used_url` text null
+
+These fields are not present in `0001_initial.sql` yet. Add them in a follow-up
+migration when relay protocol detection and admin overrides are implemented.
+
 ### models
 Stores canonical model definitions shown in the site.
 
@@ -230,9 +240,36 @@ Indexes:
 - partial index on (`probed_at` desc) where `success = false`
 
 Notes:
+- platform-run probes should ideally record the resolved compatibility mode that was used
+  for execution, either on this row or in a companion detection history table
+- public self-check probe results should remain separate from platform monitoring rows
+  unless secret-free, opt-in persistence is explicitly required
 - do not store full payloads for every successful request
 - use `sample_key` only for abnormal or sampled cases
 - if volume grows later, partition by day or convert to a Timescale hypertable
+
+### relay_protocol_detections
+Planned follow-up table for compatibility detection history.
+
+This table is not in `0001_initial.sql` yet, but it is the recommended place to keep
+explainable detection history without overloading `relays`.
+
+Suggested columns:
+- `id` uuid primary key
+- `relay_id` uuid not null references `relays(id)`
+- `model_id` uuid null references `models(id)`
+- `compatibility_mode` text not null
+- `detection_mode` text not null  # auto or manual
+- `confidence` numeric(5,2) null
+- `used_url` text null
+- `source` text not null  # public_probe, platform_probe, admin
+- `result_status` text not null  # matched, failed, superseded
+- `raw_result_json` jsonb null
+- `detected_at` timestamptz not null default now()
+
+Indexes:
+- index on (`relay_id`, `detected_at` desc)
+- index on (`compatibility_mode`, `detected_at` desc)
 
 ### probe_error_samples
 Stores detailed evidence only for abnormal or sampled cases.

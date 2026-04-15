@@ -74,6 +74,10 @@ Work items:
   - relay pricing-history query
   - relay incidents query
   - public probe request shape
+- define shared probe enums and response fields
+  - `compatibilityMode`
+  - `detectionMode`
+  - public probe diagnostic response fields such as `usedUrl` and `attemptedModes`
 - export reusable payload fragments such as relay summary, score summary, and incident summary
 - add shared contract smoke tests for representative request and response payloads
 
@@ -168,6 +172,8 @@ Goal:
 Work items:
 - implement scheduler using `node-cron`
 - implement platform probe runner for fixed server-controlled checks
+- persist and reuse relay compatibility metadata so known relays do not require
+  full auto-detection on every scheduled probe
 - write raw probe results to PostgreSQL
 - build aggregation jobs for:
   - `relay_status_5m`
@@ -193,10 +199,13 @@ Goal:
 Work items:
 - implement `POST /public/probe/check`
 - enforce URL validation and outbound restrictions from `docs/PROBE_SECURITY.md`
+- implement a server-owned probe adapter registry with model-family-based auto detection
+- support an optional explicit `compatibilityMode` override for advanced users
 - add secret redaction and bounded logging rules
 - add Cloudflare-side rate limiting and optional Turnstile gating
 - build `/probe` UI against the dedicated public-safe endpoint
 - add Playwright coverage for the main public probe page flows
+- add adapter-level tests for compatibility detection and failure classification
 - add probe security tests for:
   - URL normalization and validation
   - DNS and IP blocking of disallowed ranges
@@ -208,6 +217,8 @@ Exit criteria:
 - public probe endpoint is isolated from internal probe paths
 - no user-supplied API key is persisted by default
 - endpoint behavior respects the documented SSRF and abuse controls
+- the probe UI defaults to model-driven auto detection and exposes a safe advanced
+  compatibility override
 - browser coverage validates the public probe UX for success and failure states
 - probe security tests pass for the controls required by `docs/PROBE_SECURITY.md`
 
@@ -222,6 +233,8 @@ Work items:
   - submission review
   - sponsor placement management
   - price record management
+- allow operators to inspect and, when necessary, override a relay's stored
+  compatibility mode without changing natural ranking logic
 - implement submit flow for relay intake
 - ensure sponsor placement is rendered separately from natural ranking
 - treat `sponsors` as the public source of truth for paid placement windows

@@ -13,7 +13,9 @@ This version is intentionally narrow. It only locks the public endpoints needed 
 Internal and admin APIs are intentionally not frozen here. They can evolve during backend
 implementation as long as they stay consistent with `docs/ARCHITECTURE.md`.
 The public probe endpoint is documented separately in `docs/PROBE_SECURITY.md`
-because it has a different threat model and is not part of this read-only content contract.
+because it has a different threat model, accepts a write-style diagnostic request, and
+uses a compatibility-detection contract that is separate from these read-only content
+endpoints.
 
 ## Contract Rules
 

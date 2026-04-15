@@ -25,7 +25,7 @@ for each route, and the primary data source that should back it.
 
 | Route | Purpose | Render | Primary Data Source |
 |---|---|---|---|
-| `/probe` | User self-check probe flow | CSR | `POST /public/probe/check` |
+| `/probe` | User self-check probe flow with model-first auto detection and optional advanced override | CSR | `POST /public/probe/check` |
 
 ## Admin Routes (`admin.relaynew.ai`)
 
@@ -88,6 +88,22 @@ Hydration or secondary loads:
 - pricing history
 - incident timeline
 
+## Probe Page Modules
+
+The probe page is expected to include:
+- a primary form with `Base URL`, `API key`, and `Target model`
+- an advanced section with an optional `Compatibility Mode` selector
+- a diagnostic result panel that shows host, connectivity, protocol status, and latency
+- explanatory output such as detected compatibility mode, selected endpoint, and next
+  steps when automatic detection fails
+
+### Probe Interaction Rules
+
+- the default path should not require users to classify the relay manually
+- the advanced compatibility selector should use a fixed enum, not arbitrary free text
+- if a compatibility override is selected, the server should probe only that mode
+- if the probe runs in auto mode, the response should make the detected mode explainable
+
 ## Data Contract Notes
 
 - `/public/home-summary` should return homepage modules that are already aggregated
@@ -98,4 +114,6 @@ Hydration or secondary loads:
 - `/public/relay/:slug/pricing-history` should return price change points or chart-ready buckets
 - `/public/relay/:slug/incidents` should return timeline-ready incident records
 - `/probe` must only call the public-safe probe endpoint described in `docs/PROBE_SECURITY.md`
+- `/public/probe/check` should accept an optional `compatibilityMode` override while
+  still defaulting to model-driven automatic detection
 - admin routes on `admin.relaynew.ai` should never rely on CDN-cached responses

@@ -19,6 +19,8 @@ The product should:
 - Public ranking based on availability, latency, protocol consistency, value, and trend stability
 - Public pages should be indexable and shareable
 - Probe and admin flows can favor interaction over SEO
+- The public probe should stay model-first by default and use compatibility auto-detection
+  with an optional advanced override
 - Relay detail pages use a small first-paint contract and can progressively load
   secondary modules after hydration
 
@@ -113,6 +115,7 @@ The API service runs on the remote server and is the core application backend.
 It is responsible for:
 - public read APIs for the website
 - a dedicated public-safe probe endpoint
+- a compatibility-detection registry for public and platform probe flows
 - internal write APIs for probes and background jobs
 - admin APIs
 - probe scheduling and execution
@@ -151,6 +154,22 @@ meaning in application code:
 Shared types and API payloads should use explicit names such as `catalogStatus`,
 `supportStatus`, and `healthStatus` when the distinction matters.
 
+## Probe Compatibility Taxonomy
+
+Probe and relay compatibility logic should use explicit names rather than a vague
+`apiType` string.
+
+Recommended terms:
+- `modelFamily`: the broad family inferred from the submitted target model
+- `compatibilityMode`: the concrete protocol adapter used for a relay probe
+- `detectionMode`: whether the probe used automatic detection or an explicit override
+
+The product should default to `detectionMode=auto` for the public probe UI, while still
+allowing an advanced explicit compatibility override when needed.
+
+For the MVP, `compatibilityMode` should stay constrained to a small server-owned enum
+instead of arbitrary free text.
+
 ## Rendering Strategy
 
 The MVP currently uses a client-rendered SPA deployed on Cloudflare Workers Static
@@ -161,6 +180,8 @@ Assets.
   from the backend API
 - admin routes render through a separate admin SPA shell on `admin.relaynew.ai`
 - probe flows and chart modules stay client-rendered
+- the probe page should default to URL + key + model input, with compatibility override
+  hidden behind advanced controls
 
 ### Forward Compatibility
 - keep public route data contracts explicit so edge rendering or pre-render can be
@@ -202,13 +223,17 @@ Cloudflare-CDN-Cache-Control: public, max-age=60, stale-while-revalidate=300, st
 ```txt
 node-cron scheduler
   -> enqueue logical probe run
+  -> load relay compatibility metadata when available
   -> probe runner executes checks
+     - use stored compatibility mode when known
+     - run compatibility detection when unknown or under review
      - connectivity
      - model availability
      - non-stream completion
      - stream completion
      - latency / TTFB / outcome / usage
   -> write raw probe result rows
+  -> persist compatibility metadata updates for catalog relays when confidence is high
   -> aggregation jobs persist 5-minute health and latency windows
   -> score jobs compute and persist hourly relay scores
   -> public history APIs derive 24h / 7d / 30d responses from persisted rollups
@@ -239,6 +264,8 @@ MVP assumption:
 - admin endpoints should be protected with Cloudflare Access or equivalent auth
 - the public probe flow must use a dedicated public-safe endpoint rather than any
   generic internal probe surface
+- the public probe flow should rely on server-owned compatibility adapters instead of
+  arbitrary client-specified request templates
 - the public probe flow must apply DNS, IP, redirect, timeout, concurrency, rate,
   and payload-size controls before any outbound request is made
 - probe keys used by the platform must never be exposed to the frontend

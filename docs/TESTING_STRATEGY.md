@@ -30,9 +30,12 @@ The main browser suite should cover:
 
 The browser suite should cover:
 - valid probe submission against an allowed test target
+- automatic compatibility detection for a known relay target
+- explicit compatibility override for a known relay target
 - blocked or invalid target handling
 - timeout, loading, and degraded response states
 - user-facing redaction behavior so secrets are not echoed back into page content
+- failure rendering that does not get mistaken for a successful probe
 
 ### Admin Pages
 
@@ -99,6 +102,7 @@ including:
 - redirect re-validation
 - timeout and bounded-response behavior
 - secret redaction in logs and error handling
+- compatibility adapter matching and protocol-specific failure classification
 
 These checks are too security-sensitive to rely only on browser coverage.
 
