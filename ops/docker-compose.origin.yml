@@ -9,9 +9,7 @@ services:
       - "127.0.0.1:${ORIGIN_HOST_PORT}:8787"
     networks:
       default:
-      tunnel:
-        aliases:
-          - relaynews-origin
+      infra:
     restart: unless-stopped
     healthcheck:
       test:
@@ -25,8 +23,22 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    depends_on:
+      origin:
+        condition: service_healthy
+    command:
+      [
+        "tunnel",
+        "--no-autoupdate",
+        "run",
+        "--token",
+        "${CLOUDFLARE_TUNNEL_TOKEN:?set CLOUDFLARE_TUNNEL_TOKEN in origin env}",
+      ]
+    restart: unless-stopped
 
 networks:
-  tunnel:
+  infra:
     external: true
     name: rebase-production_default

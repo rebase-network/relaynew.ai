@@ -6,7 +6,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CF_ACCOUNT_ID="${CF_ACCOUNT_ID:-5abb6d6f38eb7d3dabf8a5adf095c5f7}"
 PUBLIC_SITE_URL="${PUBLIC_SITE_URL:-https://relaynew.ai}"
 ADMIN_SITE_URL="${ADMIN_SITE_URL:-https://admin.relaynew.ai}"
-PUBLIC_API_BASE_URL="${PUBLIC_API_BASE_URL:-https://api.rebase.network/relaynews}"
+API_SITE_URL="${API_SITE_URL:-https://api.relaynew.ai}"
+PUBLIC_API_BASE_URL="${PUBLIC_API_BASE_URL:-${API_SITE_URL}}"
 
 usage() {
   cat <<USAGE
@@ -14,15 +15,16 @@ Usage: ./ops/manage-edge.sh <command> [target]
 
 Commands:
   help                     Show this help message
-  build <web|admin|all>    Build Cloudflare frontend assets
-  preview <web|admin|all>  Build and validate Wrangler config with dry-run deploy
-  deploy <web|admin|all>   Build and deploy Cloudflare Workers static assets
+  build <web|admin|api|all>    Build Cloudflare edge apps
+  preview <web|admin|api|all>  Build and validate Wrangler config with dry-run deploy
+  deploy <web|admin|api|all>   Build and deploy Cloudflare edge apps
   whoami                   Show the active Wrangler account
 
 Overrides:
   CF_ACCOUNT_ID           Default: ${CF_ACCOUNT_ID}
   PUBLIC_SITE_URL          Default: ${PUBLIC_SITE_URL}
   ADMIN_SITE_URL           Default: ${ADMIN_SITE_URL}
+  API_SITE_URL             Default: ${API_SITE_URL}
   PUBLIC_API_BASE_URL      Default: ${PUBLIC_API_BASE_URL}
 USAGE
 }
@@ -45,6 +47,9 @@ run_build() {
     admin)
       filter="@relaynews/admin"
       ;;
+    api)
+      filter="@relaynews/api-edge"
+      ;;
     *)
       echo "Unknown app: $app" >&2
       exit 1
@@ -61,14 +66,27 @@ run_build() {
   )
 }
 
+app_dir() {
+  case "$1" in
+    api)
+      echo "api-edge"
+      ;;
+    *)
+      echo "$1"
+      ;;
+  esac
+}
+
 run_wrangle() {
   local app="$1"
   shift
+  local dir
+  dir="$(app_dir "$app")"
 
   (
     cd "$ROOT_DIR"
     export CLOUDFLARE_ACCOUNT_ID="${CF_ACCOUNT_ID}"
-    pnpm exec wrangler "$@" --config "apps/${app}/wrangler.jsonc"
+    pnpm exec wrangler "$@" --config "apps/${dir}/wrangler.jsonc"
   )
 }
 
@@ -77,12 +95,13 @@ for_each_target() {
   shift
 
   case "$target" in
-    web|admin)
+    web|admin|api)
       "$@" "$target"
       ;;
     all)
       "$@" web
       "$@" admin
+      "$@" api
       ;;
     *)
       echo "Unknown target: ${target}" >&2

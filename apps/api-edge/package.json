@@ -1,0 +1,15 @@
+{
+  "name": "@relaynews/api-edge",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "echo 'api-edge tests are not implemented yet'"
+  },
+  "devDependencies": {
+    "typescript": "6.0.2"
+  }
+}

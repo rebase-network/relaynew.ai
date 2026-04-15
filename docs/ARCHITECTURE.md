@@ -25,6 +25,7 @@ The product should:
 ### Technology Stack
 - Frontend: React Router v7 + TypeScript + Tailwind + shadcn/ui
 - Frontend hosting/runtime: Cloudflare Workers Static Assets
+- API edge: Cloudflare Worker custom domain proxy
 - Backend: Node.js + Fastify + TypeScript
 - Origin deployment runtime: Docker Compose on the remote server
 - Database: PostgreSQL
@@ -50,17 +51,20 @@ Browser
         - built web app assets
         - SPA fallback routing
         - client-side data fetches
-        - calls public API at api.rebase.network/relaynews
+        - calls public API at api.relaynew.ai
 
-  -> api.rebase.network/relaynews
-     -> Cloudflare Proxy / CDN / WAF
-        -> Origin API (remote server)
-           - public API
-           - internal/admin API
-           - probe scheduler
-           - probe runner
-           - aggregation jobs
-           - PostgreSQL
+  -> api.relaynew.ai
+     -> Cloudflare Worker custom domain
+        - product-owned hostname
+        - request proxy to dedicated tunnel
+        -> Cloudflare Tunnel
+           -> Origin API (remote server)
+              - public API
+              - internal/admin API
+              - probe scheduler
+              - probe runner
+              - aggregation jobs
+              - PostgreSQL
 ```
 
 ## Runtime Responsibilities
@@ -80,13 +84,18 @@ It is not responsible for:
 - writing high-frequency monitoring data
 - replacing the origin API
 
-### Cloudflare Proxy
-Cloudflare sits in front of `api.rebase.network/relaynews` and handles:
+### Cloudflare API Edge
+Cloudflare sits in front of `api.relaynew.ai` and handles:
 - TLS
 - WAF
 - rate limiting
 - cache rules for public read APIs
 - DDoS protection
+
+The API custom domain currently resolves to a lightweight Worker that forwards
+requests through a VPC network binding to the dedicated Cloudflare Tunnel owned
+by the same account.
+This keeps the product independent from the legacy tunnel on the remote host.
 
 Important note: Cloudflare proxy does not automatically cache JSON APIs in the desired way.
 Public `GET` endpoints must be made cacheable with explicit cache rules and/or
@@ -216,7 +225,7 @@ MVP assumption:
 ## Security Model
 
 - `relaynew.ai` serves the public site via Cloudflare Workers Static Assets
-- `api.rebase.network/relaynews` sits behind Cloudflare Proxy and the shared tunnel
+- `api.relaynew.ai` sits behind a product-owned Cloudflare Worker and dedicated tunnel
 - `admin.relaynew.ai` can be used for administrative access
 - admin endpoints should be protected with Cloudflare Access or equivalent auth
 - the public probe flow must use a dedicated public-safe endpoint rather than any
@@ -238,6 +247,7 @@ Recommended monorepo shape:
 ```txt
 apps/
   admin/     # admin frontend app
+  api-edge/  # Cloudflare Worker for API custom domain proxy
   web/       # Cloudflare Workers Static Assets frontend app
   origin/    # Fastify backend app
 packages/

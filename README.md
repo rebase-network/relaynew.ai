@@ -16,6 +16,7 @@ The site is planned to provide:
 
 - Frontend: `React Router v7 + TypeScript + Tailwind + shadcn/ui`
 - Frontend runtime: `Cloudflare Workers Static Assets`
+- API edge runtime: `Cloudflare Worker`
 - Backend: `Node.js + Fastify + TypeScript`
 - Origin deployment runtime: `Docker Compose` on the remote server
 - Database: `PostgreSQL`
@@ -27,7 +28,7 @@ The site is planned to provide:
 ## Domains
 
 - Public site: `relaynew.ai`
-- Current public API base: `https://api.rebase.network/relaynews`
+- Public API: `api.relaynew.ai`
 - Admin site: `admin.relaynew.ai`
 
 ## Repository Layout
@@ -52,6 +53,7 @@ docs/
   ROUTES.md
 apps/
   admin/
+  api-edge/
   web/
   origin/
     db/
@@ -105,6 +107,6 @@ Use `docs/DEVELOPMENT_PLAN.md` as the canonical phased build order.
 - inspect remote origin deployment paths: `./ops/manage.sh path`
 - bootstrap the remote origin host: `./ops/manage.sh bootstrap`
 - deploy the remote origin service: `./ops/manage.sh deploy`
-- inspect or update the shared Cloudflare Tunnel rule: `./ops/manage-tunnel.sh status`
+- inspect or update the dedicated Cloudflare Tunnel rule: `./ops/manage-tunnel.sh status`
 - preview Cloudflare frontend deploys: `./ops/manage-edge.sh preview all`
 - deploy Cloudflare frontend apps: `./ops/manage-edge.sh deploy all`

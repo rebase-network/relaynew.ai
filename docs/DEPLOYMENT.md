@@ -6,8 +6,9 @@ This document describes the current deployment shape for the MVP.
 
 - `apps/origin` runs on the remote server through Docker Compose
 - `apps/web` deploys to Cloudflare Workers Static Assets at `relaynew.ai`
+- `apps/api-edge` deploys a Cloudflare Worker custom domain at `api.relaynew.ai`
 - `apps/admin` deploys to Cloudflare Workers Static Assets at `admin.relaynew.ai`
-- the current public API base is `https://api.rebase.network/relaynews` through the existing Cloudflare Tunnel
+- a dedicated Cloudflare Tunnel in the product account carries origin traffic without sharing the legacy tunnel
 
 ## Required Tooling
 
@@ -39,16 +40,16 @@ Start from `ops/origin.env.example` and fill in the production database URL and 
 other runtime values before the first deploy.
 
 The current origin deployment joins the shared `rebase-production_default` Docker
-network so Cloudflare Tunnel can reach it through the `relaynews-origin` network alias.
-`DATABASE_URL` should therefore target the shared PostgreSQL service at `postgres:5432`
-instead of a loopback host.
+network so it can reach the existing PostgreSQL container at `postgres:5432`.
+The product-owned `cloudflared` sidecar runs in the same Compose project and
+connects only to the dedicated product tunnel.
 
 ### Frontend Builds
 
 The frontend deploy flow expects these build-time variables:
 
 - `CF_ACCOUNT_ID` default: `5abb6d6f38eb7d3dabf8a5adf095c5f7`
-- `PUBLIC_API_BASE_URL` default: `https://api.rebase.network/relaynews`
+- `PUBLIC_API_BASE_URL` default: `https://api.relaynew.ai`
 - `PUBLIC_SITE_URL` default: `https://relaynew.ai`
 - `ADMIN_SITE_URL` default: `https://admin.relaynew.ai`
 
@@ -99,9 +100,10 @@ These values are injected into the Vite builds as:
 Before the first production deploy, make sure:
 
 - the `relaynew.ai` zone already exists in Cloudflare account `5abb6d6f38eb7d3dabf8a5adf095c5f7`
-- `relaynew.ai` and `admin.relaynew.ai` are intended to run behind Cloudflare proxy
-- the shared `api.rebase.network` tunnel is available from the `Rebase Community` account
-- the relay monitoring ingress rule is present:
+- `relaynew.ai`, `api.relaynew.ai`, and `admin.relaynew.ai` are intended to run behind Cloudflare proxy
+- the dedicated product tunnel has been created in the same Cloudflare account
+- the tunnel token has been stored in the remote origin env file as `CLOUDFLARE_TUNNEL_TOKEN`
+- the dedicated tunnel ingress rule is present:
 
   ```bash
   ./ops/manage-tunnel.sh apply
@@ -117,13 +119,15 @@ Before the first production deploy, make sure:
 
    ```bash
    ./ops/manage-edge.sh preview web
+   ./ops/manage-edge.sh preview api
    ./ops/manage-edge.sh preview admin
    ```
 
-3. Deploy the public site and admin site:
+3. Deploy the public site, API edge, and admin site:
 
    ```bash
    ./ops/manage-edge.sh deploy web
+   ./ops/manage-edge.sh deploy api
    ./ops/manage-edge.sh deploy admin
    ```
 
@@ -137,8 +141,10 @@ Or deploy both together:
 
 - The frontend deploy path currently ships static Vite builds through Cloudflare
   Workers Static Assets with SPA fallback routing.
+- The API hostname is implemented as a small Cloudflare Worker proxy so the site,
+  custom domain, and tunnel stay in the same account without modifying the legacy tunnel.
+- The API Worker reaches the origin through a VPC network binding to the dedicated tunnel,
+  so the tunnel itself does not need a public product hostname or shared DNS changes.
 - Public and admin builds intentionally use explicit absolute URLs so cross-domain
   links stay correct after deployment.
-- The branded API hostname is intentionally deferred because the frontend zone and the
-  existing tunnel live in different Cloudflare accounts today.
 - The origin service remains the only write-capable application runtime in the MVP.

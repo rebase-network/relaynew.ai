@@ -69,6 +69,11 @@ compose_env_exports() {
 export ORIGIN_ENV_FILE='${REMOTE_ENV_FILE}'
 export COMPOSE_PROJECT_NAME='${REMOTE_COMPOSE_PROJECT}'
 export ORIGIN_HOST_PORT='${ORIGIN_HOST_PORT}'
+if [ -f "\$ORIGIN_ENV_FILE" ]; then
+  set -a
+  . "\$ORIGIN_ENV_FILE"
+  set +a
+fi
 EOF_EXPORTS
 }
 
@@ -106,10 +111,10 @@ if [ ! -f '${REMOTE_ENV_FILE}' ]; then
 NODE_ENV=production
 HOST=0.0.0.0
 PORT=8787
-API_BASE_PATH=/relaynews
 DATABASE_URL=postgres://postgres:postgres@postgres:5432/relaynews
 ENABLE_SCHEDULER=true
 PUBLIC_PROBE_ALLOW_PRIVATE_HOSTS=false
+CLOUDFLARE_TUNNEL_TOKEN=
 EOF_ENV
 fi
 if ! command -v docker >/dev/null 2>&1; then
@@ -142,8 +147,8 @@ ln -sfn '${release_dir}' '${REMOTE_CURRENT_LINK}'
 cd '${REMOTE_CURRENT_LINK}'
 docker compose -f '${REMOTE_COMPOSE_FILE}' build origin
 docker compose -f '${REMOTE_COMPOSE_FILE}' run --rm origin tsx apps/origin/src/db/migrate.ts
-docker compose -f '${REMOTE_COMPOSE_FILE}' rm -sf origin >/dev/null 2>&1 || true
-docker compose -f '${REMOTE_COMPOSE_FILE}' up -d origin
+docker compose -f '${REMOTE_COMPOSE_FILE}' rm -sf origin cloudflared >/dev/null 2>&1 || true
+docker compose -f '${REMOTE_COMPOSE_FILE}' up -d origin cloudflared
 sleep 3
 curl --fail --silent --show-error '${REMOTE_HEALTHCHECK_URL}' >/dev/null
 docker image prune -f >/dev/null 2>&1 || true
@@ -195,8 +200,8 @@ fi
 ln -sfn \"\$target_dir\" '${REMOTE_CURRENT_LINK}'
 cd '${REMOTE_CURRENT_LINK}'
 docker compose -f '${REMOTE_COMPOSE_FILE}' build origin
-docker compose -f '${REMOTE_COMPOSE_FILE}' rm -sf origin >/dev/null 2>&1 || true
-docker compose -f '${REMOTE_COMPOSE_FILE}' up -d origin
+docker compose -f '${REMOTE_COMPOSE_FILE}' rm -sf origin cloudflared >/dev/null 2>&1 || true
+docker compose -f '${REMOTE_COMPOSE_FILE}' up -d origin cloudflared
 sleep 3
 curl --fail --silent --show-error '${REMOTE_HEALTHCHECK_URL}' >/dev/null
 echo \"Rolled back to \$target_release\"
@@ -231,7 +236,7 @@ logs_remote() {
   run_remote_script "
 $(compose_env_exports)
 cd '${REMOTE_CURRENT_LINK}'
-docker compose -f '${REMOTE_COMPOSE_FILE}' logs --tail '${lines}' origin
+docker compose -f '${REMOTE_COMPOSE_FILE}' logs --tail '${lines}' origin cloudflared
 "
 }
 
@@ -254,13 +259,13 @@ $(compose_env_exports)
 cd '${REMOTE_CURRENT_LINK}'
 case '${action}' in
   start)
-    docker compose -f '${REMOTE_COMPOSE_FILE}' up -d origin
+    docker compose -f '${REMOTE_COMPOSE_FILE}' up -d origin cloudflared
     ;;
   stop)
-    docker compose -f '${REMOTE_COMPOSE_FILE}' stop origin
+    docker compose -f '${REMOTE_COMPOSE_FILE}' stop origin cloudflared
     ;;
   restart)
-    docker compose -f '${REMOTE_COMPOSE_FILE}' restart origin
+    docker compose -f '${REMOTE_COMPOSE_FILE}' restart origin cloudflared
     ;;
 esac
 "

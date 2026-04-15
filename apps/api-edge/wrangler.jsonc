@@ -1,0 +1,21 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "relaynews-api",
+  "main": "./src/index.ts",
+  "account_id": "5abb6d6f38eb7d3dabf8a5adf095c5f7",
+  "compatibility_date": "2026-04-15",
+  "workers_dev": false,
+  "vpc_networks": [
+    {
+      "binding": "ORIGIN_TUNNEL",
+      "tunnel_id": "0c4e23ef-b334-44cd-a77b-4bf4d8015013",
+      "remote": true
+    }
+  ],
+  "routes": [
+    {
+      "pattern": "api.relaynew.ai",
+      "custom_domain": true
+    }
+  ]
+}

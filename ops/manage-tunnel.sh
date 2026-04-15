@@ -3,11 +3,9 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-CF_TUNNEL_ACCOUNT_ID="${CF_TUNNEL_ACCOUNT_ID:-7e327cb72b95b88c927c7122db11baa6}"
-CF_TUNNEL_ID="${CF_TUNNEL_ID:-339357f8-3d31-437e-a7a0-77fd311a4c4e}"
-CF_TUNNEL_HOSTNAME="${CF_TUNNEL_HOSTNAME:-api.rebase.network}"
-CF_TUNNEL_PATH_REGEX="${CF_TUNNEL_PATH_REGEX:-/relaynews(?:/.*)?$}"
-CF_TUNNEL_SERVICE="${CF_TUNNEL_SERVICE:-http://relaynews-origin:8787}"
+CF_TUNNEL_ACCOUNT_ID="${CF_TUNNEL_ACCOUNT_ID:-5abb6d6f38eb7d3dabf8a5adf095c5f7}"
+CF_TUNNEL_ID="${CF_TUNNEL_ID:-0c4e23ef-b334-44cd-a77b-4bf4d8015013}"
+CF_TUNNEL_SERVICE="${CF_TUNNEL_SERVICE:-http://origin:8787}"
 
 usage() {
   cat <<USAGE
@@ -16,13 +14,11 @@ Usage: ./ops/manage-tunnel.sh <command>
 Commands:
   help        Show this help message
   status      Print the current tunnel configuration
-  apply       Upsert the relaynews ingress rule into the tunnel config
+  apply       Apply the dedicated product tunnel config
 
 Overrides:
   CF_TUNNEL_ACCOUNT_ID  Default: ${CF_TUNNEL_ACCOUNT_ID}
   CF_TUNNEL_ID          Default: ${CF_TUNNEL_ID}
-  CF_TUNNEL_HOSTNAME    Default: ${CF_TUNNEL_HOSTNAME}
-  CF_TUNNEL_PATH_REGEX  Default: ${CF_TUNNEL_PATH_REGEX}
   CF_TUNNEL_SERVICE     Default: ${CF_TUNNEL_SERVICE}
 USAGE
 }
@@ -64,68 +60,34 @@ apply_config() {
   require_cmd curl
   require_cmd pnpm
 
-  export CF_TUNNEL_HOSTNAME
-  export CF_TUNNEL_PATH_REGEX
   export CF_TUNNEL_SERVICE
 
-  local token current payload
+  local token payload
   token="$(get_api_token)"
-  current="$(mktemp)"
   payload="$(mktemp)"
-  trap 'rm -f "${current:-}" "${payload:-}"' EXIT
+  trap 'rm -f "${payload:-}"' EXIT
 
-  curl -fsS \
-    -H "Authorization: Bearer ${token}" \
-    "$(api_url)" \
-    >"$current"
-
-  python3 - "$current" "$payload" <<'PY'
+  python3 - "$payload" <<'PY'
 import json
 import os
 import sys
 
-current_path, output_path = sys.argv[1:3]
-hostname = os.environ["CF_TUNNEL_HOSTNAME"]
-path_regex = os.environ["CF_TUNNEL_PATH_REGEX"]
-service = os.environ["CF_TUNNEL_SERVICE"]
-
-with open(current_path, "r", encoding="utf-8") as handle:
-    data = json.load(handle)
-
-config = data["result"]["config"]
-ingress = config.get("ingress", [])
-
-new_rule = {
-    "hostname": hostname,
-    "path": path_regex,
-    "service": service,
-    "originRequest": {},
+payload = {
+    "config": {
+        "ingress": [
+            {
+                "service": os.environ["CF_TUNNEL_SERVICE"],
+                "originRequest": {},
+            }
+        ],
+        "warp-routing": {
+            "enabled": False,
+        },
+    }
 }
 
-filtered = [
-    rule
-    for rule in ingress
-    if not (rule.get("hostname") == hostname and rule.get("path") == path_regex)
-]
-
-updated = []
-inserted = False
-for rule in filtered:
-    if not inserted and (
-        rule.get("service", "").startswith("http_status:")
-        or (rule.get("hostname") == hostname and "path" not in rule)
-    ):
-        updated.append(new_rule)
-        inserted = True
-    updated.append(rule)
-
-if not inserted:
-    updated.append(new_rule)
-
-config["ingress"] = updated
-
-with open(output_path, "w", encoding="utf-8") as handle:
-    json.dump({"config": config}, handle)
+with open(sys.argv[1], "w", encoding="utf-8") as handle:
+    json.dump(payload, handle)
 PY
 
   curl -fsS \
@@ -136,7 +98,7 @@ PY
     --data "@${payload}" \
     >/dev/null
 
-  echo "Updated tunnel ingress for ${CF_TUNNEL_HOSTNAME}${CF_TUNNEL_PATH_REGEX}"
+  echo "Updated dedicated tunnel ingress for ${CF_TUNNEL_SERVICE}"
   show_status
 }
 
