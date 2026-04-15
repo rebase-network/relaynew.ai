@@ -17,7 +17,7 @@ Commands:
   help                     Show this help message
   build <web|admin|api|all>    Build Cloudflare edge apps
   preview <web|admin|api|all>  Build and validate Wrangler config with dry-run deploy
-  deploy <api>                  Build and deploy the API edge app
+  deploy [api]                  Build and deploy the API edge app only
   whoami                   Show the active Wrangler account
 
 Overrides:
@@ -142,19 +142,22 @@ main() {
   require_cmd pnpm
 
   local command="${1:-help}"
-  local target="${2:-all}"
+  local target="${2:-}"
 
   case "$command" in
     help|-h|--help)
       usage
       ;;
     build)
+      target="${target:-all}"
       for_each_target "$target" build_target
       ;;
     preview)
+      target="${target:-all}"
       for_each_target "$target" preview_target
       ;;
     deploy)
+      target="${target:-api}"
       case "$target" in
         api)
           deploy_target "api"
