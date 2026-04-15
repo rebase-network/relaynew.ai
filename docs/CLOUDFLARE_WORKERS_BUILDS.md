@@ -164,9 +164,9 @@ build:admin:prod
 
 ## Recommended Operating Model
 
-- `relaynews-web` -> GitHub auto-deploy enabled; do not deploy it manually from `ops/manage-api-edge.sh`
-- `relaynews-admin` -> GitHub auto-deploy enabled; do not deploy it manually from `ops/manage-api-edge.sh`
-- `relaynews-api-edge` -> manual deploy `./ops/manage-api-edge.sh deploy api`
+- `relaynews-web` -> GitHub auto-deploy enabled; do not deploy it with any ops script
+- `relaynews-admin` -> GitHub auto-deploy enabled; do not deploy it with any ops script
+- `relaynews-api-edge` -> manual deploy `./ops/manage-api-edge.sh deploy`
 - `apps/api` on the remote server -> manual deploy through `./ops/manage.sh deploy`
 
 This keeps the public and admin frontends fast to ship while preserving tighter

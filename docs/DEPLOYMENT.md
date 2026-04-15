@@ -53,17 +53,13 @@ repository build scripts:
 That means the normal GitHub -> Cloudflare Workers Builds path does not need
 dashboard-level `VITE_*` production URL variables.
 
-For local Cloudflare build or preview checks, plus manual `api-edge` deploys,
-`./ops/manage-api-edge.sh` still accepts:
+For local `api-edge` build or preview checks, plus manual `api-edge` deploys,
+`./ops/manage-api-edge.sh` accepts:
 
 - `CF_ACCOUNT_ID` default: `5abb6d6f38eb7d3dabf8a5adf095c5f7`
-- `PUBLIC_API_BASE_URL` default: `https://api.relaynew.ai`
-- `PUBLIC_SITE_URL` default: `https://relaynew.ai`
-- `ADMIN_SITE_URL` default: `https://admin.relaynew.ai`
 
-The helper exports those values into `VITE_API_BASE_URL`,
-`VITE_PUBLIC_SITE_URL`, and `VITE_ADMIN_SITE_URL` only for the local build,
-preview, and `api-edge` deploy path.
+The helper is reserved for `relaynews-api-edge` only. Frontend production host
+mapping stays in the repository build scripts and GitHub-connected Workers Builds.
 
 ## API Service Deploy Flow
 
@@ -124,26 +120,24 @@ Before the first production deploy, make sure:
 2. Connect `relaynews-web` and `relaynews-admin` to GitHub through Workers Builds.
    Use the exact dashboard values documented in `docs/CLOUDFLARE_WORKERS_BUILDS.md`.
 
-3. Validate the Cloudflare deploy config without publishing when you want a manual
+3. Validate the API edge deploy config without publishing when you want a manual
    preflight check:
 
    ```bash
-   ./ops/manage-api-edge.sh preview web
-   ./ops/manage-api-edge.sh preview admin
-   ./ops/manage-api-edge.sh preview api
+   ./ops/manage-api-edge.sh preview
    ```
 
 4. Deploy the API edge Worker manually:
 
    ```bash
-   ./ops/manage-api-edge.sh deploy api
+   ./ops/manage-api-edge.sh deploy
    ```
 
 5. Deploy `relaynews-web` and `relaynews-admin` only by pushing committed changes
    to GitHub so Cloudflare Workers Builds runs automatically.
 
-Do not run `./ops/manage-api-edge.sh deploy web`, `./ops/manage-api-edge.sh deploy admin`,
-or `./ops/manage-api-edge.sh deploy all` in normal production flow.
+Do not use any ops script to deploy `relaynews-web` or `relaynews-admin` in normal
+production flow.
 
 ## Cloudflare Worker Inventory
 
@@ -282,7 +276,7 @@ Notes:
 
 - `relaynews-web` -> GitHub auto-deploy enabled
 - `relaynews-admin` -> GitHub auto-deploy enabled
-- `relaynews-api-edge` -> manual deploy through `./ops/manage-api-edge.sh deploy api`
+- `relaynews-api-edge` -> manual deploy through `./ops/manage-api-edge.sh deploy`
 - `apps/api` on the remote server -> manual deploy through `./ops/manage.sh deploy`
 
 ### Build Watch Paths
