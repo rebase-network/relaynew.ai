@@ -135,6 +135,43 @@ Or deploy all Cloudflare apps together:
 ./ops/manage-edge.sh deploy all
 ```
 
+## Cloudflare Worker Inventory
+
+The intended Cloudflare Worker inventory for this project is:
+
+- `relaynews-web` -> public site at `relaynew.ai`
+- `relaynews-admin` -> admin site at `admin.relaynew.ai`
+- `relaynews-api-edge` -> API edge proxy at `api.relaynew.ai`
+
+Important distinction:
+
+- `relaynews-api-edge` is only the Cloudflare Worker proxy layer
+- the real backend API is `apps/api` on the remote server
+
+### Legacy `relaynews-api` Worker
+
+Earlier iterations used the Worker name `relaynews-api` for the API edge layer.
+After the rename to `relaynews-api-edge`, Cloudflare kept the old Worker as a
+separate resource instead of renaming it in place.
+
+If `relaynews-api` is still visible in the dashboard:
+
+1. open `relaynews-api-edge`
+2. confirm `api.relaynew.ai` is attached under `Settings -> Domains & Routes`
+3. confirm the active deployment is the new Worker
+4. delete the legacy `relaynews-api` Worker
+
+Safe cleanup rule:
+
+- keep `relaynews-api-edge`
+- remove `relaynews-api` once it no longer owns any custom domain or route
+
+CLI cleanup example:
+
+```bash
+pnpm exec wrangler delete relaynews-api
+```
+
 ## Cloudflare Git Auto-Deploy For `web` And `admin`
 
 The public site and admin site can be connected directly to GitHub through Workers
