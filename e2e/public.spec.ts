@@ -74,6 +74,8 @@ test("public probe flow returns a diagnostic result", async ({ page }) => {
   await expect(page.getByTestId("probe-model-value")).toHaveText(probeModel);
   await expect(page.getByTestId("probe-http-status-value")).toHaveText("200");
   await expect(page.getByTestId("probe-measured-at-value")).toHaveText(/\S+/);
+  await expect(page.getByText("Execution trace")).toBeVisible();
+  await expect(page.getByText("Matched")).toBeVisible();
   await page.getByTestId("probe-copy-endpoint-button").click();
   await expect(page.getByTestId("probe-copy-endpoint-button")).toHaveText("Copied");
   await expect(page.getByText(/^Upstream returned /)).toHaveCount(0);
@@ -101,6 +103,7 @@ test("public probe supports manual compatibility override", async ({ page }) => 
   await expect(page.getByTestId("probe-mode-value")).toHaveText(manualCompatibilityLabels[manualCompatibilityMode]);
   await expect(page.getByTestId("probe-model-value")).toHaveText(probeModel);
   await expect(page.getByTestId("probe-http-status-value")).toHaveText("200");
+  await expect(page.getByText("Execution trace")).toBeVisible();
   await expect(page.getByText(/^Upstream returned /)).toHaveCount(0);
 });
 

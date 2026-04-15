@@ -127,6 +127,16 @@ function uniqueAttemptedModes(attempts: ProbeAttempt[]) {
   return [...new Set(attempts.map((attempt) => attempt.mode))];
 }
 
+function buildAttemptTrace(results: ProbeAttemptResult[], matchedAttempt: ProbeAttemptResult | null = null) {
+  return results.map((result) => ({
+    mode: result.attempt.mode,
+    label: probeCompatibilityModeLabels[result.attempt.mode],
+    url: result.attempt.url.toString(),
+    httpStatus: result.response.status,
+    matched: matchedAttempt?.attempt.url.toString() === result.attempt.url.toString(),
+  }));
+}
+
 function shouldReplaceFailure(current: ProbeAttemptResult | null, next: ProbeAttemptResult) {
   if (!current) {
     return true;
@@ -179,7 +189,7 @@ export async function runPublicProbe(input: PublicProbeRequest): Promise<PublicP
   const targetUrl = new URL(parsed.baseUrl);
   const detectionMode = detectionModeFromRequest(parsed);
   const attempts = buildProbeAttempts(targetUrl, parsed);
-  const attemptedModes = uniqueAttemptedModes(attempts);
+  const executedResults: ProbeAttemptResult[] = [];
 
   try {
     await validateTarget(targetUrl);
@@ -187,9 +197,11 @@ export async function runPublicProbe(input: PublicProbeRequest): Promise<PublicP
 
     for (const attempt of attempts) {
       const result = await executeProbeAttempt(attempt, parsed.apiKey);
+      executedResults.push(result);
       const adapter = probeAdapterRegistry[result.attempt.mode];
 
       if (adapter.matches(result)) {
+        const attemptTrace = buildAttemptTrace(executedResults, result);
         return publicProbeResponseSchema.parse({
           ok: true,
           targetHost: targetUrl.hostname,
@@ -206,7 +218,8 @@ export async function runPublicProbe(input: PublicProbeRequest): Promise<PublicP
           compatibilityMode: result.attempt.mode,
           detectionMode,
           usedUrl: result.attempt.url.toString(),
-          attemptedModes,
+          attemptedModes: uniqueAttemptedModes(executedResults.map((entry) => entry.attempt)),
+          attemptTrace,
           message: null,
           measuredAt,
         });
@@ -241,7 +254,8 @@ export async function runPublicProbe(input: PublicProbeRequest): Promise<PublicP
       compatibilityMode: bestFailure.attempt.mode,
       detectionMode,
       usedUrl: bestFailure.attempt.url.toString(),
-      attemptedModes,
+      attemptedModes: uniqueAttemptedModes(executedResults.map((entry) => entry.attempt)),
+      attemptTrace: buildAttemptTrace(executedResults),
       message: `Upstream returned ${bestFailure.response.status} while testing ${probeCompatibilityModeLabels[bestFailure.attempt.mode]}`,
       measuredAt,
     });
@@ -261,7 +275,8 @@ export async function runPublicProbe(input: PublicProbeRequest): Promise<PublicP
       compatibilityMode: null,
       detectionMode,
       usedUrl: null,
-      attemptedModes,
+      attemptedModes: uniqueAttemptedModes(executedResults.map((entry) => entry.attempt)),
+      attemptTrace: buildAttemptTrace(executedResults),
       message: sanitizeMessage(error),
       measuredAt,
     });

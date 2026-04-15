@@ -119,6 +119,104 @@ function getProtocolCardTone(status: PublicProbeResponse["protocol"]["healthStat
   return "border-emerald-700/12 bg-emerald-50/70";
 }
 
+function getTraceCardTone(httpStatus: number | null, matched: boolean) {
+  if (matched || (httpStatus !== null && httpStatus >= 200 && httpStatus < 300)) {
+    return "border-emerald-700/12 bg-emerald-50/70 text-[#0b5c3b]";
+  }
+
+  if (httpStatus === 400 || httpStatus === 404 || httpStatus === 405 || httpStatus === 415) {
+    return "border-[#b54708]/15 bg-[#fff7e8] text-[#8a450c]";
+  }
+
+  if (httpStatus !== null && (httpStatus === 401 || httpStatus === 403 || httpStatus === 429 || httpStatus >= 500)) {
+    return "border-[#b42318]/15 bg-[#fff2ef] text-[#8d2d17]";
+  }
+
+  return "border-black/10 bg-white/75 text-black/72";
+}
+
+function getProbeFailureGuidance(result: PublicProbeResponse) {
+  if (result.ok) {
+    return null;
+  }
+
+  const status = result.protocol.httpStatus ?? null;
+
+  if (!result.connectivity.ok || status === null) {
+    return {
+      source: "Network or target reachability",
+      meaning: "The public probe could not complete a valid upstream HTTP exchange.",
+      nextStep: "Check DNS, HTTPS availability, host allowlisting, and whether the base URL is reachable from the public internet.",
+    };
+  }
+
+  if (status === 400) {
+    return {
+      source: "Upstream API returned HTTP 400",
+      meaning: "The relay is reachable, but it rejected the request shape for this adapter or model.",
+      nextStep: result.detectionMode === "auto"
+        ? "Try a manual compatibility override. If the relay is OpenAI-compatible but not Responses-compatible, switch to Chat Completions."
+        : "Recheck the selected compatibility mode, model availability, and whether the base URL already includes an `/openai` or `/v1` prefix.",
+    };
+  }
+
+  if (status === 401 || status === 403) {
+    return {
+      source: "Upstream API authentication",
+      meaning: "The endpoint answered, but the supplied key was rejected or lacks permission for this route/model.",
+      nextStep: "Verify the key, account permissions, and whether the provider expects a different auth header for this compatibility mode.",
+    };
+  }
+
+  if (status === 404) {
+    return {
+      source: "Upstream route mismatch",
+      meaning: "The relay answered, but the tested compatibility path was not found.",
+      nextStep: result.detectionMode === "auto"
+        ? "Try a manual compatibility override or adjust the base URL so the probe builds the correct `/v1` path."
+        : "Check whether the base URL already includes `/v1`, `/openai`, or another provider-specific prefix.",
+    };
+  }
+
+  if (status === 405) {
+    return {
+      source: "Upstream method mismatch",
+      meaning: "The route exists, but it does not accept the probe request method for this adapter.",
+      nextStep: "Double-check that the chosen compatibility mode matches the provider and endpoint family.",
+    };
+  }
+
+  if (status === 415) {
+    return {
+      source: "Upstream content negotiation",
+      meaning: "The endpoint rejected the request content-type or streaming shape for this adapter.",
+      nextStep: "Try a different compatibility mode or verify whether the provider expects a non-streaming variant for this endpoint.",
+    };
+  }
+
+  if (status === 429) {
+    return {
+      source: "Upstream rate limit",
+      meaning: "The relay is reachable, but the provider is currently throttling the probe request.",
+      nextStep: "Retry after the provider cooldown or test with a key and model that still have quota.",
+    };
+  }
+
+  if (status >= 500) {
+    return {
+      source: "Upstream server error",
+      meaning: "The relay accepted the request but failed internally while serving it.",
+      nextStep: "Retry later or contact the relay operator with the measured status and endpoint path.",
+    };
+  }
+
+  return {
+    source: `Upstream API returned HTTP ${status}`,
+    meaning: "The request reached the relay, but the upstream response did not match the selected compatibility shape.",
+    nextStep: "Verify the base URL, compatibility mode, and model support, then retry with the most likely adapter.",
+  };
+}
+
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
@@ -780,6 +878,8 @@ function ProbePage() {
   }, [copyState]);
 
   const resultTone = useMemo(() => (result ? getProbeResultTone(result) : null), [result]);
+  const failureGuidance = useMemo(() => (result ? getProbeFailureGuidance(result) : null), [result]);
+  const attemptTrace = result?.attemptTrace ?? [];
 
   return (
     <section className="grid gap-6 lg:grid-cols-[0.82fr_1.18fr] lg:items-start">
@@ -903,17 +1003,30 @@ function ProbePage() {
                     </p>
                   </div>
                 ) : null}
-                {result.attemptedModes.length > 0 ? (
+                {attemptTrace.length > 0 ? (
                   <div className="border border-black/10 bg-white/75 p-4">
-                    <p className="kicker">Attempted modes</p>
-                    <div className="flex flex-wrap gap-2">
-                      {result.attemptedModes.map((mode) => (
-                        <span
-                          className="border border-black/10 bg-[var(--surface)] px-2 py-1 text-xs uppercase tracking-[0.15em]"
-                          key={mode}
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="kicker">Execution trace</p>
+                      <p className="text-[0.7rem] uppercase tracking-[0.16em] text-black/45">
+                        {attemptTrace.length} request{attemptTrace.length === 1 ? "" : "s"}
+                      </p>
+                    </div>
+                    <div className="space-y-3">
+                      {attemptTrace.map((attempt, index) => (
+                        <div
+                          className={clsx("border px-3 py-3", getTraceCardTone(attempt.httpStatus, attempt.matched))}
+                          key={`${attempt.url}-${index}`}
                         >
-                          {PROBE_COMPATIBILITY_LABELS[mode]}
-                        </span>
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="text-xs uppercase tracking-[0.16em]">
+                              #{index + 1} {attempt.label}
+                            </p>
+                            <p className="text-xs uppercase tracking-[0.16em]">
+                              {attempt.matched ? "Matched" : attempt.httpStatus ? `HTTP ${attempt.httpStatus}` : "No response"}
+                            </p>
+                          </div>
+                          <p className="mt-2 break-all font-mono text-xs leading-5 opacity-80">{attempt.url}</p>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -926,6 +1039,16 @@ function ProbePage() {
                     )}
                   >
                     {result.message}
+                  </div>
+                ) : null}
+                {failureGuidance ? (
+                  <div className="border border-black/10 bg-white/75 p-4">
+                    <p className="kicker">Failure interpretation</p>
+                    <div className="space-y-3 text-sm leading-6 text-black/72">
+                      <p><span className="font-medium text-black/90">Source:</span> {failureGuidance.source}</p>
+                      <p><span className="font-medium text-black/90">Meaning:</span> {failureGuidance.meaning}</p>
+                      <p><span className="font-medium text-black/90">Next step:</span> {failureGuidance.nextStep}</p>
+                    </div>
                   </div>
                 ) : null}
                 {!result.ok && result.detectionMode === "auto" ? (
