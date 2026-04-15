@@ -37,3 +37,5 @@ service.
   access, `curl`, and `rsync` available.
 - `HOST=0.0.0.0` is required in the production env file so the container can accept
   traffic through the published port.
+- The current origin container uses Docker host networking on the Linux server, so
+  a PostgreSQL instance on the same machine can still be reached through `127.0.0.1`.

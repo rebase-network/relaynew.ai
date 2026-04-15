@@ -1,6 +1,6 @@
-# relaynews.ai
+# relaynew.ai
 
-`relaynews.ai` is a public website for API relay monitoring, latency tracking, service
+`relaynew.ai` is a public website for API relay monitoring, latency tracking, service
 health, pricing comparison, and leaderboard discovery.
 
 ## Product Scope
@@ -26,9 +26,9 @@ The site is planned to provide:
 
 ## Domains
 
-- Public site: `relaynews.ai`
-- Public API: `api.relaynews.ai`
-- Admin site: `admin.relaynews.ai`
+- Public site: `relaynew.ai`
+- Public API: `api.relaynew.ai`
+- Admin site: `admin.relaynew.ai`
 
 ## Repository Layout
 

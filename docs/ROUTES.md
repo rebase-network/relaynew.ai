@@ -1,6 +1,6 @@
 # Routes
 
-This document lists the planned route structure for `relaynews.ai`, the rendering mode
+This document lists the planned route structure for `relaynew.ai`, the rendering mode
 for each route, and the primary data source that should back it.
 
 ## Rendering Rules

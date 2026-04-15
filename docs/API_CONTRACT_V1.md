@@ -1,6 +1,6 @@
 # API Contract V1
 
-This document defines the initial public API contract for `relaynews.ai`.
+This document defines the initial public API contract for `relaynew.ai`.
 
 ## Scope
 

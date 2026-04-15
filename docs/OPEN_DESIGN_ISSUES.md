@@ -4,7 +4,7 @@ This file is the lightweight backlog for unresolved design or contract gaps.
 
 ## Current Status
 
-There are currently no active design issues tracked for `relaynews.ai`.
+There are currently no active design issues tracked for `relaynew.ai`.
 
 ## When To Use This File
 

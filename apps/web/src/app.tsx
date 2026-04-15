@@ -99,7 +99,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
             <span className="h-4 w-4 bg-[#fb6424]" />
             <span className="h-4 w-4 bg-[#fa520f]" />
           </div>
-          relaynews.ai
+          relaynew.ai
         </Link>
         <nav className="hidden items-center gap-5 md:flex">
           {navItems.map(([to, label]) => (

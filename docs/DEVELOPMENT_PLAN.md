@@ -1,6 +1,6 @@
 # Development Plan
 
-This document turns the current architecture and contract decisions for `relaynews.ai`
+This document turns the current architecture and contract decisions for `relaynew.ai`
 into an execution plan.
 
 ## Current Baseline
@@ -240,7 +240,7 @@ Goal:
 Work items:
 - deploy `apps/web` to Cloudflare Workers
 - deploy `apps/origin` to the remote server with Docker Compose
-- configure `relaynews.ai`, `api.relaynews.ai`, and `admin.relaynews.ai`
+- configure `relaynew.ai`, `api.relaynew.ai`, and `admin.relaynew.ai`
 - configure Cloudflare cache rules, WAF, and access control
 - finalize environment variable management
 - add deployment and operational runbooks

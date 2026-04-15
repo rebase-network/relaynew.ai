@@ -45,14 +45,14 @@ The product should:
 
 ```txt
 Browser
-  -> relaynews.ai
+  -> relaynew.ai
      -> Cloudflare Workers Static Assets
         - built web app assets
         - SPA fallback routing
         - client-side data fetches
         - calls public API
 
-  -> api.relaynews.ai
+  -> api.relaynew.ai
      -> Cloudflare Proxy / CDN / WAF
         -> Origin API (remote server)
            - public API
@@ -81,7 +81,7 @@ It is not responsible for:
 - replacing the origin API
 
 ### Cloudflare Proxy
-Cloudflare sits in front of `api.relaynews.ai` and handles:
+Cloudflare sits in front of `api.relaynew.ai` and handles:
 - TLS
 - WAF
 - rate limiting
@@ -215,9 +215,9 @@ MVP assumption:
 
 ## Security Model
 
-- `relaynews.ai` serves the public site via Cloudflare Workers Static Assets
-- `api.relaynews.ai` sits behind Cloudflare Proxy
-- `admin.relaynews.ai` can be used for administrative access
+- `relaynew.ai` serves the public site via Cloudflare Workers Static Assets
+- `api.relaynew.ai` sits behind Cloudflare Proxy
+- `admin.relaynew.ai` can be used for administrative access
 - admin endpoints should be protected with Cloudflare Access or equivalent auth
 - the public probe flow must use a dedicated public-safe endpoint rather than any
   generic internal probe surface

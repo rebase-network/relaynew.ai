@@ -100,7 +100,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
       <header className="border-b border-white/10 bg-[linear-gradient(180deg,rgba(255,161,16,0.15),transparent)]">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-6 lg:flex-row lg:items-center lg:justify-between lg:px-10">
           <div>
-            <p className="text-xs uppercase tracking-[0.22em] text-white/60">relaynews.ai admin</p>
+            <p className="text-xs uppercase tracking-[0.22em] text-white/60">relaynew.ai admin</p>
             <h1 className="mt-2 text-3xl tracking-[-0.05em]">Operate the relay catalog, sponsorships, and pricing lanes.</h1>
           </div>
           <div className="flex flex-wrap gap-3">

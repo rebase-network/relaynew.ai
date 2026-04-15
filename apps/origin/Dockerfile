@@ -22,17 +22,9 @@ FROM node:22-bookworm-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/package.json ./package.json
-COPY --from=build /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
-COPY --from=build /app/pnpm-lock.yaml ./pnpm-lock.yaml
-COPY --from=build /app/tsconfig.base.json ./tsconfig.base.json
-COPY --from=build /app/packages/shared/package.json ./packages/shared/package.json
-COPY --from=build /app/packages/shared/dist ./packages/shared/dist
-COPY --from=build /app/apps/origin/package.json ./apps/origin/package.json
-COPY --from=build /app/apps/origin/dist ./apps/origin/dist
-COPY --from=build /app/apps/origin/db ./apps/origin/db
+COPY --from=build /app /app
+RUN ln -sf "$(find /app/node_modules/.pnpm -path '*/node_modules/tsx/dist/cli.mjs' | head -n 1)" /usr/local/bin/tsx
 
 EXPOSE 8787
 
-CMD ["node", "apps/origin/dist/server.js"]
+CMD ["tsx", "apps/origin/src/server.ts"]

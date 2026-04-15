@@ -5,9 +5,9 @@ This document describes the current deployment shape for the MVP.
 ## Runtime Split
 
 - `apps/origin` runs on the remote server through Docker Compose
-- `apps/web` deploys to Cloudflare Workers Static Assets at `relaynews.ai`
-- `apps/admin` deploys to Cloudflare Workers Static Assets at `admin.relaynews.ai`
-- `api.relaynews.ai` continues to point at the remote origin through Cloudflare Proxy
+- `apps/web` deploys to Cloudflare Workers Static Assets at `relaynew.ai`
+- `apps/admin` deploys to Cloudflare Workers Static Assets at `admin.relaynew.ai`
+- `api.relaynew.ai` continues to point at the remote origin through Cloudflare Proxy
 
 ## Required Tooling
 
@@ -38,14 +38,18 @@ The origin service reads its runtime values from the remote file:
 Start from `ops/origin.env.example` and fill in the production database URL and any
 other runtime values before the first deploy.
 
+The current origin deployment uses Docker host networking on the Linux server, so a
+PostgreSQL instance on the same machine can still be reached through `127.0.0.1`
+inside `DATABASE_URL`.
+
 ### Frontend Builds
 
 The frontend deploy flow expects these build-time variables:
 
 - `CF_ACCOUNT_ID` default: `5abb6d6f38eb7d3dabf8a5adf095c5f7`
-- `PUBLIC_API_BASE_URL` default: `https://api.relaynews.ai`
-- `PUBLIC_SITE_URL` default: `https://relaynews.ai`
-- `ADMIN_SITE_URL` default: `https://admin.relaynews.ai`
+- `PUBLIC_API_BASE_URL` default: `https://api.relaynew.ai`
+- `PUBLIC_SITE_URL` default: `https://relaynew.ai`
+- `ADMIN_SITE_URL` default: `https://admin.relaynew.ai`
 
 These values are injected into the Vite builds as:
 
@@ -93,9 +97,9 @@ These values are injected into the Vite builds as:
 
 Before the first production deploy, make sure:
 
-- the `relaynews.ai` zone already exists in Cloudflare account `5abb6d6f38eb7d3dabf8a5adf095c5f7`
-- `relaynews.ai` and `admin.relaynews.ai` are intended to run behind Cloudflare proxy
-- `api.relaynews.ai` is planned as a proxied DNS record to the origin service
+- the `relaynew.ai` zone already exists in Cloudflare account `5abb6d6f38eb7d3dabf8a5adf095c5f7`
+- `relaynew.ai` and `admin.relaynew.ai` are intended to run behind Cloudflare proxy
+- `api.relaynew.ai` is planned as a proxied DNS record to the origin service
 
 1. Authenticate Wrangler if the local machine has not been set up yet:
 

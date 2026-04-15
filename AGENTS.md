@@ -1,6 +1,6 @@
 # AGENTS
 
-This repository is for `relaynews.ai`, a public relay monitoring and leaderboard site.
+This repository is for `relaynew.ai`, a public relay monitoring and leaderboard site.
 
 ## Read First
 
@@ -46,7 +46,7 @@ Review `docs/OPEN_DESIGN_ISSUES.md` only when active unresolved design gaps exis
 
 - prefer small, explicit changes
 - update documentation when architectural decisions change
-- keep naming neutral and product-specific to `relaynews.ai`
+- keep naming neutral and product-specific to `relaynew.ai`
 - avoid introducing new infrastructure without documenting why it is needed
 - when adding APIs, separate `public`, `internal`, and `admin` responsibilities
 - commit each completed functional slice or document change as an atomic change set

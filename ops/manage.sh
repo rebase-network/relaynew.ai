@@ -140,7 +140,7 @@ fi
 ln -sfn '${release_dir}' '${REMOTE_CURRENT_LINK}'
 cd '${REMOTE_CURRENT_LINK}'
 docker compose -f '${REMOTE_COMPOSE_FILE}' build origin
-docker compose -f '${REMOTE_COMPOSE_FILE}' run --rm origin node apps/origin/dist/db/migrate.js
+docker compose -f '${REMOTE_COMPOSE_FILE}' run --rm origin tsx apps/origin/src/db/migrate.ts
 docker compose -f '${REMOTE_COMPOSE_FILE}' up -d origin
 sleep 3
 curl --fail --silent --show-error '${REMOTE_HEALTHCHECK_URL}' >/dev/null
