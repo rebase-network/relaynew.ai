@@ -877,18 +877,14 @@ function HomePage() {
           <div className="space-y-3">
             <form className="quick-probe-card quick-probe-form" onSubmit={quickProbe.handleSubmit}>
               <div className="quick-probe-header">
-                <div className="quick-probe-mode" aria-label="Homepage quick probe mode">
-                  <span className="quick-probe-mode-pill">Quick</span>
-                  <span className="quick-probe-mode-copy">homepage probe</span>
-                </div>
+                <p className="quick-probe-heading">Quick probe</p>
                 <Link
                   aria-label="Open the Pro probe page"
                   className="quick-probe-link"
-                  title="Open the Pro probe page for full diagnostics"
+                  title="Open the Pro probe page"
                   to="/probe"
                 >
-                  <span className="quick-probe-link-pill">Pro</span>
-                  <span className="quick-probe-link-copy">full diagnostics</span>
+                  Pro
                 </Link>
               </div>
               <ProbeFormFields
