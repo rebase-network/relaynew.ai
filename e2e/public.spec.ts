@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 const isDeployedRun = process.env.E2E_DEPLOYED === "1";
+const allowDeployedWrites = process.env.E2E_ALLOW_DEPLOYED_WRITES === "1";
 const probeUrl = process.env.API_URL ?? "";
 const probeKey = process.env.API_KEY ?? "";
 const probeConfigured = Boolean(probeUrl && probeKey && probeUrl !== "https://example.com");
@@ -40,7 +41,10 @@ test("public site renders the main discovery flow", async ({ page }) => {
 });
 
 test("submit flow works from the public site", async ({ page }) => {
-  test.skip(isDeployedRun, "Submission creation is a local-only test to avoid mutating deployed data.");
+  test.skip(
+    isDeployedRun && !allowDeployedWrites,
+    "Submission creation is skipped on deployed runs unless E2E_ALLOW_DEPLOYED_WRITES=1.",
+  );
   const relayName = `Beacon Relay ${Date.now()}`;
 
   await page.goto("/submit");
