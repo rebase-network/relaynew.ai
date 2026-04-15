@@ -58,7 +58,7 @@ run_ssh() {
 
 run_remote_script() {
   local script="$1"
-  ssh "${SSH_OPTS[@]}" "$REMOTE_HOST" 'bash -se' <<EOF_REMOTE
+  ssh "${SSH_OPTS[@]}" "$REMOTE_HOST" 'tmp_script=$(mktemp); cat > "$tmp_script"; bash "$tmp_script"; rc=$?; rm -f "$tmp_script"; exit "$rc"' <<EOF_REMOTE
 set -euo pipefail
 $script
 EOF_REMOTE
@@ -75,13 +75,6 @@ if [ -f "\$API_ENV_FILE" ]; then
   set +a
 fi
 EOF_EXPORTS
-}
-
-build_ref_export() {
-  local build_ref="$1"
-  cat <<EOF_BUILD_REF
-export RELAYNEWS_BUILD_REF='${build_ref}'
-EOF_BUILD_REF
 }
 
 wait_for_postgres_script() {
@@ -166,7 +159,6 @@ deploy_remote() {
 
   run_remote_script "
 $(compose_env_exports)
-$(build_ref_export "$release_id")
 if [ ! -f '${REMOTE_ENV_FILE}' ]; then
   echo 'Missing remote env file: ${REMOTE_ENV_FILE}' >&2
   exit 1
@@ -175,9 +167,9 @@ ln -sfn '${release_dir}' '${REMOTE_CURRENT_LINK}'
 cd '${REMOTE_CURRENT_LINK}'
 docker compose -f '${REMOTE_COMPOSE_FILE}' up -d postgres
 $(wait_for_postgres_script)
-docker compose -f '${REMOTE_COMPOSE_FILE}' build api
-docker compose -f '${REMOTE_COMPOSE_FILE}' run --rm api tsx apps/api/src/db/migrate.ts
-docker compose -f '${REMOTE_COMPOSE_FILE}' up -d --force-recreate api cloudflared
+RELAYNEWS_BUILD_REF='${release_id}' docker compose -f '${REMOTE_COMPOSE_FILE}' build api
+RELAYNEWS_BUILD_REF='${release_id}' docker compose -f '${REMOTE_COMPOSE_FILE}' run --rm -T api tsx apps/api/src/db/migrate.ts </dev/null
+RELAYNEWS_BUILD_REF='${release_id}' docker compose -f '${REMOTE_COMPOSE_FILE}' up -d --force-recreate api cloudflared
 sleep 3
 curl --fail --silent --show-error '${REMOTE_HEALTHCHECK_URL}' >/dev/null
 docker image prune -f >/dev/null 2>&1 || true
@@ -227,12 +219,11 @@ if [ ! -d \"\$target_dir\" ]; then
 fi
 
 ln -sfn \"\$target_dir\" '${REMOTE_CURRENT_LINK}'
-export RELAYNEWS_BUILD_REF=\"\$target_release\"
 cd '${REMOTE_CURRENT_LINK}'
 docker compose -f '${REMOTE_COMPOSE_FILE}' up -d postgres
 $(wait_for_postgres_script)
-docker compose -f '${REMOTE_COMPOSE_FILE}' build api
-docker compose -f '${REMOTE_COMPOSE_FILE}' up -d --force-recreate api cloudflared
+RELAYNEWS_BUILD_REF=\"\$target_release\" docker compose -f '${REMOTE_COMPOSE_FILE}' build api
+RELAYNEWS_BUILD_REF=\"\$target_release\" docker compose -f '${REMOTE_COMPOSE_FILE}' up -d --force-recreate api cloudflared
 sleep 3
 curl --fail --silent --show-error '${REMOTE_HEALTHCHECK_URL}' >/dev/null
 echo \"Rolled back to \$target_release\"
@@ -256,7 +247,7 @@ if [ -e '${REMOTE_CURRENT_LINK}/${REMOTE_COMPOSE_FILE}' ]; then
   if [ -n \"\$api_container_id\" ]; then
     echo
     echo 'api_build_ref:'
-    docker inspect --format '{{ index .Config.Labels "ai.relaynews.build_ref" }}' \"\$api_container_id\" || true
+    docker inspect --format '{{ index .Config.Labels \`ai.relaynews.build_ref\` }}' \"\$api_container_id\" || true
   fi
 else
   echo 'compose file is not available in current release yet'
