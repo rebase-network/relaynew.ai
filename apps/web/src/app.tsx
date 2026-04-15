@@ -36,6 +36,30 @@ const PROBE_COMPATIBILITY_OPTIONS: Array<{ value: ProbeCompatibilityMode; label:
   { value: "anthropic-messages", label: "Anthropic Messages" },
 ];
 
+const PROBE_FIELD_META = {
+  baseUrl: {
+    placeholder: "https://relay.example.ai or https://relay.example.ai/openai",
+    helper:
+      "Paste the relay root or provider prefix. The probe can add `/v1` and protocol-specific route suffixes automatically.",
+    autoComplete: "url",
+    inputMode: "url" as const,
+  },
+  apiKey: {
+    placeholder: "Paste a relay API key",
+    helper:
+      "Used only for this bounded server-side request path. The result UI never prints the key back out.",
+    autoComplete: "off",
+    inputMode: "text" as const,
+  },
+  model: {
+    placeholder: "gpt-5.3-codex",
+    helper:
+      "Use the exact model identifier you call in production. Automatic mode infers the adapter order from it.",
+    autoComplete: "off",
+    inputMode: "text" as const,
+  },
+} as const;
+
 const PROBE_COMPATIBILITY_LABELS: Record<ProbeResolvedCompatibilityMode, string> = {
   "openai-responses": "OpenAI Responses",
   "openai-chat-completions": "OpenAI Chat Completions",
@@ -69,6 +93,22 @@ function formatProbeMeasuredAt(value: string) {
 
 function formatProbeHttpStatus(value: number | null | undefined) {
   return value ? String(value) : "n/a";
+}
+
+function formatProbeRequestCount(value: number) {
+  return `${value} request${value === 1 ? "" : "s"}`;
+}
+
+function getProbeEndpointPath(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    return new URL(value).pathname || "/";
+  } catch {
+    return null;
+  }
 }
 
 function getProbeResultTone(result: PublicProbeResponse) {
@@ -880,6 +920,22 @@ function ProbePage() {
   const resultTone = useMemo(() => (result ? getProbeResultTone(result) : null), [result]);
   const failureGuidance = useMemo(() => (result ? getProbeFailureGuidance(result) : null), [result]);
   const attemptTrace = result?.attemptTrace ?? [];
+  const usedEndpointPath = useMemo(() => getProbeEndpointPath(result?.usedUrl), [result?.usedUrl]);
+  const requestSummary = useMemo(() => {
+    if (!result) {
+      return null;
+    }
+
+    if (result.ok) {
+      return attemptTrace.length <= 1
+        ? "Matched on the first request"
+        : `Matched after ${formatProbeRequestCount(attemptTrace.length)}`;
+    }
+
+    return attemptTrace.length > 0
+      ? `Checked ${formatProbeRequestCount(attemptTrace.length)}`
+      : "Probe did not reach the upstream route";
+  }, [attemptTrace.length, result]);
 
   return (
     <section className="grid gap-6 lg:grid-cols-[0.82fr_1.18fr] lg:items-start">
@@ -905,16 +961,26 @@ function ProbePage() {
       </div>
       <div className="space-y-6">
         <form className="panel space-y-4" onSubmit={handleSubmit}>
+          <div className="border border-black/10 bg-white/65 px-4 py-3 text-sm leading-6 text-black/68">
+            Paste the same relay endpoint, key, and model you use in production. Start with auto detection unless you already know the upstream protocol family.
+          </div>
           {fields.map(([label, key]) => (
             <label key={key} className="block text-sm uppercase tracking-[0.14em] text-black/65">
               {label}
               <input
                 className="mt-2 w-full border border-black/15 bg-white px-4 py-3"
                 type={key === "apiKey" ? "password" : "text"}
+                placeholder={PROBE_FIELD_META[key].placeholder}
                 value={state[key]}
                 onChange={(event) => setState((current) => ({ ...current, [key]: event.target.value }))}
+                autoComplete={PROBE_FIELD_META[key].autoComplete}
+                inputMode={PROBE_FIELD_META[key].inputMode}
+                spellCheck={false}
                 required
               />
+              <span className="mt-2 block text-[0.74rem] normal-case tracking-normal text-black/55">
+                {PROBE_FIELD_META[key].helper}
+              </span>
             </label>
           ))}
           <details className="border border-black/10 bg-white/70 p-4">
@@ -947,6 +1013,22 @@ function ProbePage() {
               <p className="text-2xl tracking-[-0.05em]">{resultTone?.label}</p>
               <p className="mt-2 text-sm leading-6 text-current/85">{resultTone?.description}</p>
             </div>
+            <div className="mb-5 flex flex-wrap gap-2">
+              <div className="border border-black/10 bg-white/80 px-3 py-2 text-[0.72rem] uppercase tracking-[0.16em] text-black/62">
+                {requestSummary}
+              </div>
+              <div className="border border-black/10 bg-white/80 px-3 py-2 text-[0.72rem] uppercase tracking-[0.16em] text-black/62">
+                {formatProbeCompatibilityMode(result.compatibilityMode)}
+              </div>
+              <div className="border border-black/10 bg-white/80 px-3 py-2 text-[0.72rem] uppercase tracking-[0.16em] text-black/62">
+                HTTP {formatProbeHttpStatus(result.protocol.httpStatus)}
+              </div>
+              {usedEndpointPath ? (
+                <div className="border border-black/10 bg-white/80 px-3 py-2 text-[0.72rem] uppercase tracking-[0.16em] text-black/62">
+                  {usedEndpointPath}
+                </div>
+              ) : null}
+            </div>
             <MetricGrid
               columnsClassName="sm:grid-cols-2 xl:grid-cols-3"
               items={[
@@ -954,7 +1036,7 @@ function ProbePage() {
                   label: "Host",
                   value: result.targetHost,
                   testId: "probe-host-value",
-                  valueClassName: "text-[1.75rem] leading-[0.92] break-words",
+                  valueClassName: "font-mono text-[1.12rem] leading-6 break-all",
                   valueTitle: result.targetHost,
                 },
                 {
@@ -1001,6 +1083,10 @@ function ProbePage() {
                     >
                       {result.usedUrl}
                     </p>
+                    <div className="mt-3 flex flex-wrap gap-2 text-[0.68rem] uppercase tracking-[0.16em] text-black/48">
+                      {usedEndpointPath ? <span className="border border-black/10 bg-[var(--surface)] px-2 py-1">{usedEndpointPath}</span> : null}
+                      <span className="border border-black/10 bg-[var(--surface)] px-2 py-1">{formatProbeRequestCount(attemptTrace.length)}</span>
+                    </div>
                   </div>
                 ) : null}
                 {attemptTrace.length > 0 ? (
