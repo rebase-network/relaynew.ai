@@ -20,6 +20,7 @@ import {
   NavLink,
   Route,
   Routes,
+  useLocation,
   useNavigate,
   useParams,
   useSearchParams,
@@ -51,6 +52,23 @@ function formatProbeDetectionMode(mode: ProbeDetectionMode | undefined) {
   }
 
   return "Automatic";
+}
+
+function formatProbeMeasuredAt(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleString([], {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
+function formatProbeHttpStatus(value: number | null | undefined) {
+  return value ? String(value) : "n/a";
 }
 
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
@@ -106,6 +124,8 @@ function useLoadable<T>(loader: () => Promise<T>, deps: unknown[]) {
 }
 
 function AppShell({ children }: { children: React.ReactNode }) {
+  const location = useLocation();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const navItems = [
     ["/", "Home"],
     ["/leaderboard/openai-gpt-4.1", "Leaderboard"],
@@ -114,35 +134,68 @@ function AppShell({ children }: { children: React.ReactNode }) {
     ["/probe", "Probe"],
   ] as const;
 
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [location.pathname]);
+
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--ink)]">
       <div className="absolute inset-x-0 top-0 -z-10 h-[32rem] bg-[radial-gradient(circle_at_top,_rgba(255,217,0,0.36),_transparent_55%),linear-gradient(180deg,_rgba(255,240,194,0.96),_rgba(255,250,235,0.96))]" />
-      <header className="mx-auto flex max-w-7xl items-center justify-between px-6 py-6 lg:px-10">
-        <Link to="/" className="flex items-center gap-3 text-sm uppercase tracking-[0.25em]">
-          <div className="flex shadow-[var(--shadow)]">
-            <span className="h-4 w-4 bg-[#ffd900]" />
-            <span className="h-4 w-4 bg-[#ffa110]" />
-            <span className="h-4 w-4 bg-[#fb6424]" />
-            <span className="h-4 w-4 bg-[#fa520f]" />
-          </div>
-          relaynew.ai
-        </Link>
-        <nav className="hidden items-center gap-5 md:flex">
-          {navItems.map(([to, label]) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                clsx(
-                  "text-sm uppercase tracking-[0.18em] transition-opacity",
-                  isActive ? "opacity-100" : "opacity-65 hover:opacity-100",
-                )
-              }
-            >
-              {label}
-            </NavLink>
-          ))}
-        </nav>
+      <header className="mx-auto max-w-7xl px-6 py-6 lg:px-10">
+        <div className="flex items-center justify-between gap-4">
+          <Link to="/" className="flex items-center gap-3 text-sm uppercase tracking-[0.25em]">
+            <div className="flex shadow-[var(--shadow)]">
+              <span className="h-4 w-4 bg-[#ffd900]" />
+              <span className="h-4 w-4 bg-[#ffa110]" />
+              <span className="h-4 w-4 bg-[#fb6424]" />
+              <span className="h-4 w-4 bg-[#fa520f]" />
+            </div>
+            relaynew.ai
+          </Link>
+          <button
+            aria-controls="mobile-primary-nav"
+            aria-expanded={mobileNavOpen}
+            className="border border-black/10 bg-white/70 px-3 py-2 text-xs uppercase tracking-[0.18em] md:hidden"
+            onClick={() => setMobileNavOpen((current) => !current)}
+            type="button"
+          >
+            {mobileNavOpen ? "Close" : "Menu"}
+          </button>
+          <nav className="hidden items-center gap-5 md:flex">
+            {navItems.map(([to, label]) => (
+              <NavLink
+                key={to}
+                to={to}
+                className={({ isActive }) =>
+                  clsx(
+                    "text-sm uppercase tracking-[0.18em] transition-opacity",
+                    isActive ? "opacity-100" : "opacity-65 hover:opacity-100",
+                  )
+                }
+              >
+                {label}
+              </NavLink>
+            ))}
+          </nav>
+        </div>
+        {mobileNavOpen ? (
+          <nav className="panel mt-4 grid gap-2 md:hidden" id="mobile-primary-nav">
+            {navItems.map(([to, label]) => (
+              <NavLink
+                key={to}
+                to={to}
+                className={({ isActive }) =>
+                  clsx(
+                    "border border-black/8 px-4 py-3 text-sm uppercase tracking-[0.18em] transition-colors",
+                    isActive ? "bg-[#1f1f1f] text-white" : "bg-white/80 hover:bg-white",
+                  )
+                }
+              >
+                {label}
+              </NavLink>
+            ))}
+          </nav>
+        ) : null}
       </header>
       <main className="mx-auto max-w-7xl px-6 pb-24 lg:px-10">{children}</main>
       <footer className="border-t border-black/10 bg-[linear-gradient(180deg,rgba(255,161,16,0.15),rgba(31,31,31,1))] px-6 py-10 text-white lg:px-10">
@@ -190,13 +243,31 @@ function StatusDot({ status }: { status: string }) {
   return <span className={clsx("inline-block h-2.5 w-2.5", tone)} />;
 }
 
-function MetricGrid({ items }: { items: Array<{ label: string; value: string | number; testId?: string }> }) {
+function MetricGrid({
+  items,
+  columnsClassName = "sm:grid-cols-2 xl:grid-cols-4",
+}: {
+  items: Array<{
+    label: string;
+    value: string | number;
+    testId?: string;
+    valueClassName?: string;
+    valueTitle?: string;
+  }>;
+  columnsClassName?: string;
+}) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className={clsx("grid gap-4", columnsClassName)}>
       {items.map((item) => (
         <div key={item.label} className="border border-black/10 bg-white/75 p-4">
           <p className="kicker">{item.label}</p>
-          <p className="mt-3 text-3xl tracking-[-0.04em]" data-testid={item.testId}>{item.value}</p>
+          <p
+            className={clsx("mt-3 tracking-[-0.04em]", item.valueClassName ?? "text-3xl")}
+            data-testid={item.testId}
+            title={item.valueTitle}
+          >
+            {item.value}
+          </p>
         </div>
       ))}
     </div>
@@ -621,12 +692,26 @@ function ProbePage() {
   }
 
   return (
-    <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+    <section className="grid gap-6 lg:grid-cols-[0.82fr_1.18fr] lg:items-start">
       <div className="panel bg-[#fff0c2]">
         <p className="kicker">Self-check probe</p>
         <h1 className="text-5xl leading-[0.92] tracking-[-0.06em]">Run a bounded connectivity check against a relay endpoint.</h1>
         <p className="mt-5 text-black/70">The public probe uses a tightly controlled server-side request path. It never echoes your API key back into the UI.</p>
         <p className="mt-3 text-sm text-black/60">Most relays should work with automatic compatibility detection. Use the advanced override only when you already know the protocol shape.</p>
+        <div className="mt-8 grid gap-3 sm:grid-cols-3">
+          <div className="border border-black/10 bg-white/65 p-3">
+            <p className="kicker">Request scope</p>
+            <p className="text-sm leading-6 text-black/75">Single bounded check with no persistent key storage.</p>
+          </div>
+          <div className="border border-black/10 bg-white/65 p-3">
+            <p className="kicker">Best default</p>
+            <p className="text-sm leading-6 text-black/75">Start with auto detection, then override only when needed.</p>
+          </div>
+          <div className="border border-black/10 bg-white/65 p-3">
+            <p className="kicker">What you get</p>
+            <p className="text-sm leading-6 text-black/75">Latency, protocol health, resolved endpoint, and adapter trace.</p>
+          </div>
+        </div>
       </div>
       <div className="space-y-6">
         <form className="panel space-y-4" onSubmit={handleSubmit}>
@@ -668,26 +753,86 @@ function ProbePage() {
         {result ? (
           <Panel title="Probe result" kicker="Diagnostic output">
             <MetricGrid
+              columnsClassName="sm:grid-cols-2 xl:grid-cols-3"
               items={[
-                { label: "Host", value: result.targetHost, testId: "probe-host-value" },
+                {
+                  label: "Host",
+                  value: result.targetHost,
+                  testId: "probe-host-value",
+                  valueClassName: "text-[1.75rem] leading-[0.92] break-words",
+                  valueTitle: result.targetHost,
+                },
                 { label: "Connectivity", value: result.connectivity.ok ? "ok" : "failed", testId: "probe-connectivity-value" },
                 { label: "Protocol", value: result.protocol.ok ? result.protocol.healthStatus : "unknown", testId: "probe-protocol-value" },
                 { label: "Latency", value: result.connectivity.latencyMs ? `${result.connectivity.latencyMs} ms` : "-", testId: "probe-latency-value" },
-                { label: "Compatibility", value: formatProbeCompatibilityMode(result.compatibilityMode), testId: "probe-mode-value" },
+                {
+                  label: "Compatibility",
+                  value: formatProbeCompatibilityMode(result.compatibilityMode),
+                  testId: "probe-mode-value",
+                  valueClassName: "text-[1.7rem] leading-[0.94]",
+                },
                 { label: "Detection", value: formatProbeDetectionMode(result.detectionMode), testId: "probe-detection-value" },
               ]}
             />
-            {result.usedUrl ? (
-              <p className="mt-4 text-sm text-black/70">
-                Used endpoint: <span className="font-medium" data-testid="probe-used-url-value">{result.usedUrl}</span>
-              </p>
-            ) : null}
-            {result.attemptedModes.length > 0 ? (
-              <p className="mt-2 text-sm text-black/60">
-                Attempted modes: {result.attemptedModes.map((mode) => PROBE_COMPATIBILITY_LABELS[mode]).join(", ")}
-              </p>
-            ) : null}
-            {result.message ? <p className="mt-4 text-sm text-black/70">{result.message}</p> : null}
+            <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+              <div className="space-y-4">
+                {result.usedUrl ? (
+                  <div className="border border-black/10 bg-white/75 p-4">
+                    <p className="kicker">Used endpoint</p>
+                    <p
+                      className="overflow-hidden break-all font-mono text-sm leading-6 text-black/72"
+                      data-testid="probe-used-url-value"
+                      title={result.usedUrl}
+                    >
+                      {result.usedUrl}
+                    </p>
+                  </div>
+                ) : null}
+                {result.attemptedModes.length > 0 ? (
+                  <div className="border border-black/10 bg-white/75 p-4">
+                    <p className="kicker">Attempted modes</p>
+                    <div className="flex flex-wrap gap-2">
+                      {result.attemptedModes.map((mode) => (
+                        <span
+                          className="border border-black/10 bg-[var(--surface)] px-2 py-1 text-xs uppercase tracking-[0.15em]"
+                          key={mode}
+                        >
+                          {PROBE_COMPATIBILITY_LABELS[mode]}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+                {result.message ? (
+                  <div className="border border-black/10 bg-[#fff4da] p-4 text-sm leading-6 text-black/72">{result.message}</div>
+                ) : null}
+              </div>
+              <MetricGrid
+                columnsClassName="sm:grid-cols-2 xl:grid-cols-1"
+                items={[
+                  {
+                    label: "Target model",
+                    value: result.model,
+                    testId: "probe-model-value",
+                    valueClassName: "text-[1.35rem] leading-[1.05] break-words",
+                    valueTitle: result.model,
+                  },
+                  {
+                    label: "HTTP status",
+                    value: formatProbeHttpStatus(result.protocol.httpStatus),
+                    testId: "probe-http-status-value",
+                    valueClassName: "text-[1.8rem] leading-[0.95]",
+                  },
+                  {
+                    label: "Measured at",
+                    value: formatProbeMeasuredAt(result.measuredAt),
+                    testId: "probe-measured-at-value",
+                    valueClassName: "text-lg leading-7",
+                    valueTitle: result.measuredAt,
+                  },
+                ]}
+              />
+            </div>
             {!result.ok && result.detectionMode === "auto" ? (
               <p className="mt-2 text-sm text-[#a33a16]">If the automatic match looks wrong, rerun the probe with a manual compatibility override in the advanced section.</p>
             ) : null}

@@ -69,6 +69,9 @@ test("public probe flow returns a diagnostic result", async ({ page }) => {
   await expect(page.getByTestId("probe-protocol-value")).toHaveText("healthy");
   await expect(page.getByTestId("probe-detection-value")).toHaveText("Automatic");
   await expect(page.getByTestId("probe-mode-value")).not.toHaveText("Not detected");
+  await expect(page.getByTestId("probe-model-value")).toHaveText(probeModel);
+  await expect(page.getByTestId("probe-http-status-value")).toHaveText("200");
+  await expect(page.getByTestId("probe-measured-at-value")).toHaveText(/\S+/);
   await expect(page.getByText(/^Upstream returned /)).toHaveCount(0);
 });
 
@@ -90,5 +93,19 @@ test("public probe supports manual compatibility override", async ({ page }) => 
   await expect(page.getByTestId("probe-protocol-value")).toHaveText("healthy");
   await expect(page.getByTestId("probe-detection-value")).toHaveText("Manual override");
   await expect(page.getByTestId("probe-mode-value")).toHaveText(manualCompatibilityLabels[manualCompatibilityMode]);
+  await expect(page.getByTestId("probe-model-value")).toHaveText(probeModel);
+  await expect(page.getByTestId("probe-http-status-value")).toHaveText("200");
   await expect(page.getByText(/^Upstream returned /)).toHaveCount(0);
+});
+
+test("public mobile navigation exposes the primary routes", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/probe");
+  await page.getByRole("button", { name: "Menu" }).click();
+
+  await expect(page.getByRole("link", { name: "Home" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Leaderboard" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Methodology" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Submit" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Probe" })).toBeVisible();
 });
