@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+CF_ACCOUNT_ID="${CF_ACCOUNT_ID:-5abb6d6f38eb7d3dabf8a5adf095c5f7}"
 PUBLIC_SITE_URL="${PUBLIC_SITE_URL:-https://relaynews.ai}"
 ADMIN_SITE_URL="${ADMIN_SITE_URL:-https://admin.relaynews.ai}"
 PUBLIC_API_BASE_URL="${PUBLIC_API_BASE_URL:-https://api.relaynews.ai}"
@@ -19,6 +20,7 @@ Commands:
   whoami                   Show the active Wrangler account
 
 Overrides:
+  CF_ACCOUNT_ID           Default: ${CF_ACCOUNT_ID}
   PUBLIC_SITE_URL          Default: ${PUBLIC_SITE_URL}
   ADMIN_SITE_URL           Default: ${ADMIN_SITE_URL}
   PUBLIC_API_BASE_URL      Default: ${PUBLIC_API_BASE_URL}
@@ -65,6 +67,7 @@ run_wrangle() {
 
   (
     cd "$ROOT_DIR"
+    export CLOUDFLARE_ACCOUNT_ID="${CF_ACCOUNT_ID}"
     pnpm exec wrangler "$@" --config "apps/${app}/wrangler.jsonc"
   )
 }
@@ -129,6 +132,7 @@ main() {
     whoami)
       (
         cd "$ROOT_DIR"
+        export CLOUDFLARE_ACCOUNT_ID="${CF_ACCOUNT_ID}"
         pnpm exec wrangler whoami
       )
       ;;

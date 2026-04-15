@@ -17,6 +17,7 @@ This document describes the current deployment shape for the MVP.
 - `Docker` for local validation and E2E
 - `wrangler` for Cloudflare deploys
 - SSH access to `rebase@rebase.network` for origin operations
+- Cloudflare account target: `5abb6d6f38eb7d3dabf8a5adf095c5f7`
 
 ### Remote Origin Host
 
@@ -41,6 +42,7 @@ other runtime values before the first deploy.
 
 The frontend deploy flow expects these build-time variables:
 
+- `CF_ACCOUNT_ID` default: `5abb6d6f38eb7d3dabf8a5adf095c5f7`
 - `PUBLIC_API_BASE_URL` default: `https://api.relaynews.ai`
 - `PUBLIC_SITE_URL` default: `https://relaynews.ai`
 - `ADMIN_SITE_URL` default: `https://admin.relaynews.ai`
@@ -88,6 +90,12 @@ These values are injected into the Vite builds as:
    ```
 
 ## Cloudflare Deploy Flow
+
+Before the first production deploy, make sure:
+
+- the `relaynews.ai` zone already exists in Cloudflare account `5abb6d6f38eb7d3dabf8a5adf095c5f7`
+- `relaynews.ai` and `admin.relaynews.ai` are intended to run behind Cloudflare proxy
+- `api.relaynews.ai` is planned as a proxied DNS record to the origin service
 
 1. Authenticate Wrangler if the local machine has not been set up yet:
 
