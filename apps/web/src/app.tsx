@@ -131,6 +131,7 @@ const HOME_LEADERBOARD_ROW_LIMIT = 3;
 const DEFAULT_LEADERBOARD_MODEL_KEY = "openai-gpt-5.4";
 const LEADERBOARD_DIRECTORY_PATH = "/leaderboard/directory";
 const LOADABLE_CACHE_MAX_AGE_MS = 60_000;
+const THIRTY_DAY_BAR_COUNT = 30;
 
 const LEADERBOARD_VENDOR_LABELS: Record<string, string> = {
   anthropic: "Anthropic",
@@ -232,6 +233,82 @@ function getAvailabilityTrendStatus(availability: number): HealthStatus {
 
 function formatScoreMetricLabel(label: keyof RelayOverviewResponse["scoreSummary"]) {
   return label === "total" ? "Total" : `${label.charAt(0).toUpperCase()}${label.slice(1)}`;
+}
+
+type DailyHistorySlot = {
+  dateKey: string;
+  point: RelayHistoryResponse["points"][number] | null;
+};
+
+function getIsoDateKey(value: string | Date) {
+  const date = value instanceof Date ? value : new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())).toISOString().slice(0, 10);
+}
+
+function buildDailyHistorySlots(
+  points: RelayHistoryResponse["points"],
+  measuredAt: string,
+  dayCount = THIRTY_DAY_BAR_COUNT,
+): DailyHistorySlot[] {
+  const pointByDateKey = new Map<string, RelayHistoryResponse["points"][number]>();
+
+  for (const point of points) {
+    const dateKey = getIsoDateKey(point.bucketStart);
+
+    if (dateKey) {
+      pointByDateKey.set(dateKey, point);
+    }
+  }
+
+  const measuredDateKey = getIsoDateKey(measuredAt);
+  const latestPointDateKey = [...pointByDateKey.keys()].sort().at(-1) ?? null;
+  const anchorDate = measuredDateKey ?? latestPointDateKey ?? getIsoDateKey(new Date()) ?? new Date().toISOString().slice(0, 10);
+  const anchor = new Date(`${anchorDate}T00:00:00.000Z`);
+
+  return Array.from({ length: dayCount }, (_, index) => {
+    const slotDate = new Date(anchor);
+    slotDate.setUTCDate(anchor.getUTCDate() - (dayCount - index - 1));
+    const dateKey = slotDate.toISOString().slice(0, 10);
+
+    return {
+      dateKey,
+      point: pointByDateKey.get(dateKey) ?? null,
+    };
+  });
+}
+
+function getLatencyToneClass(latencyMs: number | null) {
+  if (latencyMs === null) {
+    return "bg-zinc-300";
+  }
+
+  if (latencyMs < 1000) {
+    return "bg-emerald-500";
+  }
+
+  if (latencyMs < 2000) {
+    return "bg-yellow-400";
+  }
+
+  if (latencyMs < 4000) {
+    return "bg-orange-500";
+  }
+
+  return "bg-red-500";
+}
+
+function getLatencyBarHeight(latencyMs: number | null, ceilingMs: number) {
+  if (latencyMs === null) {
+    return 20;
+  }
+
+  const normalized = Math.min(latencyMs, ceilingMs) / ceilingMs;
+  return Math.max(24, Math.round(24 + normalized * 76));
 }
 
 function getModelVendorKey(modelKey: string) {
@@ -2339,17 +2416,81 @@ function LeaderboardPage() {
 }
 
 function MiniBars({
-  points,
+  slots,
   heightClassName = "h-36",
 }: {
-  points: RelayHistoryResponse["points"];
+  slots: DailyHistorySlot[];
   heightClassName?: string;
 }) {
-  const maxLatency = Math.max(...points.map((point) => point.latencyP95Ms ?? 0), 1);
+  const maxLatency = Math.max(...slots.map((slot) => slot.point?.latencyP95Ms ?? 0), 4000);
+
   return (
     <div className={clsx("flex items-end gap-1", heightClassName)}>
-      {points.map((point) => (
-        <div key={point.bucketStart} className="flex-1 bg-[linear-gradient(180deg,#ffd900,#fa520f)]" style={{ height: `${((point.latencyP95Ms ?? 0) / maxLatency) * 100}%` }} title={`${point.bucketStart} · ${point.latencyP95Ms ?? 0} ms`} />
+      {slots.map((slot) => {
+        const latencyMs = slot.point?.latencyP95Ms ?? null;
+
+        return (
+          <div
+            key={slot.dateKey}
+            className={clsx("flex-1 rounded-[0.02rem]", getLatencyToneClass(latencyMs))}
+            data-testid="relay-latency-bar"
+            style={{ height: `${getLatencyBarHeight(latencyMs, maxLatency)}%` }}
+            title={`${new Date(`${slot.dateKey}T00:00:00.000Z`).toLocaleDateString()} · ${latencyMs === null ? "No sample" : `p95 ${latencyMs} ms`}`}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+function RelayLatencyLegend() {
+  return (
+    <div className="flex flex-wrap gap-2 text-[0.68rem] uppercase tracking-[0.16em] text-black/48">
+      {[
+        { label: "<1s", toneClassName: "bg-emerald-500" },
+        { label: "1-2s", toneClassName: "bg-yellow-400" },
+        { label: "2-4s", toneClassName: "bg-orange-500" },
+        { label: "4s+", toneClassName: "bg-red-500" },
+        { label: "No sample", toneClassName: "bg-zinc-300" },
+      ].map((item) => (
+        <span key={item.label} className="inline-flex items-center gap-1.5">
+          <span className={clsx("h-2.5 w-2.5 rounded-full", item.toneClassName)} />
+          {item.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function getStatusHistoryToneClass(point: RelayHistoryResponse["points"][number] | null) {
+  if (!point) {
+    return "bg-zinc-300";
+  }
+
+  return getStatusToneClass(getAvailabilityTrendStatus(point.availability));
+}
+
+function formatStatusHistoryTitle(slot: DailyHistorySlot) {
+  const displayDate = new Date(`${slot.dateKey}T00:00:00.000Z`).toLocaleDateString();
+
+  if (!slot.point) {
+    return `${displayDate} · No sample`;
+  }
+
+  const status = getAvailabilityTrendStatus(slot.point.availability);
+  return `${displayDate} · ${status} · ${formatAvailability(slot.point.availability)}`;
+}
+
+function StatusHistoryGrid({ slots }: { slots: DailyHistorySlot[] }) {
+  return (
+    <div className="grid grid-cols-5 gap-2">
+      {slots.map((slot) => (
+        <div
+          key={slot.dateKey}
+          className={clsx("h-10 rounded-[0.02rem]", getStatusHistoryToneClass(slot.point))}
+          data-testid="relay-status-bar"
+          title={formatStatusHistoryTitle(slot)}
+        />
       ))}
     </div>
   );
@@ -2389,39 +2530,28 @@ function ScorePopover({ scoreSummary }: { scoreSummary: RelayOverviewResponse["s
 }
 
 function StatusHistoryPanel({
-  points,
+  slots,
   incidentCount,
 }: {
-  points: RelayHistoryResponse["points"];
+  slots: DailyHistorySlot[];
   incidentCount: number;
 }) {
-  const statusPoints = points.map((point) => ({
-    ...point,
-    status: getAvailabilityTrendStatus(point.availability),
-  }));
+  const measuredSlots = slots.filter((slot) => slot.point);
 
-  if (statusPoints.length === 0) {
+  if (slots.length === 0) {
     return <p className="text-sm text-black/60">No thirty-day status samples yet.</p>;
   }
 
-  const healthyCount = statusPoints.filter((point) => point.status === "healthy").length;
-  const degradedCount = statusPoints.filter((point) => point.status === "degraded").length;
+  const healthyCount = measuredSlots.filter((slot) => slot.point && getAvailabilityTrendStatus(slot.point.availability) === "healthy").length;
+  const degradedCount = measuredSlots.filter((slot) => slot.point && getAvailabilityTrendStatus(slot.point.availability) === "degraded").length;
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-5 gap-2">
-        {statusPoints.map((point) => (
-          <div
-            key={point.bucketStart}
-            className={clsx("h-10 rounded-[0.02rem]", getStatusToneClass(point.status))}
-            title={`${new Date(point.bucketStart).toLocaleDateString()} · ${point.status} · ${formatAvailability(point.availability)}`}
-          />
-        ))}
-      </div>
+      <StatusHistoryGrid slots={slots} />
       <div className="grid gap-2 sm:grid-cols-2">
         <div className="surface-card px-3 py-2.5 text-sm">
           <p className="font-mono text-[0.64rem] uppercase tracking-[0.18em] text-black/46">Stable windows</p>
-          <p className="mt-2 text-black/76">{healthyCount} of {statusPoints.length}</p>
+          <p className="mt-2 text-black/76">{healthyCount} of {measuredSlots.length || 0}</p>
         </div>
         <div className="surface-card px-3 py-2.5 text-sm">
           <p className="font-mono text-[0.64rem] uppercase tracking-[0.18em] text-black/46">Events in 30d</p>
@@ -2429,7 +2559,7 @@ function StatusHistoryPanel({
         </div>
       </div>
       <p className="text-sm leading-6 text-black/64">
-        Green means stable, amber means degraded, and red means down.
+        Green means stable, amber means degraded, red means down, and gray means no sample for that day.
         {degradedCount > 0 ? ` ${degradedCount} sampled windows show degraded behavior.` : ""}
       </p>
     </div>
@@ -2487,6 +2617,8 @@ function RelayPage() {
     ...row,
     currentPrice: latestPricingByModelKey.get(row.modelKey) ?? null,
   })) ?? [];
+  const historySlots = history.data ? buildDailyHistorySlots(history.data.points, history.data.measuredAt) : [];
+  const latestMeasuredHistoryPoint = [...historySlots].reverse().find((slot) => slot.point?.latencyP95Ms !== null)?.point ?? null;
 
   return (
     <div className="space-y-4">
@@ -2546,7 +2678,8 @@ function RelayPage() {
         >
           {history.loading || !history.data ? <p className="text-sm text-black/60">Loading trend...</p> : (
             <div className="space-y-3">
-              <MiniBars heightClassName="h-28" points={history.data.points} />
+              <MiniBars heightClassName="h-28" slots={historySlots} />
+              <RelayLatencyLegend />
               <div className="grid gap-2 sm:grid-cols-3">
                 <div className="surface-card px-3 py-2.5 text-sm">
                   <p className="font-mono text-[0.64rem] uppercase tracking-[0.18em] text-black/46">Window</p>
@@ -2559,7 +2692,7 @@ function RelayPage() {
                 <div className="surface-card px-3 py-2.5 text-sm">
                   <p className="font-mono text-[0.64rem] uppercase tracking-[0.18em] text-black/46">Latest p95</p>
                   <p className="mt-2 text-black/76">
-                    {formatLatency(history.data.points[history.data.points.length - 1]?.latencyP95Ms ?? null)}
+                    {formatLatency(latestMeasuredHistoryPoint?.latencyP95Ms ?? null)}
                   </p>
                 </div>
               </div>
@@ -2576,7 +2709,7 @@ function RelayPage() {
           {history.loading || !history.data || incidents.loading || !incidents.data ? (
             <p className="text-sm text-black/60">Loading status...</p>
           ) : (
-            <StatusHistoryPanel incidentCount={incidents.data.rows.length} points={history.data.points} />
+            <StatusHistoryPanel incidentCount={incidents.data.rows.length} slots={historySlots} />
           )}
         </Panel>
       </section>
