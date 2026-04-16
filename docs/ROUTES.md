@@ -21,7 +21,7 @@ for each route, and the primary data source that should back it.
 | `/leaderboard/:modelKey` | Main leaderboard for a model | CSR in public SPA | `GET /public/leaderboard/:modelKey` |
 | `/relay/:slug` | Relay detail page with overview and trend charts | CSR in public SPA | `GET /public/relay/:slug/overview`, `GET /public/relay/:slug/history`, `GET /public/relay/:slug/models`, `GET /public/relay/:slug/pricing-history`, `GET /public/relay/:slug/incidents` |
 | `/methodology` | Ranking and scoring explanation | CSR in public SPA | static content or `GET /public/methodology` |
-| `/submit` | Relay submission and sponsor inquiry entry point | CSR in public SPA | static content, optional form metadata API |
+| `/submit` | Relay submission entry point with initial bounded verification | CSR in public SPA | `POST /public/submissions` |
 
 ## Tooling Routes
 
@@ -120,4 +120,8 @@ The probe page is expected to include:
 - `/probe` must only call the public-safe probe endpoint described in `docs/PROBE_SECURITY.md`
 - `/public/probe/check` should accept an optional `compatibilityMode` override while
   still defaulting to model-driven automatic detection
+- `/public/submissions` should require `testApiKey` and `testModel`, store them in a
+  rotation-friendly credential record, and return a concise initial probe summary
+- approving a submission should move the active credential from the submission owner
+  into the target relay owner rather than duplicating keys across tables
 - admin routes on `admin.relaynew.ai` should never rely on CDN-cached responses

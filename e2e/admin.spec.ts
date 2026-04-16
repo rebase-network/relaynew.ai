@@ -99,19 +99,20 @@ test("admin can review submissions, create sponsors, and add prices", async ({ p
   const sponsorName = `Sponsor ${Date.now()}`;
   const inputPrice = "0.33";
   const outputPrice = "1.22";
+  const relayBaseUrl = `https://example.com/relay/${relaySlug}`;
 
   const relayResponse = await request.post(`${apiBaseUrl}/admin/relays`, {
     data: {
       slug: relaySlug,
       name: relayName,
-      baseUrl: `https://${relaySlug}.example.ai/v1`,
+      baseUrl: relayBaseUrl,
       providerName: "Playwright Ops",
-      websiteUrl: `https://${relaySlug}.example.ai`,
+      websiteUrl: "https://example.com",
       catalogStatus: "active",
       isFeatured: false,
       isSponsored: false,
       description: "Created by deployed Playwright admin coverage.",
-      docsUrl: `https://${relaySlug}.example.ai/docs`,
+      docsUrl: `https://example.com/docs/${relaySlug}`,
       notes: "Playwright admin verification",
     },
   });
@@ -120,10 +121,12 @@ test("admin can review submissions, create sponsors, and add prices", async ({ p
   const submissionResponse = await request.post(`${apiBaseUrl}/public/submissions`, {
     data: {
       relayName,
-      baseUrl: `https://${relaySlug}.example.ai/v1`,
-      websiteUrl: "https://review.example.ai",
+      baseUrl: relayBaseUrl,
+      websiteUrl: "https://example.com",
       submitterEmail: "ops@example.com",
       notes: "Created by deployed Playwright admin coverage.",
+      testApiKey: "sk-playwright-submit",
+      testModel: "gpt-5.4",
     },
   });
   expect(submissionResponse.ok()).toBeTruthy();
@@ -133,9 +136,13 @@ test("admin can review submissions, create sponsors, and add prices", async ({ p
   await page.goto(`${adminBaseUrl}/submissions`);
   const submissionCard = page.locator(".admin-list-card").filter({ hasText: relayName }).first();
   await expect(submissionCard).toBeVisible();
+  await expect(submissionCard).toContainText("Credential");
+  await expect(submissionCard).toContainText("Probe");
+  await expect(submissionCard).toContainText("gpt-5.4");
   await submissionCard.getByRole("button", { name: "Approve" }).click();
   await expect(page.getByText(/Submission approved\./)).toBeVisible();
   await expect(submissionCard).toContainText(/approved/i);
+  await expect(submissionCard).toContainText("Linked relay");
 
   await page.goto(`${adminBaseUrl}/sponsors`);
   await page.getByLabel("Name").fill(sponsorName);

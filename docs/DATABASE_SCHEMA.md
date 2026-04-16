@@ -176,12 +176,49 @@ Suggested columns:
 - `notes` text null
 - `status` text not null default 'pending'
 - `review_notes` text null
+- `approved_relay_id` uuid null references `relays(id)`
 - `created_at` timestamptz not null default now()
 - `updated_at` timestamptz not null default now()
 
 Indexes:
 - index on `status`
 - index on `created_at desc`
+
+Notes:
+- `submissions` stays as the review queue and audit trail, not the long-term source of truth
+- once approved, the operational relay record lives in `relays`, and `approved_relay_id` links the review record back to that catalog entry
+
+### probe_credentials
+Rotation-friendly monitoring credentials for either a pending submission or an approved relay.
+
+Suggested columns:
+- `id` uuid primary key
+- `submission_id` uuid null references `submissions(id)` on delete cascade
+- `relay_id` uuid null references `relays(id)` on delete cascade
+- `api_key` text not null
+- `test_model` text not null
+- `compatibility_mode` text not null default 'auto'
+- `status` text not null default 'active'
+- `last_verified_at` timestamptz null
+- `last_probe_ok` boolean null
+- `last_health_status` text null
+- `last_http_status` integer null
+- `last_message` text null
+- `last_detection_mode` text null
+- `last_used_url` text null
+- `created_at` timestamptz not null default now()
+- `updated_at` timestamptz not null default now()
+
+Indexes:
+- partial unique index on `submission_id` where `status = 'active'`
+- partial unique index on `relay_id` where `status = 'active'`
+- index on (`submission_id`, `created_at` desc)
+- index on (`relay_id`, `created_at` desc)
+
+Notes:
+- exactly one owner should be present on each row: either `submission_id` or `relay_id`
+- key rotation should create a new active row and mark the previous row as `rotated` or `revoked`
+- initial submit-time probes should write their latest verification snapshot back to this table
 
 ### sponsors
 Paid placement records kept separate from ranking logic.

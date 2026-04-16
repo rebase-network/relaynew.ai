@@ -571,6 +571,22 @@ function SubmissionsPage() {
                 <p className="text-xl tracking-[-0.03em]">{row.relayName}</p>
                 <p className="mt-1 text-sm text-white/60">{row.baseUrl}</p>
                 <p className="mt-2 text-xs uppercase tracking-[0.16em] text-white/40">{row.status} · {new Date(row.createdAt).toLocaleString()}</p>
+                {row.approvedRelay ? <p className="mt-2 text-sm text-emerald-300/80">Linked relay · {row.approvedRelay.name}</p> : null}
+                {row.probeCredential ? (
+                  <div className="mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white/65">
+                    <p>
+                      Credential · {row.probeCredential.status} · {row.probeCredential.apiKeyPreview}
+                    </p>
+                    <p>
+                      Probe · {row.probeCredential.testModel} · {row.probeCredential.lastHealthStatus ?? "unknown"}
+                      {row.probeCredential.lastHttpStatus ? ` · ${row.probeCredential.lastHttpStatus}` : ""}
+                      {row.probeCredential.lastVerifiedAt
+                        ? ` · ${new Date(row.probeCredential.lastVerifiedAt).toLocaleString()}`
+                        : ""}
+                    </p>
+                    {row.probeCredential.lastMessage ? <p className="text-white/48">{row.probeCredential.lastMessage}</p> : null}
+                  </div>
+                ) : null}
               </div>
               <div className="flex flex-wrap gap-2">
                 <button className="pill pill-active" type="button" onClick={() => review(row.id, "approved")}>Approve</button>

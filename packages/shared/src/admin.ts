@@ -2,10 +2,16 @@ import { z } from "zod";
 
 import {
   catalogStatusSchema,
+  healthStatusSchema,
   isoTimestampSchema,
   relaySummarySchema,
   supportStatusSchema,
 } from "./common";
+import {
+  probeCompatibilityModeSchema,
+  probeDetectionModeSchema,
+  probeResolvedCompatibilityModeSchema,
+} from "./probe";
 
 const internalIdSchema = z.string().min(1);
 const trimString = (value: unknown) => (typeof value === "string" ? value.trim() : value);
@@ -18,25 +24,43 @@ const emptyStringToNull = (value: unknown) => {
   return trimmed === "" ? null : trimmed;
 };
 const requiredUrlSchema = z.preprocess(trimString, z.url());
+const requiredHttpsUrlSchema = z.preprocess(trimString, z.url({ protocol: /^https$/ }));
 const optionalUrlSchema = z.preprocess(emptyStringToUndefined, z.url().optional());
 const nullableUrlSchema = z.preprocess(emptyStringToNull, z.url().nullable());
 const optionalNonEmptyStringSchema = z.preprocess(emptyStringToUndefined, z.string().min(1).optional());
 const optionalEmailSchema = z.preprocess(emptyStringToUndefined, z.email().optional());
 const nullableNonEmptyStringSchema = z.preprocess(emptyStringToNull, z.string().min(1).nullable());
+const requiredNonEmptyStringSchema = z.preprocess(trimString, z.string().min(1));
+
+export const probeCredentialStatusSchema = z.enum(["active", "rotated", "revoked"]);
 
 export const publicSubmissionRequestSchema = z.object({
-  relayName: z.string().min(1),
-  baseUrl: requiredUrlSchema,
+  relayName: requiredNonEmptyStringSchema,
+  baseUrl: requiredHttpsUrlSchema,
   websiteUrl: optionalUrlSchema,
   submitterName: optionalNonEmptyStringSchema,
   submitterEmail: optionalEmailSchema,
   notes: optionalNonEmptyStringSchema,
+  testApiKey: requiredNonEmptyStringSchema,
+  testModel: requiredNonEmptyStringSchema,
+  compatibilityMode: z.preprocess(trimString, probeCompatibilityModeSchema).default("auto"),
+});
+
+export const submissionProbeSummarySchema = z.object({
+  ok: z.boolean(),
+  healthStatus: healthStatusSchema,
+  httpStatus: z.number().int().min(100).max(599).nullable(),
+  message: z.string().nullable(),
+  verifiedAt: isoTimestampSchema,
+  compatibilityMode: probeResolvedCompatibilityModeSchema.nullable().optional(),
+  detectionMode: probeDetectionModeSchema.optional(),
 });
 
 export const publicSubmissionResponseSchema = z.object({
   ok: z.literal(true),
   id: internalIdSchema,
   status: z.enum(["pending", "approved", "rejected", "archived"]),
+  probe: submissionProbeSummarySchema.nullable().optional(),
 });
 
 export const adminOverviewResponseSchema = z.object({
@@ -90,6 +114,21 @@ export const adminSubmissionSchema = z.object({
   notes: z.string().nullable(),
   status: z.enum(["pending", "approved", "rejected", "archived"]),
   reviewNotes: z.string().nullable(),
+  approvedRelay: relaySummarySchema.nullable(),
+  probeCredential: z
+    .object({
+      id: internalIdSchema,
+      status: probeCredentialStatusSchema,
+      testModel: z.string().min(1),
+      compatibilityMode: probeCompatibilityModeSchema,
+      apiKeyPreview: z.string().min(1),
+      lastVerifiedAt: isoTimestampSchema.nullable(),
+      lastProbeOk: z.boolean().nullable(),
+      lastHealthStatus: healthStatusSchema.nullable(),
+      lastHttpStatus: z.number().int().min(100).max(599).nullable(),
+      lastMessage: z.string().nullable(),
+    })
+    .nullable(),
   createdAt: isoTimestampSchema,
 });
 
@@ -167,6 +206,7 @@ export const adminRelayModelSchema = z.object({
 
 export type PublicSubmissionRequest = z.infer<typeof publicSubmissionRequestSchema>;
 export type PublicSubmissionResponse = z.infer<typeof publicSubmissionResponseSchema>;
+export type SubmissionProbeSummary = z.infer<typeof submissionProbeSummarySchema>;
 export type AdminOverviewResponse = z.infer<typeof adminOverviewResponseSchema>;
 export type AdminRelay = z.infer<typeof adminRelaySchema>;
 export type AdminRelaysResponse = z.infer<typeof adminRelaysResponseSchema>;
@@ -174,6 +214,7 @@ export type AdminRelayUpsert = z.infer<typeof adminRelayUpsertSchema>;
 export type AdminSubmission = z.infer<typeof adminSubmissionSchema>;
 export type AdminSubmissionsResponse = z.infer<typeof adminSubmissionsResponseSchema>;
 export type AdminSubmissionReview = z.infer<typeof adminSubmissionReviewSchema>;
+export type ProbeCredentialStatus = z.infer<typeof probeCredentialStatusSchema>;
 export type AdminSponsor = z.infer<typeof adminSponsorSchema>;
 export type AdminSponsorsResponse = z.infer<typeof adminSponsorsResponseSchema>;
 export type AdminSponsorUpsert = z.infer<typeof adminSponsorUpsertSchema>;

@@ -10,7 +10,7 @@ psql "$DATABASE_URL" -f apps/api/db/migrations/0001_initial.sql
 
 ## What the initial migration includes
 
-- core catalog tables for relays, models, prices, submissions, and sponsors
+- core catalog tables for relays, models, prices, submissions, probe credentials, and sponsors
 - raw probe storage with selective detailed error samples
 - incident event storage for relay timelines
 - 5-minute and hourly aggregation tables

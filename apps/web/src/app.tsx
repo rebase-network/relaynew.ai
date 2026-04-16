@@ -617,6 +617,9 @@ type SubmitFormState = {
   baseUrl: string;
   websiteUrl: string;
   submitterEmail: string;
+  testApiKey: string;
+  testModel: string;
+  compatibilityMode: ProbeCompatibilityMode;
 };
 
 type SubmitFormErrors = Partial<Record<keyof SubmitFormState, string>>;
@@ -627,6 +630,8 @@ function validateSubmitForm(state: SubmitFormState) {
   const baseUrl = state.baseUrl.trim();
   const websiteUrl = state.websiteUrl.trim();
   const submitterEmail = state.submitterEmail.trim();
+  const testApiKey = state.testApiKey.trim();
+  const testModel = state.testModel.trim();
 
   if (!relayName) {
     errors.relayName = "Relay name is required.";
@@ -634,8 +639,8 @@ function validateSubmitForm(state: SubmitFormState) {
 
   if (!baseUrl) {
     errors.baseUrl = "Base URL is required.";
-  } else if (!isValidHttpUrl(baseUrl)) {
-    errors.baseUrl = "Enter a full base URL such as https://relay.example.ai/v1.";
+  } else if (!isValidHttpUrl(baseUrl) || !baseUrl.startsWith("https://")) {
+    errors.baseUrl = "Enter a full HTTPS base URL such as https://relay.example.ai/v1.";
   }
 
   if (websiteUrl && !isValidHttpUrl(websiteUrl)) {
@@ -646,6 +651,14 @@ function validateSubmitForm(state: SubmitFormState) {
     errors.submitterEmail = "Enter a valid contact email address.";
   }
 
+  if (!testApiKey) {
+    errors.testApiKey = "A test key is required for the initial relay probe.";
+  }
+
+  if (!testModel) {
+    errors.testModel = "A test model is required.";
+  }
+
   return {
     errors,
     payload: {
@@ -653,6 +666,9 @@ function validateSubmitForm(state: SubmitFormState) {
       baseUrl,
       websiteUrl: websiteUrl || undefined,
       submitterEmail: submitterEmail || undefined,
+      testApiKey,
+      testModel,
+      compatibilityMode: state.compatibilityMode,
     },
   };
 }
@@ -2543,41 +2559,25 @@ function PolicyPage() {
 }
 
 function SubmitPage() {
-  const [state, setState] = useState<SubmitFormState>({ relayName: "", baseUrl: "", websiteUrl: "", submitterEmail: "" });
+  const [state, setState] = useState<SubmitFormState>({
+    relayName: "",
+    baseUrl: "",
+    websiteUrl: "",
+    submitterEmail: "",
+    testApiKey: "",
+    testModel: "gpt-5.4",
+    compatibilityMode: "auto",
+  });
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<PublicSubmissionResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<SubmitFormErrors>({});
-  const fields = [
-    {
-      label: "Relay name",
-      key: "relayName",
-      type: "text",
-      required: true,
-      placeholder: "Northwind Relay",
-    },
-    {
-      label: "Base URL",
-      key: "baseUrl",
-      type: "url",
-      required: true,
-      placeholder: "https://northwind.example.ai/v1",
-    },
-    {
-      label: "Website URL",
-      key: "websiteUrl",
-      type: "url",
-      required: false,
-      placeholder: "https://northwind.example.ai",
-    },
-    {
-      label: "Contact email",
-      key: "submitterEmail",
-      type: "email",
-      required: false,
-      placeholder: "ops@example.com",
-    },
-  ] as const;
+
+  function updateField<Key extends keyof SubmitFormState>(key: Key, value: SubmitFormState[Key]) {
+    setState((current) => ({ ...current, [key]: value }));
+    setFieldErrors((current) => ({ ...current, [key]: undefined }));
+    setError(null);
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -2597,7 +2597,15 @@ function SubmitPage() {
         body: JSON.stringify(payload),
       });
       setResult(response);
-      setState({ relayName: "", baseUrl: "", websiteUrl: "", submitterEmail: "" });
+      setState({
+        relayName: "",
+        baseUrl: "",
+        websiteUrl: "",
+        submitterEmail: "",
+        testApiKey: "",
+        testModel: "gpt-5.4",
+        compatibilityMode: "auto",
+      });
       setFieldErrors({});
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Unable to submit relay.");
@@ -2618,37 +2626,118 @@ function SubmitPage() {
             <p className="text-sm leading-6 text-black/72">Every relay enters an operator review lane before it appears anywhere public.</p>
           </div>
           <div className="surface-card p-3.5">
-            <p className="kicker !text-black/52">Natural board</p>
-            <p className="text-sm leading-6 text-black/72">Ranking stays tied to observed quality, not to sponsor placement decisions.</p>
+            <p className="kicker !text-black/52">Stored credential</p>
+            <p className="text-sm leading-6 text-black/72">Monitoring keys live in a dedicated credential record so they can be rotated without rewriting relay metadata.</p>
           </div>
           <div className="surface-card p-3.5">
-            <p className="kicker !text-black/52">Fast intake</p>
-            <p className="text-sm leading-6 text-black/72">URL and contact checks happen in-browser first so the write path stays clean.</p>
+            <p className="kicker !text-black/52">Initial probe</p>
+            <p className="text-sm leading-6 text-black/72">Each submission runs a bounded probe immediately, so the review queue already has a first verification snapshot.</p>
           </div>
         </div>
       </div>
       <form className="panel form-shell" noValidate onSubmit={handleSubmit}>
-        {fields.map(({ label, key, type, required, placeholder }) => (
-          <label key={key} className="form-field">
-            {label}
+        <label className="form-field">
+          Relay name
+          <input
+            className="input-shell mt-2"
+            type="text"
+            placeholder="Northwind Relay"
+            required
+            value={state.relayName}
+            onChange={(event) => updateField("relayName", event.target.value)}
+          />
+          {fieldErrors.relayName ? <span className="field-error">{fieldErrors.relayName}</span> : null}
+        </label>
+        <label className="form-field">
+          Base URL
+          <input
+            className="input-shell mt-2"
+            type="url"
+            placeholder="https://northwind.example.ai/v1"
+            required
+            value={state.baseUrl}
+            onChange={(event) => updateField("baseUrl", event.target.value)}
+          />
+          {fieldErrors.baseUrl ? <span className="field-error">{fieldErrors.baseUrl}</span> : null}
+        </label>
+        <label className="form-field">
+          Website URL
+          <input
+            className="input-shell mt-2"
+            type="url"
+            placeholder="https://northwind.example.ai"
+            value={state.websiteUrl}
+            onChange={(event) => updateField("websiteUrl", event.target.value)}
+          />
+          {fieldErrors.websiteUrl ? <span className="field-error">{fieldErrors.websiteUrl}</span> : null}
+        </label>
+        <label className="form-field">
+          Contact email
+          <input
+            className="input-shell mt-2"
+            type="email"
+            placeholder="ops@example.com"
+            value={state.submitterEmail}
+            onChange={(event) => updateField("submitterEmail", event.target.value)}
+          />
+          {fieldErrors.submitterEmail ? <span className="field-error">{fieldErrors.submitterEmail}</span> : null}
+        </label>
+        <label className="form-field">
+          Test API key
+          <input
+            className="input-shell mt-2"
+            type="password"
+            placeholder="sk-monitoring-or-relay-key"
+            required
+            value={state.testApiKey}
+            onChange={(event) => updateField("testApiKey", event.target.value)}
+          />
+          <span className="form-note mt-2 text-xs leading-5 text-black/56">
+            Use a dedicated monitoring key. It stays attached to the relay credential record and can be rotated later.
+          </span>
+          {fieldErrors.testApiKey ? <span className="field-error">{fieldErrors.testApiKey}</span> : null}
+        </label>
+        <div className="grid gap-4 md:grid-cols-[1fr_0.82fr]">
+          <label className="form-field">
+            Test model
             <input
               className="input-shell mt-2"
-              type={type}
-              placeholder={placeholder}
-              value={state[key]}
-              onChange={(event) => {
-                const nextValue = event.target.value;
-                setState((current) => ({ ...current, [key]: nextValue }));
-                setFieldErrors((current) => ({ ...current, [key]: undefined }));
-                setError(null);
-              }}
-              required={required}
+              type="text"
+              placeholder="gpt-5.4"
+              required
+              value={state.testModel}
+              onChange={(event) => updateField("testModel", event.target.value)}
             />
-            {fieldErrors[key] ? <span className="field-error">{fieldErrors[key]}</span> : null}
+            {fieldErrors.testModel ? <span className="field-error">{fieldErrors.testModel}</span> : null}
           </label>
-        ))}
+          <label className="form-field">
+            API type
+            <select
+              className="input-shell mt-2"
+              value={state.compatibilityMode}
+              onChange={(event) => updateField("compatibilityMode", event.target.value as ProbeCompatibilityMode)}
+            >
+              {PROBE_COMPATIBILITY_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+        </div>
         <button className="button-dark" disabled={submitting} type="submit">{submitting ? "Submitting..." : "Submit relay"}</button>
-        {result ? <p className="text-sm form-feedback-success">Submission created: {result.id}</p> : null}
+        {result ? (
+          <div className="surface-card space-y-2 p-3.5">
+            <p className="text-sm form-feedback-success">Submission created: {result.id}</p>
+            {result.probe ? (
+              <>
+                <p className="text-sm leading-6 text-black/72">
+                  Initial probe: {result.probe.ok ? "passed" : "needs review"} · {result.probe.healthStatus}
+                  {result.probe.httpStatus ? ` · ${result.probe.httpStatus}` : ""}
+                </p>
+                {result.probe.message ? <p className="text-sm leading-6 text-black/58">{result.probe.message}</p> : null}
+              </>
+            ) : null}
+          </div>
+        ) : null}
         {error ? <p className="text-sm form-feedback-error">{error}</p> : null}
       </form>
     </section>

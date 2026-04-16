@@ -184,6 +184,8 @@ test("public submission and admin relay inputs parse", () => {
     baseUrl: "https://northwind.example.ai/v1",
     websiteUrl: "https://northwind.example.ai",
     submitterEmail: "ops@example.com",
+    testApiKey: "sk-monitoring",
+    testModel: "gpt-5.4",
   });
 
   const relay = adminRelayUpsertSchema.parse({
@@ -194,6 +196,7 @@ test("public submission and admin relay inputs parse", () => {
   });
 
   assert.equal(submission.relayName, "Northwind Relay");
+  assert.equal(submission.compatibilityMode, "auto");
   assert.equal(relay.slug, "northwind-relay");
 });
 
@@ -204,6 +207,8 @@ test("public submission and admin relay inputs normalize blank optional fields",
     websiteUrl: "",
     submitterEmail: "",
     notes: "   ",
+    testApiKey: " sk-monitoring ",
+    testModel: " gpt-5.4 ",
   });
 
   const relay = adminRelayUpsertSchema.parse({
@@ -219,6 +224,8 @@ test("public submission and admin relay inputs normalize blank optional fields",
   assert.equal(submission.baseUrl, "https://northwind.example.ai/v1");
   assert.equal(submission.websiteUrl, undefined);
   assert.equal(submission.submitterEmail, undefined);
+  assert.equal(submission.testApiKey, "sk-monitoring");
+  assert.equal(submission.testModel, "gpt-5.4");
   assert.equal(relay.baseUrl, "https://northwind.example.ai/v1");
   assert.equal(relay.providerName, null);
   assert.equal(relay.websiteUrl, null);

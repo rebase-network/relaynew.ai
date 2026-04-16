@@ -107,15 +107,19 @@ test("submit flow works from the public site", async ({ page }) => {
     "Submission creation is skipped on deployed runs unless E2E_ALLOW_DEPLOYED_WRITES=1.",
   );
   const relayName = `Beacon Relay ${Date.now()}`;
+  const relayBaseUrl = `https://example.com/relay/${Date.now()}`;
 
   await page.goto("/submit");
   await page.getByLabel("Relay name").fill(relayName);
-  await page.getByLabel("Base URL").fill(`https://beacon-${Date.now()}.example.ai/v1`);
-  await page.getByLabel("Website URL").fill("https://beacon.example.ai");
+  await page.getByLabel("Base URL").fill(relayBaseUrl);
+  await page.getByLabel("Website URL").fill("https://example.com");
   await page.getByLabel("Contact email").fill("ops@example.com");
+  await page.getByLabel("Test API key").fill("sk-submit-check");
+  await page.getByLabel("Test model").fill("gpt-5.4");
   await page.getByRole("button", { name: "Submit relay" }).click();
 
   await expect(page.getByText("Submission created:")).toBeVisible();
+  await expect(page.getByText(/^Initial probe:/)).toBeVisible();
 });
 
 test("submit flow validates malformed relay URLs before sending", async ({ page }) => {
@@ -124,12 +128,15 @@ test("submit flow validates malformed relay URLs before sending", async ({ page 
   await page.getByLabel("Base URL").fill("relay.example.ai");
   await page.getByLabel("Website URL").fill("not-a-url");
   await page.getByLabel("Contact email").fill("ops@");
+  await page.getByLabel("Test model").fill("");
   await page.getByRole("button", { name: "Submit relay" }).click();
 
   await expect(page.getByText("Please fix the highlighted fields before submitting.")).toBeVisible();
-  await expect(page.getByText("Enter a full base URL such as https://relay.example.ai/v1.")).toBeVisible();
+  await expect(page.getByText("Enter a full HTTPS base URL such as https://relay.example.ai/v1.")).toBeVisible();
   await expect(page.getByText("Enter a valid website URL such as https://relay.example.ai.")).toBeVisible();
   await expect(page.getByText("Enter a valid contact email address.")).toBeVisible();
+  await expect(page.getByText("A test key is required for the initial relay probe.")).toBeVisible();
+  await expect(page.getByText("A test model is required.")).toBeVisible();
   await expect(page.getByText("Submission created:")).toHaveCount(0);
 });
 

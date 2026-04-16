@@ -12,8 +12,104 @@ import {
   publicSubmissionResponseSchema,
 } from "@relaynews/shared";
 import type { FastifyInstance } from "fastify";
+import type { Kysely, Transaction } from "kysely";
 
+import type { Database } from "../db/types";
+import { runPublicProbe } from "../lib/probe";
+import {
+  maskApiKey,
+  toProbeCredentialVerification,
+  toSubmissionProbeSummary,
+} from "../lib/probe-credentials";
 import { refreshPublicData } from "../lib/refresh-public-data";
+
+type DbExecutor = Kysely<Database> | Transaction<Database>;
+
+function slugifyRelayName(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/-{2,}/g, "-");
+}
+
+async function ensureUniqueRelaySlug(db: DbExecutor, relayName: string) {
+  const baseSlug = slugifyRelayName(relayName) || `relay-${Date.now()}`;
+  let candidate = baseSlug;
+  let suffix = 2;
+
+  while (true) {
+    const existing = await db
+      .selectFrom("relays")
+      .select("id")
+      .where("slug", "=", candidate)
+      .executeTakeFirst();
+
+    if (!existing) {
+      return candidate;
+    }
+
+    candidate = `${baseSlug}-${suffix}`;
+    suffix += 1;
+  }
+}
+
+async function resolveApprovedRelay(
+  db: DbExecutor,
+  submission: {
+    id: string;
+    relayName: string;
+    baseUrl: string;
+    websiteUrl: string | null;
+    approvedRelayId: string | null;
+  },
+) {
+  if (submission.approvedRelayId) {
+    const approvedRelay = await db
+      .selectFrom("relays")
+      .select(["id", "slug", "name"])
+      .where("id", "=", submission.approvedRelayId)
+      .executeTakeFirst();
+
+    if (approvedRelay) {
+      return approvedRelay;
+    }
+  }
+
+  const existingRelay = await db
+    .selectFrom("relays")
+    .select(["id", "slug", "name"])
+    .where("base_url", "=", submission.baseUrl)
+    .executeTakeFirst();
+
+  if (existingRelay) {
+    return existingRelay;
+  }
+
+  const createdAt = new Date().toISOString();
+  const slug = await ensureUniqueRelaySlug(db, submission.relayName);
+
+  return db
+    .insertInto("relays")
+    .values({
+      slug,
+      name: submission.relayName,
+      base_url: submission.baseUrl,
+      provider_name: null,
+      description: null,
+      website_url: submission.websiteUrl,
+      docs_url: null,
+      status: "pending",
+      is_featured: false,
+      is_sponsored: false,
+      region_label: "global",
+      notes: null,
+      created_at: createdAt,
+      updated_at: createdAt,
+    })
+    .returning(["id", "slug", "name"])
+    .executeTakeFirstOrThrow();
+}
 
 export async function registerAdminRoutes(app: FastifyInstance) {
   app.get("/admin/overview", async () => {
@@ -144,52 +240,289 @@ export async function registerAdminRoutes(app: FastifyInstance) {
         "notes",
         "status",
         "review_notes as reviewNotes",
+        "approved_relay_id as approvedRelayId",
         "created_at as createdAt",
       ])
       .orderBy("created_at", "desc")
       .execute();
 
-    return adminSubmissionsResponseSchema.parse({ rows });
+    const submissionIds = rows.map((row) => row.id);
+    const approvedRelayIds = rows.flatMap((row) => (row.approvedRelayId ? [row.approvedRelayId] : []));
+
+    const [submissionCredentials, relayCredentials, approvedRelays] = await Promise.all([
+      submissionIds.length === 0
+        ? Promise.resolve([])
+        : app.db
+            .selectFrom("probe_credentials")
+            .select([
+              "id",
+              "submission_id as submissionId",
+              "status",
+              "test_model as testModel",
+              "compatibility_mode as compatibilityMode",
+              "api_key as apiKey",
+              "last_verified_at as lastVerifiedAt",
+              "last_probe_ok as lastProbeOk",
+              "last_health_status as lastHealthStatus",
+              "last_http_status as lastHttpStatus",
+              "last_message as lastMessage",
+              "created_at as createdAt",
+            ])
+            .where("submission_id", "in", submissionIds)
+            .where("status", "=", "active")
+            .orderBy("created_at", "desc")
+            .execute(),
+      approvedRelayIds.length === 0
+        ? Promise.resolve([])
+        : app.db
+            .selectFrom("probe_credentials")
+            .select([
+              "id",
+              "relay_id as relayId",
+              "status",
+              "test_model as testModel",
+              "compatibility_mode as compatibilityMode",
+              "api_key as apiKey",
+              "last_verified_at as lastVerifiedAt",
+              "last_probe_ok as lastProbeOk",
+              "last_health_status as lastHealthStatus",
+              "last_http_status as lastHttpStatus",
+              "last_message as lastMessage",
+              "created_at as createdAt",
+            ])
+            .where("relay_id", "in", approvedRelayIds)
+            .where("status", "=", "active")
+            .orderBy("created_at", "desc")
+            .execute(),
+      approvedRelayIds.length === 0
+        ? Promise.resolve([])
+        : app.db
+            .selectFrom("relays")
+            .select(["id", "slug", "name"])
+            .where("id", "in", approvedRelayIds)
+            .execute(),
+    ]);
+
+    const activeSubmissionCredentialBySubmissionId = new Map<
+      string,
+      (typeof submissionCredentials)[number]
+    >();
+    for (const credential of submissionCredentials) {
+      if (credential.submissionId && !activeSubmissionCredentialBySubmissionId.has(credential.submissionId)) {
+        activeSubmissionCredentialBySubmissionId.set(credential.submissionId, credential);
+      }
+    }
+
+    const activeRelayCredentialByRelayId = new Map<string, (typeof relayCredentials)[number]>();
+    for (const credential of relayCredentials) {
+      if (credential.relayId && !activeRelayCredentialByRelayId.has(credential.relayId)) {
+        activeRelayCredentialByRelayId.set(credential.relayId, credential);
+      }
+    }
+
+    const approvedRelayById = new Map(approvedRelays.map((relay) => [relay.id, relay]));
+
+    return adminSubmissionsResponseSchema.parse({
+      rows: rows.map((row) => {
+        const approvedRelay = row.approvedRelayId ? approvedRelayById.get(row.approvedRelayId) ?? null : null;
+        const probeCredential =
+          activeSubmissionCredentialBySubmissionId.get(row.id) ??
+          (row.approvedRelayId ? activeRelayCredentialByRelayId.get(row.approvedRelayId) : undefined);
+
+        return {
+          id: row.id,
+          relayName: row.relayName,
+          baseUrl: row.baseUrl,
+          websiteUrl: row.websiteUrl,
+          submitterName: row.submitterName,
+          submitterEmail: row.submitterEmail,
+          notes: row.notes,
+          status: row.status,
+          reviewNotes: row.reviewNotes,
+          approvedRelay: approvedRelay
+            ? {
+                slug: approvedRelay.slug,
+                name: approvedRelay.name,
+              }
+            : null,
+          probeCredential: probeCredential
+            ? {
+                id: probeCredential.id,
+                status: probeCredential.status,
+                testModel: probeCredential.testModel,
+                compatibilityMode: probeCredential.compatibilityMode,
+                apiKeyPreview: maskApiKey(probeCredential.apiKey),
+                lastVerifiedAt: probeCredential.lastVerifiedAt,
+                lastProbeOk: probeCredential.lastProbeOk,
+                lastHealthStatus: probeCredential.lastHealthStatus,
+                lastHttpStatus: probeCredential.lastHttpStatus,
+                lastMessage: probeCredential.lastMessage,
+              }
+            : null,
+          createdAt: row.createdAt,
+        };
+      }),
+    });
   });
 
   app.post("/public/submissions", async (request, reply) => {
     const body = publicSubmissionRequestSchema.parse(request.body ?? {});
-    const row = await app.db
-      .insertInto("submissions")
-      .values({
-        relay_name: body.relayName,
-        base_url: body.baseUrl,
-        website_url: body.websiteUrl ?? null,
-        submitter_name: body.submitterName ?? null,
-        submitter_email: body.submitterEmail ?? null,
-        notes: body.notes ?? null,
-        status: "pending",
-        review_notes: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .returning(["id", "status"])
-      .executeTakeFirstOrThrow();
+    const createdAt = new Date().toISOString();
+    const row = await app.db.transaction().execute(async (trx) => {
+      const submission = await trx
+        .insertInto("submissions")
+        .values({
+          relay_name: body.relayName,
+          base_url: body.baseUrl,
+          website_url: body.websiteUrl ?? null,
+          submitter_name: body.submitterName ?? null,
+          submitter_email: body.submitterEmail ?? null,
+          notes: body.notes ?? null,
+          status: "pending",
+          review_notes: null,
+          approved_relay_id: null,
+          created_at: createdAt,
+          updated_at: createdAt,
+        })
+        .returning(["id", "status"])
+        .executeTakeFirstOrThrow();
+
+      const credential = await trx
+        .insertInto("probe_credentials")
+        .values({
+          submission_id: submission.id,
+          relay_id: null,
+          api_key: body.testApiKey,
+          test_model: body.testModel,
+          compatibility_mode: body.compatibilityMode,
+          status: "active",
+          last_verified_at: null,
+          last_probe_ok: null,
+          last_health_status: null,
+          last_http_status: null,
+          last_message: null,
+          last_detection_mode: null,
+          last_used_url: null,
+          created_at: createdAt,
+          updated_at: createdAt,
+        })
+        .returning(["id"])
+        .executeTakeFirstOrThrow();
+
+      return {
+        id: submission.id,
+        status: submission.status,
+        credentialId: credential.id,
+      };
+    });
+
+    const probeResult = await runPublicProbe({
+      baseUrl: body.baseUrl,
+      apiKey: body.testApiKey,
+      model: body.testModel,
+      compatibilityMode: body.compatibilityMode,
+    });
+
+    await app.db
+      .updateTable("probe_credentials")
+      .set(toProbeCredentialVerification(probeResult))
+      .where("id", "=", row.credentialId)
+      .executeTakeFirst();
 
     reply.code(201);
     return publicSubmissionResponseSchema.parse({
       ok: true,
       id: row.id,
       status: row.status,
+      probe: toSubmissionProbeSummary(probeResult),
     });
   });
 
   app.post("/admin/submissions/:id/review", async (request) => {
     const params = request.params as { id: string };
     const body = adminSubmissionReviewSchema.parse(request.body ?? {});
-    await app.db
-      .updateTable("submissions")
-      .set({
-        status: body.status,
-        review_notes: body.reviewNotes ?? null,
-      })
-      .where("id", "=", params.id)
-      .executeTakeFirst();
+    await app.db.transaction().execute(async (trx) => {
+      const submission = await trx
+        .selectFrom("submissions")
+        .select([
+          "id",
+          "relay_name as relayName",
+          "base_url as baseUrl",
+          "website_url as websiteUrl",
+          "approved_relay_id as approvedRelayId",
+        ])
+        .where("id", "=", params.id)
+        .executeTakeFirst();
+
+      if (!submission) {
+        throw app.httpErrors.notFound("Submission not found");
+      }
+
+      if (body.status === "approved") {
+        const relay = await resolveApprovedRelay(trx, submission);
+
+        await trx
+          .updateTable("submissions")
+          .set({
+            status: body.status,
+            review_notes: body.reviewNotes ?? null,
+            approved_relay_id: relay.id,
+          })
+          .where("id", "=", params.id)
+          .executeTakeFirst();
+
+        const activeRelayCredential = await trx
+          .selectFrom("probe_credentials")
+          .select(["id"])
+          .where("relay_id", "=", relay.id)
+          .where("status", "=", "active")
+          .executeTakeFirst();
+
+        if (activeRelayCredential) {
+          await trx
+            .updateTable("probe_credentials")
+            .set({ status: "rotated" })
+            .where("id", "=", activeRelayCredential.id)
+            .executeTakeFirst();
+        }
+
+        const activeSubmissionCredential = await trx
+          .selectFrom("probe_credentials")
+          .select(["id"])
+          .where("submission_id", "=", params.id)
+          .where("status", "=", "active")
+          .executeTakeFirst();
+
+        if (activeSubmissionCredential) {
+          await trx
+            .updateTable("probe_credentials")
+            .set({
+              submission_id: null,
+              relay_id: relay.id,
+            })
+            .where("id", "=", activeSubmissionCredential.id)
+            .executeTakeFirst();
+        }
+
+        return;
+      }
+
+      await trx
+        .updateTable("submissions")
+        .set({
+          status: body.status,
+          review_notes: body.reviewNotes ?? null,
+        })
+        .where("id", "=", params.id)
+        .executeTakeFirst();
+
+      await trx
+        .updateTable("probe_credentials")
+        .set({ status: "revoked" })
+        .where("submission_id", "=", params.id)
+        .where("status", "=", "active")
+        .execute();
+    });
 
     return { ok: true };
   });

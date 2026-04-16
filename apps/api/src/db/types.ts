@@ -81,6 +81,26 @@ export interface SubmissionsTable {
   notes: string | null;
   status: string;
   review_notes: string | null;
+  approved_relay_id: string | null;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+export interface ProbeCredentialsTable {
+  id: Generated<string>;
+  submission_id: string | null;
+  relay_id: string | null;
+  api_key: string;
+  test_model: string;
+  compatibility_mode: string;
+  status: string;
+  last_verified_at: string | null;
+  last_probe_ok: boolean | null;
+  last_health_status: string | null;
+  last_http_status: number | null;
+  last_message: string | null;
+  last_detection_mode: string | null;
+  last_used_url: string | null;
   created_at: Timestamp;
   updated_at: Timestamp;
 }
@@ -231,6 +251,7 @@ export interface Database {
   relay_models: RelayModelsTable;
   relay_prices: RelayPricesTable;
   submissions: SubmissionsTable;
+  probe_credentials: ProbeCredentialsTable;
   sponsors: SponsorsTable;
   probe_results_raw: ProbeResultsRawTable;
   incident_events: IncidentEventsTable;
