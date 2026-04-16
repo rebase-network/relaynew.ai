@@ -944,18 +944,18 @@ function HomePage() {
         </div>
       </Panel>
 
-      <section className="grid gap-3 lg:grid-cols-[1fr_auto_auto] lg:items-stretch">
-        <div className="surface-card flex items-center p-4">
-          <p className="text-sm uppercase tracking-[0.16em] text-black/64">
-            Natural ranking, operator intake, and sponsor promotion stay separated by design.
-          </p>
+      <section className="home-bridge">
+        <p className="home-bridge-copy">
+          Methodology explains how relays are measured. Policy covers listing rules, sponsor separation, and review.
+        </p>
+        <div className="home-bridge-actions">
+          <Link className="home-bridge-link" to="/methodology">
+            Methodology
+          </Link>
+          <Link className="home-bridge-link" to="/policy">
+            Policy
+          </Link>
         </div>
-        <Link className="surface-link flex items-center justify-center px-4 py-4 text-sm uppercase tracking-[0.16em]" to="/methodology">
-          Methodology
-        </Link>
-        <Link className="surface-link flex items-center justify-center px-4 py-4 text-sm uppercase tracking-[0.16em]" to="/policy">
-          Policy
-        </Link>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
