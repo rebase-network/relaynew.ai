@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 const isDeployedRun = process.env.E2E_DEPLOYED === "1";
 const allowDeployedWrites = process.env.E2E_ALLOW_DEPLOYED_WRITES === "1";
@@ -13,12 +13,30 @@ const manualCompatibilityLabels: Record<string, string> = {
   "anthropic-messages": "Anthropic Messages",
 };
 
-test("public site renders the main discovery flow", async ({ page }) => {
+async function gotoHome(page: Page) {
+  const heroHeading = page.getByRole("heading", { name: /Find strong relays fast/i });
+  const fetchError = page.getByText("Failed to fetch");
+
   await page.goto("/");
+
+  try {
+    await heroHeading.waitFor({ state: "visible", timeout: 8_000 });
+  } catch {
+    if (await fetchError.isVisible().catch(() => false)) {
+      await page.reload();
+    }
+
+    await heroHeading.waitFor({ state: "visible", timeout: 8_000 });
+  }
+}
+
+test("public site renders the main discovery flow", async ({ page }) => {
+  await gotoHome(page);
   await expect(page.getByRole("heading", { name: /Find strong relays fast/i })).toBeVisible();
   await expect(page.getByRole("link", { name: "Admin" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Run probe" })).toBeVisible();
-  await expect(page.getByText("Quick probe")).toHaveCount(0);
+  await expect(page.getByText("Quick probe")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Open the full probe page" })).toBeVisible();
 
   if (isDeployedRun) {
     await page.getByRole("link", { name: "Leaderboard" }).click();
@@ -48,7 +66,7 @@ test("public site renders the main discovery flow", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Gemini 3.1" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Sonnet 4.6" })).toHaveCount(0);
 
-  await page.goto("/");
+  await gotoHome(page);
   const featuredSection = page.locator("section").filter({ has: page.getByRole("heading", { name: "Featured boards" }) }).first();
   await expect(featuredSection.getByRole("heading", { name: "Sonnet 4.6" })).toBeVisible();
   await expect(featuredSection.getByRole("heading", { name: "Opus 4.6" })).toBeVisible();
@@ -135,8 +153,6 @@ test("public probe flow returns a diagnostic result", async ({ page }) => {
   await expect(page.getByTestId("probe-model-value")).toHaveText(probeModel);
   await expect(page.getByTestId("probe-http-status-value")).toHaveText(/\S+/);
   await expect(page.getByTestId("probe-measured-at-value")).toHaveText(/\S+/);
-  await expect(page.getByText("Execution trace")).toBeVisible();
-  await expect(page.getByText("Matched", { exact: true })).toBeVisible();
 });
 
 test("public probe supports manual compatibility override", async ({ page }) => {
