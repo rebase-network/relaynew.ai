@@ -1528,6 +1528,7 @@ function MetricGrid({
     testId?: string;
     cardClassName?: string;
     valueClassName?: string;
+    valueSpacingClassName?: string;
     valueTitle?: string;
   }>;
   columnsClassName?: string;
@@ -1541,7 +1542,7 @@ function MetricGrid({
         >
           <p className="kicker">{item.label}</p>
           <p
-            className={clsx("mt-3 tracking-[-0.04em]", item.valueClassName ?? "text-3xl")}
+            className={clsx(item.valueSpacingClassName ?? "mt-3", "tracking-[-0.04em]", item.valueClassName ?? "text-3xl")}
             data-testid={item.testId}
             title={item.valueTitle}
           >
@@ -2725,27 +2726,33 @@ function ProbePage() {
                     label: "Connectivity",
                     value: result.connectivity.ok ? "ok" : "failed",
                     testId: "probe-connectivity-value",
-                    cardClassName: getConnectivityCardTone(result.connectivity.ok),
-                    valueClassName: "text-[1.3rem] leading-[0.96]",
+                    cardClassName: clsx("probe-metric-card", getConnectivityCardTone(result.connectivity.ok)),
+                    valueClassName: "text-[1.08rem] leading-[1]",
+                    valueSpacingClassName: "mt-2",
                   },
                   {
                     label: "Protocol",
                     value: result.protocol.ok ? result.protocol.healthStatus : "unknown",
                     testId: "probe-protocol-value",
-                    cardClassName: getProtocolCardTone(result.protocol.healthStatus, result.protocol.ok),
-                    valueClassName: "text-[1.3rem] leading-[0.96]",
+                    cardClassName: clsx("probe-metric-card", getProtocolCardTone(result.protocol.healthStatus, result.protocol.ok)),
+                    valueClassName: "text-[1.08rem] leading-[1]",
+                    valueSpacingClassName: "mt-2",
                   },
                   {
                     label: "Latency",
                     value: result.connectivity.latencyMs ? `${result.connectivity.latencyMs} ms` : "-",
                     testId: "probe-latency-value",
-                    valueClassName: "text-[1.3rem] leading-[0.96]",
+                    cardClassName: "probe-metric-card",
+                    valueClassName: "text-[1.08rem] leading-[1]",
+                    valueSpacingClassName: "mt-2",
                   },
                   {
                     label: "HTTP status",
                     value: formatProbeHttpStatus(result.protocol.httpStatus),
                     testId: "probe-http-status-value",
-                    valueClassName: "text-[1.3rem] leading-[0.96]",
+                    cardClassName: "probe-metric-card",
+                    valueClassName: "text-[1.08rem] leading-[1]",
+                    valueSpacingClassName: "mt-2",
                   },
                 ]}
               />

@@ -525,6 +525,15 @@ textarea {
   background: linear-gradient(90deg, rgba(255, 217, 0, 0.82), rgba(250, 82, 15, 0.9));
 }
 
+.probe-metric-card {
+  min-height: 0;
+  padding: 0.72rem 0.76rem;
+}
+
+.probe-metric-card::before {
+  height: 0.16rem;
+}
+
 .surface-card,
 .surface-link,
 .input-shell,
