@@ -2752,18 +2752,23 @@ function ProbePage() {
               <div className="mt-5 space-y-4">
                 <div className="surface-card p-4">
                   <p className="kicker">Resolved route</p>
-                  <p
-                    className="mt-3 break-all font-mono text-[1.02rem] leading-6 tracking-[-0.02em]"
-                    data-testid="probe-host-value"
-                    title={result.targetHost}
-                  >
-                    {result.targetHost}
-                  </p>
+                  <div className="mt-3 flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="kicker !text-black/52">Host</p>
+                      <p
+                        className="mt-1 break-all font-mono text-sm leading-6 tracking-[-0.02em] text-black/78"
+                        data-testid="probe-host-value"
+                        title={result.targetHost}
+                      >
+                        {result.targetHost}
+                      </p>
+                    </div>
+                  </div>
                   <div className="mt-3 flex items-start justify-between gap-3">
                     <p
-                      className="min-w-0 break-all font-mono text-sm leading-6 text-black/72"
-                      data-testid="probe-used-url-value"
-                      title={result.usedUrl ?? undefined}
+                        className="min-w-0 break-all font-mono text-sm leading-6 text-black/72"
+                        data-testid="probe-used-url-value"
+                        title={result.usedUrl ?? undefined}
                     >
                       {result.usedUrl ?? "No resolved endpoint was captured."}
                     </p>
@@ -2778,40 +2783,40 @@ function ProbePage() {
                       </button>
                     ) : null}
                   </div>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                    <div className="surface-card p-3">
-                      <p className="kicker !text-black/52">Compatibility</p>
-                      <p className="text-[1rem] leading-6 break-words" data-testid="probe-mode-value">
+                  <dl className="mt-4 grid gap-x-4 gap-y-3 sm:grid-cols-2">
+                    <div>
+                      <dt className="kicker !text-black/52">Compatibility</dt>
+                      <dd className="mt-1 text-sm leading-6 break-words text-black/78" data-testid="probe-mode-value">
                         {formatProbeCompatibilityMode(result.compatibilityMode)}
-                      </p>
+                      </dd>
                     </div>
-                    <div className="surface-card p-3">
-                      <p className="kicker !text-black/52">Detection</p>
-                      <p className="text-[1rem] leading-6 break-words" data-testid="probe-detection-value">
+                    <div>
+                      <dt className="kicker !text-black/52">Detection</dt>
+                      <dd className="mt-1 text-sm leading-6 break-words text-black/78" data-testid="probe-detection-value">
                         {formatProbeDetectionMode(result.detectionMode)}
-                      </p>
+                      </dd>
                     </div>
-                    <div className="surface-card p-3">
-                      <p className="kicker !text-black/52">Model</p>
-                      <p
-                        className="text-[1rem] leading-6 break-words"
+                    <div>
+                      <dt className="kicker !text-black/52">Model</dt>
+                      <dd
+                        className="mt-1 text-sm leading-6 break-words text-black/78"
                         data-testid="probe-model-value"
                         title={result.model}
                       >
                         {result.model}
-                      </p>
+                      </dd>
                     </div>
-                    <div className="surface-card p-3">
-                      <p className="kicker !text-black/52">Measured at</p>
-                      <p
-                        className="text-sm leading-6"
+                    <div>
+                      <dt className="kicker !text-black/52">Measured at</dt>
+                      <dd
+                        className="mt-1 text-sm leading-6 text-black/78"
                         data-testid="probe-measured-at-value"
                         title={result.measuredAt}
                       >
                         {formatProbeMeasuredAt(result.measuredAt)}
-                      </p>
+                      </dd>
                     </div>
-                  </div>
+                  </dl>
                 </div>
                 {result.message && !result.ok ? (
                   <div className="border border-[#b54708]/20 bg-[#fff7e8] p-4 text-sm leading-6 text-[#8a450c]">
