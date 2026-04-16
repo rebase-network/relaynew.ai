@@ -401,6 +401,66 @@ textarea {
   transform: none;
 }
 
+@keyframes skeleton-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-block {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.2rem;
+  background: rgba(31, 31, 31, 0.08);
+}
+
+.skeleton-block::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.52) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+}
+
+.skeleton-kicker {
+  height: 0.72rem;
+}
+
+.skeleton-line {
+  height: 1rem;
+}
+
+.skeleton-heading-lg {
+  height: clamp(2.9rem, 4vw, 4.1rem);
+}
+
+.skeleton-heading-md {
+  height: 2.3rem;
+}
+
+.skeleton-button {
+  height: 2.95rem;
+  border-radius: 0.05rem;
+}
+
+.skeleton-pill {
+  height: 2rem;
+  border-radius: 999px;
+}
+
+.skeleton-input {
+  height: 2.75rem;
+}
+
 .metric-card {
   position: relative;
   min-height: 7.4rem;
