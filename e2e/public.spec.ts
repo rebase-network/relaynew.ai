@@ -88,7 +88,7 @@ test("public site renders the main discovery flow", async ({ page }) => {
   await expect(page.getByText('Showing 1 of 3 rows for "Ember"')).toBeVisible();
   await page.getByRole("button", { name: /Degraded/i }).click();
   await expect(page.getByText("No relays match this combination yet.")).toBeVisible();
-  await page.getByRole("button", { name: "Reset filters" }).click();
+  await page.locator(".directory-empty-state").getByRole("button", { name: "Reset filters" }).click();
   await expect(page.getByRole("link", { name: "Aurora Relay" })).toBeVisible();
   await page.getByRole("button", { name: /Degraded/i }).click();
   await expect(page.getByRole("link", { name: "Solstice Router" })).toBeVisible();

@@ -1587,6 +1587,30 @@ function MetricGrid({
   );
 }
 
+function CompactBadgeList({
+  badges,
+  limit = 2,
+  className,
+}: {
+  badges: string[];
+  limit?: number;
+  className?: string;
+}) {
+  const visibleBadges = badges.slice(0, limit);
+  const remainingCount = badges.length - visibleBadges.length;
+
+  return (
+    <div className={clsx("flex flex-wrap gap-1.5", className)}>
+      {visibleBadges.map((badge) => (
+        <span key={badge} className="signal-chip">
+          {badge}
+        </span>
+      ))}
+      {remainingCount > 0 ? <span className="signal-chip">+{remainingCount}</span> : null}
+    </div>
+  );
+}
+
 function LeaderboardPreviewCard({
   board,
   rowLimit,
@@ -1619,16 +1643,7 @@ function LeaderboardPreviewCard({
                 <p className="text-[0.65rem] uppercase tracking-[0.18em] text-black/50">#{row.rank}</p>
                 <p className="truncate text-[1.08rem] leading-tight tracking-[-0.03em]">{row.relay.name}</p>
               </div>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {row.badges.slice(0, 1).map((badge) => (
-                  <span key={badge} className="signal-chip">
-                    {badge}
-                  </span>
-                ))}
-                {row.badges.length > 1 ? (
-                  <span className="signal-chip">+{row.badges.length - 1}</span>
-                ) : null}
-              </div>
+              <CompactBadgeList badges={row.badges} className="mt-2" limit={1} />
             </div>
             <div className="leaderboard-preview-score min-w-[8.75rem] text-right text-sm">
               <div className="flex items-center justify-end gap-2 text-[0.66rem] uppercase tracking-[0.15em] text-black/62">
@@ -1650,16 +1665,14 @@ function LeaderboardPreviewCard({
 
 function LeaderboardRowCard({ row }: { row: LeaderboardResponse["rows"][number] }) {
   return (
-    <article className="surface-card p-4 md:hidden">
-      <div className="flex items-start justify-between gap-4">
+    <article className="surface-card leaderboard-mobile-row p-3.5 md:hidden">
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs uppercase tracking-[0.16em] text-black/55">#{row.rank}</p>
-          <Link to={`/relay/${row.relay.slug}`} className="mt-1 block text-[1.65rem] leading-[0.96] tracking-[-0.04em] hover:underline">
+          <Link to={`/relay/${row.relay.slug}`} className="mt-1 block text-[1.5rem] leading-[0.96] tracking-[-0.04em] hover:underline">
             {row.relay.name}
           </Link>
-          <div className="mt-3 flex flex-wrap gap-2 text-xs uppercase tracking-[0.14em] text-black/55">
-            {row.badges.map((badge) => <span key={badge} className="signal-chip">{badge}</span>)}
-          </div>
+          <CompactBadgeList badges={row.badges} className="mt-3" />
         </div>
         <div className="shrink-0 text-right">
           <div className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-black/62">
@@ -1669,7 +1682,7 @@ function LeaderboardRowCard({ row }: { row: LeaderboardResponse["rows"][number] 
           <p className="text-[0.68rem] uppercase tracking-[0.18em] text-black/46">score</p>
         </div>
       </div>
-      <div className="mt-4 grid grid-cols-2 gap-2.5">
+      <div className="mt-3.5 grid grid-cols-2 gap-2">
         <div className="border border-black/8 bg-white/72 px-3 py-2.5">
           <p className="text-[0.64rem] uppercase tracking-[0.18em] text-black/46">Avail 24h</p>
           <p className="mt-2 text-sm leading-5 text-black/78">{formatAvailability(row.availability24h)}</p>
@@ -2031,6 +2044,11 @@ function LeaderboardPage() {
       })),
     [healthFilter, rows],
   );
+  const trackedRelayCount = rows.length;
+  const healthyRelayCount = rows.filter((row) => row.healthStatus === "healthy").length;
+  const degradedRelayCount = rows.filter((row) => row.healthStatus === "degraded").length;
+  const hasActiveFilters = rowQuery.length > 0 || healthFilter !== "all" || limit !== "20";
+  const resultsSummary = `Showing ${filteredRows.length} of ${trackedRelayCount} rows${rowQuery ? ` for "${rowQuery}"` : ""}`;
 
   const leaderboardSearch = searchParams.toString();
 
@@ -2072,6 +2090,10 @@ function LeaderboardPage() {
     setSearchParams(params);
   }
 
+  function resetLeaderboardFilters() {
+    setSearchParams(new URLSearchParams());
+  }
+
   return (
     <div className="space-y-6">
       <section className="panel bg-[#fff0c2]">
@@ -2080,6 +2102,11 @@ function LeaderboardPage() {
           <div>
             <h1 className="text-4xl leading-[0.92] tracking-[-0.06em] md:text-5xl">{data.model.name}</h1>
             <p className="mt-2 text-sm uppercase tracking-[0.16em] text-black/60">Measured at {new Date(data.measuredAt).toLocaleString()}</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <span className="signal-chip">{trackedRelayCount} tracked relays</span>
+              <span className="signal-chip">{healthyRelayCount} healthy</span>
+              <span className="signal-chip">{degradedRelayCount} degraded</span>
+            </div>
           </div>
           <div className="flex flex-wrap gap-2.5">
             <Link className="button-dark" to={LEADERBOARD_DIRECTORY_PATH}>All model lanes</Link>
@@ -2090,11 +2117,14 @@ function LeaderboardPage() {
       {directory.data?.boards.length ? (
         <section className="panel-soft border border-black/8 px-4 py-4">
           <div className="flex flex-col gap-3">
-            <div>
-              <p className="kicker">Switch model lane</p>
-              <p className="text-sm leading-6 text-black/68">
-                Move across tracked model boards without leaving the full ranking view.
-              </p>
+            <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+              <div>
+                <p className="kicker">Switch model lane</p>
+                <p className="text-sm leading-6 text-black/68">
+                  Jump across tracked boards without leaving the full ranking view.
+                </p>
+              </div>
+              <p className="directory-filter-meta">{directory.data.boards.length} tracked lanes</p>
             </div>
             <div className="leaderboard-model-switcher">
               {directory.data.boards.map((board) => (
@@ -2117,6 +2147,21 @@ function LeaderboardPage() {
         </section>
       ) : null}
       <section className="leaderboard-row-filters">
+        <div className="leaderboard-filter-header">
+          <div>
+            <p className="kicker">Search and filters</p>
+            <p className="directory-filter-meta">{resultsSummary}</p>
+          </div>
+          {hasActiveFilters ? (
+            <button
+              className="leaderboard-filter-reset"
+              onClick={resetLeaderboardFilters}
+              type="button"
+            >
+              Reset filters
+            </button>
+          ) : null}
+        </div>
         <div className="leaderboard-row-filter-grid">
           <label className="directory-search">
             <span className="directory-search-label">Search relays</span>
@@ -2143,28 +2188,27 @@ function LeaderboardPage() {
             </select>
           </label>
         </div>
-        <div className="directory-vendor-row">
-          {healthFilterOptions.map((option) => (
-            <button
-              key={option.value}
-              className={clsx(
-                "directory-filter-chip",
-                healthFilter === option.value && "directory-filter-chip-active",
-              )}
-              onClick={() => updateLeaderboardFilters({ health: option.value })}
-              type="button"
-            >
-              {option.label}
-              <span className="leaderboard-chip-count">{option.count}</span>
-            </button>
-          ))}
+        <div className="leaderboard-filter-footer">
+          <div className="directory-vendor-row">
+            {healthFilterOptions.map((option) => (
+              <button
+                key={option.value}
+                className={clsx(
+                  "directory-filter-chip",
+                  healthFilter === option.value && "directory-filter-chip-active",
+                )}
+                onClick={() => updateLeaderboardFilters({ health: option.value })}
+                type="button"
+              >
+                {option.label}
+                <span className="leaderboard-chip-count">{option.count}</span>
+              </button>
+            ))}
+          </div>
+          <p className="directory-filter-meta">Health filters stay in sync with the current board and search matches relay name, slug, or badge.</p>
         </div>
-        <p className="directory-filter-meta">
-          Showing {filteredRows.length} of {data.rows.length} rows
-          {rowQuery ? ` for "${rowQuery}"` : ""}
-        </p>
       </section>
-      <Panel title="Ranked relay rows" kicker="Natural ranking">
+      <Panel title="Ranked relay rows" kicker={hasActiveFilters ? "Filtered ranking" : "Natural ranking"}>
         {filteredRows.length ? (
           <>
             <div className="space-y-3 md:hidden">
@@ -2189,19 +2233,17 @@ function LeaderboardPage() {
                 <tbody>
                   {filteredRows.map((row) => (
                     <tr key={row.relay.slug} className="align-top">
-                      <td className="py-3.5 text-2xl tracking-[-0.04em]">#{row.rank}</td>
-                      <td className="py-3.5">
-                        <Link to={`/relay/${row.relay.slug}`} className="text-xl tracking-[-0.03em] hover:underline">{row.relay.name}</Link>
-                        <div className="mt-2 flex flex-wrap gap-2 text-xs uppercase tracking-[0.14em] text-black/55">
-                          {row.badges.map((badge) => <span key={badge} className="signal-chip">{badge}</span>)}
-                        </div>
+                      <td className="py-3 text-2xl tracking-[-0.04em]">#{row.rank}</td>
+                      <td className="py-3">
+                        <Link to={`/relay/${row.relay.slug}`} className="text-[1.08rem] tracking-[-0.03em] hover:underline">{row.relay.name}</Link>
+                        <CompactBadgeList badges={row.badges} className="mt-2" />
                       </td>
-                      <td className="py-3.5 text-sm uppercase tracking-[0.14em]"><span className="inline-flex items-center gap-2"><StatusDot status={row.healthStatus} /> {row.healthStatus}</span></td>
-                      <td className="py-3.5 text-xl tracking-[-0.03em]">{row.score.toFixed(1)}</td>
-                      <td className="py-3.5">{formatAvailability(row.availability24h)}</td>
-                      <td className="py-3.5">{formatLatency(row.latencyP50Ms)}</td>
-                      <td className="py-3.5">{row.inputPricePer1M ?? "-"}</td>
-                      <td className="py-3.5">{row.outputPricePer1M ?? "-"}</td>
+                      <td className="py-3 text-sm uppercase tracking-[0.14em]"><span className="inline-flex items-center gap-2"><StatusDot status={row.healthStatus} /> {row.healthStatus}</span></td>
+                      <td className="py-3 text-[1.08rem] tracking-[-0.03em]">{row.score.toFixed(1)}</td>
+                      <td className="py-3">{formatAvailability(row.availability24h)}</td>
+                      <td className="py-3">{formatLatency(row.latencyP50Ms)}</td>
+                      <td className="py-3">{row.inputPricePer1M ?? "-"}</td>
+                      <td className="py-3">{row.outputPricePer1M ?? "-"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -2217,7 +2259,7 @@ function LeaderboardPage() {
             </p>
             <button
               className="button-cream mt-5"
-              onClick={() => setSearchParams(limit === "20" ? new URLSearchParams() : new URLSearchParams({ limit }))}
+              onClick={resetLeaderboardFilters}
               type="button"
             >
               Reset filters

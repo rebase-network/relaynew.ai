@@ -718,10 +718,54 @@ textarea {
   padding: 0.95rem 1rem;
 }
 
+.leaderboard-filter-header,
+.leaderboard-filter-footer {
+  display: flex;
+  gap: 0.85rem;
+  justify-content: space-between;
+}
+
+.leaderboard-filter-header {
+  align-items: end;
+}
+
+.leaderboard-filter-footer {
+  align-items: start;
+  flex-direction: column;
+}
+
 .leaderboard-row-filter-grid {
   display: grid;
   gap: 0.85rem;
   grid-template-columns: minmax(0, 1fr) minmax(8rem, 10rem);
+}
+
+.leaderboard-filter-reset {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(31, 31, 31, 0.1);
+  background: rgba(255, 255, 255, 0.7);
+  padding: 0.75rem 0.95rem;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  line-height: 1.2;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  transition:
+    transform 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.leaderboard-filter-reset:hover {
+  transform: translateY(-1px);
+  border-color: rgba(250, 82, 15, 0.24);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow:
+    rgba(127, 99, 21, 0.12) 0 14px 28px,
+    rgba(250, 82, 15, 0.07) 0 0 0 1px inset;
 }
 
 .leaderboard-chip-count {
@@ -743,12 +787,19 @@ textarea {
 
 .leaderboard-model-switcher {
   display: flex;
-  flex-wrap: wrap;
   gap: 0.65rem;
+  overflow-x: auto;
+  padding-bottom: 0.15rem;
+  scrollbar-width: none;
+}
+
+.leaderboard-model-switcher::-webkit-scrollbar {
+  display: none;
 }
 
 .leaderboard-model-pill {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
   border: 1px solid rgba(31, 31, 31, 0.09);
@@ -782,6 +833,10 @@ textarea {
   background: var(--ink);
   color: white;
   box-shadow: rgba(31, 31, 31, 0.18) 0 18px 30px;
+}
+
+.leaderboard-mobile-row .signal-chip {
+  max-width: 100%;
 }
 
 .status-dot {
@@ -1070,6 +1125,15 @@ textarea {
     grid-template-columns: 1fr;
   }
 
+  .leaderboard-filter-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .leaderboard-filter-reset {
+    width: 100%;
+  }
+
   .form-field-inline,
   .quick-probe-field {
     grid-template-columns: 1fr;
@@ -1140,5 +1204,10 @@ textarea {
   .panel,
   .hero-panel {
     padding: 1.45rem;
+  }
+
+  .leaderboard-model-switcher {
+    flex-wrap: wrap;
+    overflow: visible;
   }
 }
