@@ -18,10 +18,12 @@ import {
 } from "@relaynews/shared";
 import { useEffect, useMemo, useState } from "react";
 import {
-  Link,
-  NavLink,
+  Link as RouterLink,
+  NavLink as RouterNavLink,
   Route,
   Routes,
+  type LinkProps as RouterLinkProps,
+  type NavLinkProps as RouterNavLinkProps,
   useLocation,
   useNavigate,
   useParams,
@@ -125,6 +127,7 @@ const PROBE_OUTPUT_CARDS = [
 const HOME_LEADERBOARD_ROW_LIMIT = 3;
 const DEFAULT_LEADERBOARD_MODEL_KEY = "openai-gpt-5.4";
 const LEADERBOARD_DIRECTORY_PATH = "/leaderboard/directory";
+const LOADABLE_CACHE_MAX_AGE_MS = 60_000;
 
 const LEADERBOARD_VENDOR_LABELS: Record<string, string> = {
   anthropic: "Anthropic",
@@ -203,6 +206,216 @@ function getModelVendorLabel(modelKey: string) {
 
 function getLeaderboardPath(modelKey: string) {
   return modelKey === DEFAULT_LEADERBOARD_MODEL_KEY ? "/leaderboard" : `/leaderboard/${modelKey}`;
+}
+
+type LoadableCacheEntry<T> = {
+  data?: T;
+  error?: string;
+  promise?: Promise<T>;
+  updatedAt: number;
+};
+
+const loadableCache = new Map<string, LoadableCacheEntry<unknown>>();
+
+function getLoadableCacheEntry<T>(key: string) {
+  return loadableCache.get(key) as LoadableCacheEntry<T> | undefined;
+}
+
+function getCachedLoadableState<T>(key: string) {
+  const entry = getLoadableCacheEntry<T>(key);
+
+  if (!entry) {
+    return {
+      data: null,
+      error: null,
+      hasFreshData: false,
+      hasAnyData: false,
+    };
+  }
+
+  const hasAnyData = entry.data !== undefined;
+  const hasFreshData = Date.now() - entry.updatedAt < LOADABLE_CACHE_MAX_AGE_MS;
+
+  return {
+    data: (entry.data as T | undefined) ?? null,
+    error: entry.error ?? null,
+    hasFreshData,
+    hasAnyData,
+  };
+}
+
+function primeLoadableCache<T>(key: string, loader: () => Promise<T>) {
+  const cachedEntry = getLoadableCacheEntry<T>(key);
+
+  if (cachedEntry?.promise) {
+    return cachedEntry.promise;
+  }
+
+  const promise = loader()
+    .then((value) => {
+      loadableCache.set(key, {
+        data: value,
+        updatedAt: Date.now(),
+      });
+
+      return value;
+    })
+    .catch((reason: unknown) => {
+      const error = reason instanceof Error ? reason.message : "Unknown error";
+
+      loadableCache.set(key, {
+        error,
+        updatedAt: Date.now(),
+      });
+
+      throw new Error(error);
+    });
+
+  loadableCache.set(key, {
+    ...cachedEntry,
+    promise,
+    updatedAt: cachedEntry?.updatedAt ?? 0,
+  });
+
+  return promise;
+}
+
+function prefetchPublicRoute(target: string) {
+  let url: URL;
+
+  try {
+    url = new URL(target, "https://relaynew.ai");
+  } catch {
+    return;
+  }
+
+  const pathname = url.pathname;
+  const limit = url.searchParams.get("limit") ?? "20";
+
+  const prefetches: Array<[string, () => Promise<unknown>]> = [];
+
+  if (pathname === "/") {
+    prefetches.push(["/public/home-summary", () => fetchJson("/public/home-summary")]);
+  } else if (pathname === "/leaderboard") {
+    prefetches.push(
+      ["/public/leaderboard-directory", () => fetchJson("/public/leaderboard-directory")],
+      [
+        `/public/leaderboard/${DEFAULT_LEADERBOARD_MODEL_KEY}?limit=${limit}`,
+        () => fetchJson(`/public/leaderboard/${DEFAULT_LEADERBOARD_MODEL_KEY}?limit=${limit}`),
+      ],
+    );
+  } else if (pathname === LEADERBOARD_DIRECTORY_PATH) {
+    prefetches.push(["/public/leaderboard-directory", () => fetchJson("/public/leaderboard-directory")]);
+  } else if (pathname.startsWith("/leaderboard/")) {
+    const modelKey = pathname.slice("/leaderboard/".length);
+
+    if (modelKey && modelKey !== "directory") {
+      prefetches.push(
+        ["/public/leaderboard-directory", () => fetchJson("/public/leaderboard-directory")],
+        [
+          `/public/leaderboard/${modelKey}?limit=${limit}`,
+          () => fetchJson(`/public/leaderboard/${modelKey}?limit=${limit}`),
+        ],
+      );
+    }
+  } else if (pathname.startsWith("/relay/")) {
+    const slug = pathname.slice("/relay/".length);
+
+    if (slug) {
+      prefetches.push(
+        [`/public/relay/${slug}/overview`, () => fetchJson(`/public/relay/${slug}/overview`)],
+        [`/public/relay/${slug}/history?window=7d`, () => fetchJson(`/public/relay/${slug}/history?window=7d`)],
+        [`/public/relay/${slug}/models`, () => fetchJson(`/public/relay/${slug}/models`)],
+        [`/public/relay/${slug}/pricing-history`, () => fetchJson(`/public/relay/${slug}/pricing-history`)],
+        [`/public/relay/${slug}/incidents`, () => fetchJson(`/public/relay/${slug}/incidents`)],
+      );
+    }
+  } else if (pathname === "/methodology") {
+    prefetches.push(["/public/methodology", () => fetchJson("/public/methodology")]);
+  }
+
+  for (const [key, loader] of prefetches) {
+    const cached = getCachedLoadableState(key);
+
+    if (cached.hasFreshData) {
+      continue;
+    }
+
+    void primeLoadableCache(key, loader).catch(() => undefined);
+  }
+}
+
+function getResolvableTarget(to: RouterLinkProps["to"] | RouterNavLinkProps["to"]) {
+  if (typeof to === "string") {
+    return to;
+  }
+
+  const pathname = to.pathname ?? "";
+  const search = typeof to.search === "string" ? to.search : "";
+  const hash = typeof to.hash === "string" ? to.hash : "";
+
+  return pathname ? `${pathname}${search}${hash}` : null;
+}
+
+type PrefetchableLinkHandlers = {
+  onMouseEnter: React.MouseEventHandler<HTMLAnchorElement> | undefined;
+  onFocus: React.FocusEventHandler<HTMLAnchorElement> | undefined;
+  onTouchStart: React.TouchEventHandler<HTMLAnchorElement> | undefined;
+  onMouseDown: React.MouseEventHandler<HTMLAnchorElement> | undefined;
+};
+
+function createPrefetchHandlers<T extends PrefetchableLinkHandlers>(
+  target: string | null,
+  props: T,
+) {
+  const triggerPrefetch = () => {
+    if (target) {
+      prefetchPublicRoute(target);
+    }
+  };
+
+  return {
+    onMouseEnter: (event: React.MouseEvent<HTMLAnchorElement>) => {
+      triggerPrefetch();
+      props.onMouseEnter?.(event);
+    },
+    onFocus: (event: React.FocusEvent<HTMLAnchorElement>) => {
+      triggerPrefetch();
+      props.onFocus?.(event);
+    },
+    onTouchStart: (event: React.TouchEvent<HTMLAnchorElement>) => {
+      triggerPrefetch();
+      props.onTouchStart?.(event);
+    },
+    onMouseDown: (event: React.MouseEvent<HTMLAnchorElement>) => {
+      triggerPrefetch();
+      props.onMouseDown?.(event);
+    },
+  };
+}
+
+function Link(props: RouterLinkProps) {
+  const target = getResolvableTarget(props.to);
+  const prefetchHandlers = createPrefetchHandlers(target, {
+    onMouseEnter: props.onMouseEnter,
+    onFocus: props.onFocus,
+    onTouchStart: props.onTouchStart,
+    onMouseDown: props.onMouseDown,
+  });
+
+  return <RouterLink {...props} {...prefetchHandlers} />;
+}
+
+function NavLink(props: RouterNavLinkProps) {
+  const target = getResolvableTarget(props.to);
+  const prefetchHandlers = createPrefetchHandlers(target, {
+    onMouseEnter: props.onMouseEnter,
+    onFocus: props.onFocus,
+    onTouchStart: props.onTouchStart,
+    onMouseDown: props.onMouseDown,
+  });
+
+  return <RouterNavLink {...props} {...prefetchHandlers} />;
 }
 
 function getProbeEndpointPath(value: string | null | undefined) {
@@ -673,20 +886,54 @@ function InlineProbeSummary({
   );
 }
 
-function useLoadable<T>(loader: () => Promise<T>, deps: unknown[]) {
-  const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+function useLoadable<T>(cacheKey: string | null, loader: () => Promise<T>, deps: unknown[]) {
+  const initialState = cacheKey
+    ? getCachedLoadableState<T>(cacheKey)
+    : { data: null, error: null, hasFreshData: false, hasAnyData: false };
+  const [data, setData] = useState<T | null>(initialState.data);
+  const [loading, setLoading] = useState(!initialState.hasAnyData && !initialState.error);
+  const [error, setError] = useState<string | null>(initialState.error);
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
-    setError(null);
+    const cachedState = cacheKey
+      ? getCachedLoadableState<T>(cacheKey)
+      : { data: null, error: null, hasFreshData: false, hasAnyData: false };
 
-    loader()
+    if (cachedState.hasAnyData) {
+      setData(cachedState.data);
+      setError(null);
+      setLoading(false);
+
+      if (cachedState.hasFreshData) {
+        return () => {
+          active = false;
+        };
+      }
+    } else if (cachedState.error) {
+      setData(null);
+      setError(cachedState.error);
+
+      if (cachedState.hasFreshData) {
+        setLoading(false);
+        return () => {
+          active = false;
+        };
+      }
+
+      setLoading(true);
+    } else {
+      setLoading(true);
+      setError(null);
+    }
+
+    const request = cacheKey ? primeLoadableCache(cacheKey, loader) : loader();
+
+    request
       .then((value) => {
         if (active) {
           setData(value);
+          setError(null);
         }
       })
       .catch((reason: unknown) => {
@@ -949,7 +1196,11 @@ function LeaderboardPreviewCard({
 }
 
 function HomePage() {
-  const { data, loading, error } = useLoadable<HomeSummaryResponse>(() => fetchJson("/public/home-summary"), []);
+  const { data, loading, error } = useLoadable<HomeSummaryResponse>(
+    "/public/home-summary",
+    () => fetchJson("/public/home-summary"),
+    [],
+  );
   const quickProbe = useProbeController(DEFAULT_PROBE_STATE);
 
   if (loading) return <LoadingPanel />;
@@ -1083,6 +1334,7 @@ function HomePage() {
 function LeaderboardIndexPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { data, loading, error } = useLoadable<LeaderboardDirectoryResponse>(
+    "/public/leaderboard-directory",
     () => fetchJson("/public/leaderboard-directory"),
     [],
   );
@@ -1239,11 +1491,14 @@ function LeaderboardPage() {
     ? (rawHealthFilter as LeaderboardHealthFilter)
     : "all";
   const directory = useLoadable<LeaderboardDirectoryResponse>(
+    "/public/leaderboard-directory",
     () => fetchJson("/public/leaderboard-directory"),
     [],
   );
+  const leaderboardCacheKey = `/public/leaderboard/${modelKey}?limit=${limit}`;
   const { data, loading, error } = useLoadable<LeaderboardResponse>(
-    () => fetchJson(`/public/leaderboard/${modelKey}?limit=${limit}`),
+    leaderboardCacheKey,
+    () => fetchJson(leaderboardCacheKey),
     [modelKey, limit],
   );
   const rows = data?.rows ?? [];
@@ -1484,11 +1739,31 @@ function MiniBars({ points }: { points: RelayHistoryResponse["points"] }) {
 
 function RelayPage() {
   const { slug = "aurora-relay" } = useParams();
-  const overview = useLoadable<RelayOverviewResponse>(() => fetchJson(`/public/relay/${slug}/overview`), [slug]);
-  const history = useLoadable<RelayHistoryResponse>(() => fetchJson(`/public/relay/${slug}/history?window=7d`), [slug]);
-  const models = useLoadable<RelayModelsResponse>(() => fetchJson(`/public/relay/${slug}/models`), [slug]);
-  const pricing = useLoadable<RelayPricingHistoryResponse>(() => fetchJson(`/public/relay/${slug}/pricing-history`), [slug]);
-  const incidents = useLoadable<RelayIncidentsResponse>(() => fetchJson(`/public/relay/${slug}/incidents`), [slug]);
+  const overview = useLoadable<RelayOverviewResponse>(
+    `/public/relay/${slug}/overview`,
+    () => fetchJson(`/public/relay/${slug}/overview`),
+    [slug],
+  );
+  const history = useLoadable<RelayHistoryResponse>(
+    `/public/relay/${slug}/history?window=7d`,
+    () => fetchJson(`/public/relay/${slug}/history?window=7d`),
+    [slug],
+  );
+  const models = useLoadable<RelayModelsResponse>(
+    `/public/relay/${slug}/models`,
+    () => fetchJson(`/public/relay/${slug}/models`),
+    [slug],
+  );
+  const pricing = useLoadable<RelayPricingHistoryResponse>(
+    `/public/relay/${slug}/pricing-history`,
+    () => fetchJson(`/public/relay/${slug}/pricing-history`),
+    [slug],
+  );
+  const incidents = useLoadable<RelayIncidentsResponse>(
+    `/public/relay/${slug}/incidents`,
+    () => fetchJson(`/public/relay/${slug}/incidents`),
+    [slug],
+  );
 
   if (overview.loading) return <LoadingPanel />;
   if (overview.error || !overview.data) return <ErrorPanel message={overview.error ?? "Unable to load relay."} />;
@@ -1576,7 +1851,11 @@ function RelayPage() {
 }
 
 function MethodologyPage() {
-  const { data, loading, error } = useLoadable<MethodologyResponse>(() => fetchJson("/public/methodology"), []);
+  const { data, loading, error } = useLoadable<MethodologyResponse>(
+    "/public/methodology",
+    () => fetchJson("/public/methodology"),
+    [],
+  );
   if (loading) return <LoadingPanel />;
   if (error || !data) return <ErrorPanel message={error ?? "Unable to load methodology."} />;
 
