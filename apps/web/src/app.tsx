@@ -123,6 +123,12 @@ const PROBE_OUTPUT_CARDS = [
 
 const HOME_LEADERBOARD_ROW_LIMIT = 3;
 
+const LEADERBOARD_VENDOR_LABELS: Record<string, string> = {
+  anthropic: "Anthropic",
+  openai: "OpenAI",
+  google: "Google",
+};
+
 function formatProbeCompatibilityMode(mode: ProbeResolvedCompatibilityMode | null | undefined) {
   return mode ? PROBE_COMPATIBILITY_LABELS[mode] : "Not detected";
 }
@@ -170,6 +176,15 @@ function formatAvailability(value: number) {
 
 function formatLatency(value: number | null) {
   return value === null ? "n/a" : `${value} ms`;
+}
+
+function getModelVendorKey(modelKey: string) {
+  return modelKey.split("-")[0] ?? "other";
+}
+
+function getModelVendorLabel(modelKey: string) {
+  const vendorKey = getModelVendorKey(modelKey);
+  return LEADERBOARD_VENDOR_LABELS[vendorKey] ?? vendorKey.replace(/^\w/, (char) => char.toUpperCase());
 }
 
 function getProbeEndpointPath(value: string | null | undefined) {
@@ -1045,13 +1060,67 @@ function HomePage() {
 }
 
 function LeaderboardIndexPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { data, loading, error } = useLoadable<LeaderboardDirectoryResponse>(
     () => fetchJson("/public/leaderboard-directory"),
     [],
   );
+  const boards = data?.boards ?? [];
+  const searchQuery = searchParams.get("q")?.trim() ?? "";
+  const vendorFilter = searchParams.get("vendor") ?? "all";
+  const vendorOptions = useMemo(
+    () =>
+      Array.from(
+        new Map(
+          boards.map((board) => {
+            const vendorKey = getModelVendorKey(board.modelKey);
+            return [vendorKey, { key: vendorKey, label: getModelVendorLabel(board.modelKey) }];
+          }),
+        ).values(),
+      ),
+    [boards],
+  );
+  const filteredBoards = useMemo(() => {
+    const normalizedQuery = searchQuery.toLowerCase();
+
+    return boards.filter((board) => {
+      const vendorKey = getModelVendorKey(board.modelKey);
+      const matchesVendor = vendorFilter === "all" || vendorKey === vendorFilter;
+      const matchesQuery =
+        normalizedQuery.length === 0 ||
+        board.modelName.toLowerCase().includes(normalizedQuery) ||
+        board.modelKey.toLowerCase().includes(normalizedQuery) ||
+        getModelVendorLabel(board.modelKey).toLowerCase().includes(normalizedQuery);
+
+      return matchesVendor && matchesQuery;
+    });
+  }, [boards, searchQuery, vendorFilter]);
 
   if (loading) return <LoadingPanel />;
   if (error || !data) return <ErrorPanel message={error ?? "Unable to load leaderboard directory."} />;
+
+  function updateDirectorySearch(next: { q?: string; vendor?: string }) {
+    const params = new URLSearchParams(searchParams);
+
+    if (next.q !== undefined) {
+      const value = next.q.trim();
+      if (value) {
+        params.set("q", value);
+      } else {
+        params.delete("q");
+      }
+    }
+
+    if (next.vendor !== undefined) {
+      if (next.vendor === "all") {
+        params.delete("vendor");
+      } else {
+        params.set("vendor", next.vendor);
+      }
+    }
+
+    setSearchParams(params);
+  }
 
   return (
     <div className="space-y-6">
@@ -1073,11 +1142,66 @@ function LeaderboardIndexPage() {
         </div>
       </section>
 
+      <section className="directory-filters">
+        <label className="directory-search">
+          <span className="directory-search-label">Search lanes</span>
+          <input
+            aria-label="Search lanes"
+            className="input-shell"
+            onChange={(event) => updateDirectorySearch({ q: event.target.value })}
+            placeholder="Search model or vendor"
+            type="search"
+            value={searchQuery}
+          />
+        </label>
+        <div className="directory-vendor-row">
+          <button
+            className={clsx("directory-filter-chip", vendorFilter === "all" && "directory-filter-chip-active")}
+            onClick={() => updateDirectorySearch({ vendor: "all" })}
+            type="button"
+          >
+            All
+          </button>
+          {vendorOptions.map((vendor) => (
+            <button
+              key={vendor.key}
+              className={clsx(
+                "directory-filter-chip",
+                vendorFilter === vendor.key && "directory-filter-chip-active",
+              )}
+              onClick={() => updateDirectorySearch({ vendor: vendor.key })}
+              type="button"
+            >
+              {vendor.label}
+            </button>
+          ))}
+        </div>
+        <p className="directory-filter-meta">
+          Showing {filteredBoards.length} of {data.boards.length} boards
+        </p>
+      </section>
+
       <div className="grid gap-4 lg:grid-cols-2">
-        {data.boards.map((board) => (
+        {filteredBoards.map((board) => (
           <LeaderboardPreviewCard key={board.modelKey} board={board} />
         ))}
       </div>
+      {filteredBoards.length === 0 ? (
+        <section className="directory-empty-state">
+          <p className="kicker">No matches</p>
+          <h2 className="text-3xl leading-[0.96] tracking-[-0.04em]">No leaderboard lanes match this filter.</h2>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-black/68">
+            Clear the search term or switch vendor filters to bring the full directory back.
+          </p>
+          <button
+            className="button-cream mt-5"
+            onClick={() => setSearchParams(new URLSearchParams())}
+            type="button"
+          >
+            Reset filters
+          </button>
+        </section>
+      ) : null}
     </div>
   );
 }

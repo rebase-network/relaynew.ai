@@ -520,6 +520,88 @@ textarea {
     rgba(250, 82, 15, 0.07) 0 0 0 1px inset;
 }
 
+.directory-filters {
+  display: grid;
+  gap: 0.85rem;
+  border: 1px solid rgba(31, 31, 31, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(255, 250, 235, 0.9));
+  box-shadow: rgba(127, 99, 21, 0.08) 0 10px 24px;
+  padding: 0.95rem 1rem;
+}
+
+.directory-search {
+  display: grid;
+  gap: 0.42rem;
+}
+
+.directory-search-label,
+.directory-filter-meta {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  line-height: 1.4;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.directory-search-label {
+  color: rgba(31, 31, 31, 0.58);
+}
+
+.directory-vendor-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.directory-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(31, 31, 31, 0.09);
+  background: rgba(255, 255, 255, 0.72);
+  padding: 0.72rem 0.9rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  line-height: 1.2;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+.directory-filter-chip:hover {
+  transform: translateY(-1px);
+  border-color: rgba(250, 82, 15, 0.24);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow:
+    rgba(127, 99, 21, 0.12) 0 14px 28px,
+    rgba(250, 82, 15, 0.07) 0 0 0 1px inset;
+}
+
+.directory-filter-chip-active {
+  border-color: rgba(31, 31, 31, 0.18);
+  background: var(--ink);
+  color: white;
+  box-shadow: rgba(31, 31, 31, 0.18) 0 18px 30px;
+}
+
+.directory-filter-meta {
+  color: rgba(31, 31, 31, 0.5);
+}
+
+.directory-empty-state {
+  border: 1px solid rgba(31, 31, 31, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 240, 194, 0.62));
+  box-shadow: rgba(127, 99, 21, 0.08) 0 10px 24px;
+  padding: 1.15rem;
+}
+
 .leaderboard-model-switcher {
   display: flex;
   flex-wrap: wrap;

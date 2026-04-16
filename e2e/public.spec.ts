@@ -37,6 +37,9 @@ test("public site renders the main discovery flow", async ({ page }) => {
   await page.getByRole("link", { name: "Browse leaderboards" }).click();
   await expect(page).toHaveURL(/\/leaderboard$/);
   await expect(page.getByText("Leaderboard directory")).toBeVisible();
+  await page.getByLabel("Search lanes").fill("Gemini");
+  await expect(page.getByRole("heading", { name: "Gemini 3.1" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sonnet 4.6" })).toHaveCount(0);
 
   await page.goto("/");
   const featuredSection = page.locator("section").filter({ has: page.getByText("Featured leaderboards") }).first();
