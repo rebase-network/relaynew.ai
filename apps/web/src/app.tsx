@@ -1,5 +1,6 @@
 import { clsx } from "clsx";
 import {
+  type HealthStatus,
   type HomeSummaryResponse,
   type LeaderboardDirectoryResponse,
   type LeaderboardResponse,
@@ -128,6 +129,17 @@ const LEADERBOARD_VENDOR_LABELS: Record<string, string> = {
   openai: "OpenAI",
   google: "Google",
 };
+
+type LeaderboardHealthFilter = "all" | HealthStatus;
+
+const LEADERBOARD_HEALTH_FILTERS: Array<{ value: LeaderboardHealthFilter; label: string }> = [
+  { value: "all", label: "All" },
+  { value: "healthy", label: "Healthy" },
+  { value: "degraded", label: "Degraded" },
+  { value: "down", label: "Down" },
+  { value: "paused", label: "Paused" },
+  { value: "unknown", label: "Unknown" },
+];
 
 function formatProbeCompatibilityMode(mode: ProbeResolvedCompatibilityMode | null | undefined) {
   return mode ? PROBE_COMPATIBILITY_LABELS[mode] : "Not detected";
@@ -1210,6 +1222,13 @@ function LeaderboardPage() {
   const { modelKey = "openai-gpt-5.4" } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const limit = searchParams.get("limit") ?? "20";
+  const rowQuery = searchParams.get("q")?.trim() ?? "";
+  const rawHealthFilter = searchParams.get("health");
+  const healthFilter: LeaderboardHealthFilter = LEADERBOARD_HEALTH_FILTERS.some(
+    (option) => option.value === rawHealthFilter,
+  )
+    ? (rawHealthFilter as LeaderboardHealthFilter)
+    : "all";
   const directory = useLoadable<LeaderboardDirectoryResponse>(
     () => fetchJson("/public/leaderboard-directory"),
     [],
@@ -1218,31 +1237,90 @@ function LeaderboardPage() {
     () => fetchJson(`/public/leaderboard/${modelKey}?limit=${limit}`),
     [modelKey, limit],
   );
+  const rows = data?.rows ?? [];
+
+  const filteredRows = useMemo(() => {
+    const normalizedQuery = rowQuery.toLowerCase();
+
+    return rows.filter((row) => {
+      const matchesHealth = healthFilter === "all" || row.healthStatus === healthFilter;
+      const matchesQuery =
+        normalizedQuery.length === 0 ||
+        row.relay.name.toLowerCase().includes(normalizedQuery) ||
+        row.relay.slug.toLowerCase().includes(normalizedQuery) ||
+        row.badges.some((badge) => badge.toLowerCase().includes(normalizedQuery));
+
+      return matchesHealth && matchesQuery;
+    });
+  }, [healthFilter, rowQuery, rows]);
+
+  const healthFilterOptions = useMemo(
+    () =>
+      LEADERBOARD_HEALTH_FILTERS.filter((option) => {
+        if (option.value === "all" || option.value === healthFilter) {
+          return true;
+        }
+
+        return rows.some((row) => row.healthStatus === option.value);
+      }).map((option) => ({
+        ...option,
+        count:
+          option.value === "all"
+            ? rows.length
+            : rows.filter((row) => row.healthStatus === option.value).length,
+      })),
+    [healthFilter, rows],
+  );
+
+  const leaderboardSearch = searchParams.toString();
 
   if (loading) return <LoadingPanel />;
   if (error || !data) return <ErrorPanel message={error ?? "Unable to load leaderboard."} />;
+
+  function updateLeaderboardFilters(next: {
+    limit?: string;
+    q?: string;
+    health?: LeaderboardHealthFilter;
+  }) {
+    const params = new URLSearchParams(searchParams);
+
+    if (next.limit !== undefined) {
+      if (next.limit === "20") {
+        params.delete("limit");
+      } else {
+        params.set("limit", next.limit);
+      }
+    }
+
+    if (next.q !== undefined) {
+      const value = next.q.trim();
+      if (value) {
+        params.set("q", value);
+      } else {
+        params.delete("q");
+      }
+    }
+
+    if (next.health !== undefined) {
+      if (next.health === "all") {
+        params.delete("health");
+      } else {
+        params.set("health", next.health);
+      }
+    }
+
+    setSearchParams(params);
+  }
 
   return (
     <div className="space-y-6">
       <section className="panel bg-[#fff0c2]">
         <p className="kicker">Leaderboard</p>
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex flex-col gap-3">
           <div>
             <h1 className="text-4xl leading-[0.92] tracking-[-0.06em] md:text-5xl">{data.model.name}</h1>
             <p className="mt-2 text-sm uppercase tracking-[0.16em] text-black/60">Measured at {new Date(data.measuredAt).toLocaleString()}</p>
           </div>
-          <label className="form-field max-w-[9rem]">
-            Rows
-            <select
-              className="input-shell mt-2 block"
-              value={limit}
-              onChange={(event) => setSearchParams({ limit: event.target.value })}
-            >
-              <option value="10">10</option>
-              <option value="20">20</option>
-              <option value="50">50</option>
-            </select>
-          </label>
         </div>
       </section>
       {directory.data?.boards.length ? (
@@ -1262,7 +1340,10 @@ function LeaderboardPage() {
                     "leaderboard-model-pill",
                     board.modelKey === data.model.key && "leaderboard-model-pill-active",
                   )}
-                  to={`/leaderboard/${board.modelKey}`}
+                  to={{
+                    pathname: `/leaderboard/${board.modelKey}`,
+                    search: leaderboardSearch ? `?${leaderboardSearch}` : "",
+                  }}
                 >
                   {board.modelName}
                 </Link>
@@ -1271,42 +1352,107 @@ function LeaderboardPage() {
           </div>
         </section>
       ) : null}
-      <Panel title="Ranked relay rows" kicker="Natural ranking">
-        <div className="data-table">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b border-black/10">
-                <th className="pb-2.5">Rank</th>
-                <th className="pb-2.5">Relay</th>
-                <th className="pb-2.5">Health</th>
-                <th className="pb-2.5">Score</th>
-                <th className="pb-2.5">Avail 24h</th>
-                <th className="pb-2.5">Latency p50</th>
-                <th className="pb-2.5">Input</th>
-                <th className="pb-2.5">Output</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.rows.map((row) => (
-                <tr key={row.relay.slug} className="align-top">
-                  <td className="py-3.5 text-2xl tracking-[-0.04em]">#{row.rank}</td>
-                  <td className="py-3.5">
-                    <Link to={`/relay/${row.relay.slug}`} className="text-xl tracking-[-0.03em] hover:underline">{row.relay.name}</Link>
-                    <div className="mt-2 flex flex-wrap gap-2 text-xs uppercase tracking-[0.14em] text-black/55">
-                      {row.badges.map((badge) => <span key={badge} className="signal-chip">{badge}</span>)}
-                    </div>
-                  </td>
-                  <td className="py-3.5 text-sm uppercase tracking-[0.14em]"><span className="inline-flex items-center gap-2"><StatusDot status={row.healthStatus} /> {row.healthStatus}</span></td>
-                  <td className="py-3.5 text-xl tracking-[-0.03em]">{row.score.toFixed(1)}</td>
-                  <td className="py-3.5">{(row.availability24h * 100).toFixed(2)}%</td>
-                  <td className="py-3.5">{row.latencyP50Ms ?? "-"} ms</td>
-                  <td className="py-3.5">{row.inputPricePer1M ?? "-"}</td>
-                  <td className="py-3.5">{row.outputPricePer1M ?? "-"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <section className="leaderboard-row-filters">
+        <div className="leaderboard-row-filter-grid">
+          <label className="directory-search">
+            <span className="directory-search-label">Search relays</span>
+            <input
+              aria-label="Search relays"
+              className="input-shell"
+              onChange={(event) => updateLeaderboardFilters({ q: event.target.value })}
+              placeholder="Search relay name, slug, or badge"
+              type="search"
+              value={rowQuery}
+            />
+          </label>
+          <label className="directory-search">
+            <span className="directory-search-label">Rows</span>
+            <select
+              aria-label="Rows"
+              className="input-shell"
+              value={limit}
+              onChange={(event) => updateLeaderboardFilters({ limit: event.target.value })}
+            >
+              <option value="10">10</option>
+              <option value="20">20</option>
+              <option value="50">50</option>
+            </select>
+          </label>
         </div>
+        <div className="directory-vendor-row">
+          {healthFilterOptions.map((option) => (
+            <button
+              key={option.value}
+              className={clsx(
+                "directory-filter-chip",
+                healthFilter === option.value && "directory-filter-chip-active",
+              )}
+              onClick={() => updateLeaderboardFilters({ health: option.value })}
+              type="button"
+            >
+              {option.label}
+              <span className="leaderboard-chip-count">{option.count}</span>
+            </button>
+          ))}
+        </div>
+        <p className="directory-filter-meta">
+          Showing {filteredRows.length} of {data.rows.length} rows
+          {rowQuery ? ` for "${rowQuery}"` : ""}
+        </p>
+      </section>
+      <Panel title="Ranked relay rows" kicker="Natural ranking">
+        {filteredRows.length ? (
+          <div className="data-table">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-black/10">
+                  <th className="pb-2.5">Rank</th>
+                  <th className="pb-2.5">Relay</th>
+                  <th className="pb-2.5">Health</th>
+                  <th className="pb-2.5">Score</th>
+                  <th className="pb-2.5">Avail 24h</th>
+                  <th className="pb-2.5">Latency p50</th>
+                  <th className="pb-2.5">Input</th>
+                  <th className="pb-2.5">Output</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRows.map((row) => (
+                  <tr key={row.relay.slug} className="align-top">
+                    <td className="py-3.5 text-2xl tracking-[-0.04em]">#{row.rank}</td>
+                    <td className="py-3.5">
+                      <Link to={`/relay/${row.relay.slug}`} className="text-xl tracking-[-0.03em] hover:underline">{row.relay.name}</Link>
+                      <div className="mt-2 flex flex-wrap gap-2 text-xs uppercase tracking-[0.14em] text-black/55">
+                        {row.badges.map((badge) => <span key={badge} className="signal-chip">{badge}</span>)}
+                      </div>
+                    </td>
+                    <td className="py-3.5 text-sm uppercase tracking-[0.14em]"><span className="inline-flex items-center gap-2"><StatusDot status={row.healthStatus} /> {row.healthStatus}</span></td>
+                    <td className="py-3.5 text-xl tracking-[-0.03em]">{row.score.toFixed(1)}</td>
+                    <td className="py-3.5">{formatAvailability(row.availability24h)}</td>
+                    <td className="py-3.5">{formatLatency(row.latencyP50Ms)}</td>
+                    <td className="py-3.5">{row.inputPricePer1M ?? "-"}</td>
+                    <td className="py-3.5">{row.outputPricePer1M ?? "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="directory-empty-state">
+            <p className="kicker">No rows</p>
+            <h2 className="text-3xl leading-[0.96] tracking-[-0.04em]">No relays match this combination yet.</h2>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-black/68">
+              Clear the search term or switch the health filter to bring the full ranked table back.
+            </p>
+            <button
+              className="button-cream mt-5"
+              onClick={() => setSearchParams(limit === "20" ? new URLSearchParams() : new URLSearchParams({ limit }))}
+              type="button"
+            >
+              Reset filters
+            </button>
+          </div>
+        )}
       </Panel>
     </div>
   );

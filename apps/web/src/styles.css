@@ -602,6 +602,39 @@ textarea {
   padding: 1.15rem;
 }
 
+.leaderboard-row-filters {
+  display: grid;
+  gap: 0.85rem;
+  border: 1px solid rgba(31, 31, 31, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(255, 248, 228, 0.9));
+  box-shadow: rgba(127, 99, 21, 0.08) 0 10px 24px;
+  padding: 0.95rem 1rem;
+}
+
+.leaderboard-row-filter-grid {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: minmax(0, 1fr) minmax(8rem, 10rem);
+}
+
+.leaderboard-chip-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.3rem;
+  margin-left: 0.48rem;
+  border-radius: 999px;
+  background: rgba(31, 31, 31, 0.08);
+  padding: 0.16rem 0.34rem;
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+}
+
+.directory-filter-chip-active .leaderboard-chip-count {
+  background: rgba(255, 255, 255, 0.16);
+}
+
 .leaderboard-model-switcher {
   display: flex;
   flex-wrap: wrap;
@@ -889,6 +922,10 @@ textarea {
 }
 
 @media (max-width: 767px) {
+  .leaderboard-row-filter-grid {
+    grid-template-columns: 1fr;
+  }
+
   .site-header-bar {
     align-items: flex-start;
     flex-direction: column;
