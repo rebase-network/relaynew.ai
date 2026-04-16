@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 const isDeployedRun = process.env.E2E_DEPLOYED === "1";
 const allowDeployedWrites = process.env.E2E_ALLOW_DEPLOYED_WRITES === "1";
 const adminBaseUrl = process.env.ADMIN_BASE_URL ?? "http://127.0.0.1:4174";
+const webBaseUrl = process.env.WEB_BASE_URL ?? "http://127.0.0.1:4173";
 const apiBaseUrl =
   process.env.API_BASE_URL ?? (isDeployedRun ? "https://api.relaynew.ai" : "http://127.0.0.1:8787");
 
@@ -228,10 +229,13 @@ test("admin can review submissions, create sponsors, and add prices", async ({ p
   await expect(submissionCard).toContainText("Credential");
   await expect(submissionCard).toContainText("Probe");
   await expect(submissionCard).toContainText("gpt-5.4");
-  await submissionCard.getByRole("button", { name: "Approve" }).click();
-  await expect(page.getByText(/Submission approved\./)).toBeVisible();
+  await submissionCard.getByRole("button", { name: "Approve & activate" }).click();
+  await expect(page.getByText(/Relay activated, credential moved, and monitoring started\./)).toBeVisible();
   await expect(submissionCard).toContainText(/approved/i);
   await expect(submissionCard).toContainText("Linked relay");
+
+  await page.goto(`${webBaseUrl}/leaderboard/openai-gpt-5.4`);
+  await expect(page.getByRole("link", { name: relayName })).toBeVisible();
 
   await page.goto(`${adminBaseUrl}/sponsors`);
   await page.getByLabel("Name").fill(sponsorName);

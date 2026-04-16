@@ -28,6 +28,7 @@ import {
   toProbeCredentialVerification,
   toSubmissionProbeSummary,
 } from "../lib/probe-credentials";
+import { runRelayCredentialMonitoringById } from "../lib/relay-monitoring";
 import { refreshPublicData } from "../lib/refresh-public-data";
 
 type DbExecutor = Kysely<Database> | Transaction<Database>;
@@ -106,7 +107,7 @@ async function resolveApprovedRelay(
       description: null,
       website_url: submission.websiteUrl,
       docs_url: null,
-      status: "pending",
+      status: "active",
       is_featured: false,
       is_sponsored: false,
       region_label: "global",
@@ -659,18 +660,22 @@ export async function registerAdminRoutes(app: FastifyInstance) {
       }),
     );
 
-    const probeResult = await runPublicProbe({
-      baseUrl: owner.ownerBaseUrl,
-      apiKey: body.apiKey,
-      model: body.testModel,
-      compatibilityMode: body.compatibilityMode,
-    });
+    const probeResult = owner.ownerType === "relay"
+      ? (await runRelayCredentialMonitoringById(app.db, id)).probe
+      : await runPublicProbe({
+        baseUrl: owner.ownerBaseUrl,
+        apiKey: body.apiKey,
+        model: body.testModel,
+        compatibilityMode: body.compatibilityMode,
+      });
 
-    await app.db
-      .updateTable("probe_credentials")
-      .set(toProbeCredentialVerification(probeResult))
-      .where("id", "=", id)
-      .executeTakeFirst();
+    if (owner.ownerType !== "relay") {
+      await app.db
+        .updateTable("probe_credentials")
+        .set(toProbeCredentialVerification(probeResult))
+        .where("id", "=", id)
+        .executeTakeFirst();
+    }
 
     reply.code(201);
     return adminProbeCredentialMutationResponseSchema.parse({
@@ -684,18 +689,22 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     const params = request.params as { id: string };
     const credential = await getProbeCredentialRowById(app.db, params.id);
     const owner = resolveProbeCredentialOwner(credential);
-    const probeResult = await runPublicProbe({
-      baseUrl: owner.ownerBaseUrl,
-      apiKey: credential.apiKey,
-      model: credential.testModel,
-      compatibilityMode: credential.compatibilityMode,
-    });
+    const probeResult = owner.ownerType === "relay"
+      ? (await runRelayCredentialMonitoringById(app.db, credential.id)).probe
+      : await runPublicProbe({
+        baseUrl: owner.ownerBaseUrl,
+        apiKey: credential.apiKey,
+        model: credential.testModel,
+        compatibilityMode: credential.compatibilityMode,
+      });
 
-    await app.db
-      .updateTable("probe_credentials")
-      .set(toProbeCredentialVerification(probeResult))
-      .where("id", "=", credential.id)
-      .executeTakeFirst();
+    if (owner.ownerType !== "relay") {
+      await app.db
+        .updateTable("probe_credentials")
+        .set(toProbeCredentialVerification(probeResult))
+        .where("id", "=", credential.id)
+        .executeTakeFirst();
+    }
 
     return adminProbeCredentialMutationResponseSchema.parse({
       ok: true,
@@ -717,18 +726,22 @@ export async function registerAdminRoutes(app: FastifyInstance) {
       }),
     );
 
-    const probeResult = await runPublicProbe({
-      baseUrl: owner.ownerBaseUrl,
-      apiKey: body.apiKey,
-      model: body.testModel,
-      compatibilityMode: body.compatibilityMode,
-    });
+    const probeResult = owner.ownerType === "relay"
+      ? (await runRelayCredentialMonitoringById(app.db, id)).probe
+      : await runPublicProbe({
+        baseUrl: owner.ownerBaseUrl,
+        apiKey: body.apiKey,
+        model: body.testModel,
+        compatibilityMode: body.compatibilityMode,
+      });
 
-    await app.db
-      .updateTable("probe_credentials")
-      .set(toProbeCredentialVerification(probeResult))
-      .where("id", "=", id)
-      .executeTakeFirst();
+    if (owner.ownerType !== "relay") {
+      await app.db
+        .updateTable("probe_credentials")
+        .set(toProbeCredentialVerification(probeResult))
+        .where("id", "=", id)
+        .executeTakeFirst();
+    }
 
     return adminProbeCredentialMutationResponseSchema.parse({
       ok: true,
@@ -830,6 +843,8 @@ export async function registerAdminRoutes(app: FastifyInstance) {
   app.post("/admin/submissions/:id/review", async (request) => {
     const params = request.params as { id: string };
     const body = adminSubmissionReviewSchema.parse(request.body ?? {});
+    let approvedCredentialId: string | null = null;
+
     await app.db.transaction().execute(async (trx) => {
       const submission = await trx
         .selectFrom("submissions")
@@ -849,6 +864,22 @@ export async function registerAdminRoutes(app: FastifyInstance) {
 
       if (body.status === "approved") {
         const relay = await resolveApprovedRelay(trx, submission);
+        const relayUpdate: {
+          status: "active";
+          website_url?: string | null;
+        } = {
+          status: "active",
+        };
+
+        if (submission.websiteUrl) {
+          relayUpdate.website_url = submission.websiteUrl;
+        }
+
+        await trx
+          .updateTable("relays")
+          .set(relayUpdate)
+          .where("id", "=", relay.id)
+          .executeTakeFirst();
 
         await trx
           .updateTable("submissions")
@@ -891,6 +922,8 @@ export async function registerAdminRoutes(app: FastifyInstance) {
             })
             .where("id", "=", activeSubmissionCredential.id)
             .executeTakeFirst();
+
+          approvedCredentialId = activeSubmissionCredential.id;
         }
 
         return;
@@ -912,6 +945,12 @@ export async function registerAdminRoutes(app: FastifyInstance) {
         .where("status", "=", "active")
         .execute();
     });
+
+    if (body.status === "approved" && approvedCredentialId) {
+      await runRelayCredentialMonitoringById(app.db, approvedCredentialId);
+    } else if (body.status === "approved") {
+      await refreshPublicData(app.db);
+    }
 
     return { ok: true };
   });

@@ -593,7 +593,14 @@ function SubmissionsPage() {
         method: "POST",
         body: JSON.stringify({ status, reviewNotes: notes[id] ?? null }),
       });
-      setMutation({ pending: false, error: null, success: `Submission ${status}.` });
+      setMutation({
+        pending: false,
+        error: null,
+        success:
+          status === "approved"
+            ? "Submission approved. Relay activated, credential moved, and monitoring started."
+            : `Submission ${status}.`,
+      });
       await submissions.reload();
     } catch (reason) {
       setMutation({ pending: false, error: reason instanceof Error ? reason.message : "Unable to review submission.", success: null });
@@ -606,6 +613,17 @@ function SubmissionsPage() {
   return (
     <Card title="Submission queue" kicker="Review lane">
       <div className="space-y-3">
+        <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3.5 text-sm text-white/68">
+          <p className="text-[11px] uppercase tracking-[0.18em] text-white/42">Approval flow</p>
+          <p className="mt-2 text-white/78">
+            Approve now handles the full intake handoff in one step: create or link the relay,
+            move the test credential, activate the relay, run the first monitoring probe, and
+            refresh the public snapshots.
+          </p>
+          <p className="mt-2 text-white/54">
+            Use the credentials page later for rotation, revoke, or recovery work.
+          </p>
+        </div>
         {submissions.data.rows.map((row) => (
           <div key={row.id} className="admin-list-card border border-white/10 bg-white/5 p-3.5">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -629,11 +647,26 @@ function SubmissionsPage() {
                     {row.probeCredential.lastMessage ? <p className="text-white/48">{row.probeCredential.lastMessage}</p> : null}
                   </div>
                 ) : null}
+                {!row.approvedRelay && row.status === "pending" ? (
+                  <p className="mt-3 text-sm text-white/48">
+                    Approval will activate this relay immediately and start public monitoring.
+                  </p>
+                ) : null}
               </div>
               <div className="flex flex-wrap gap-2">
-                <button className="pill pill-active" type="button" onClick={() => review(row.id, "approved")}>Approve</button>
+                <button className="pill pill-active" type="button" onClick={() => review(row.id, "approved")}>Approve &amp; activate</button>
                 <button className="pill pill-idle" type="button" onClick={() => review(row.id, "rejected")}>Reject</button>
                 <button className="pill pill-ghost" type="button" onClick={() => review(row.id, "archived")}>Archive</button>
+                {row.approvedRelay ? (
+                  <Link
+                    className="pill pill-idle"
+                    rel="noreferrer"
+                    target="_blank"
+                    to={`${PUBLIC_SITE_URL}/relay/${row.approvedRelay.slug}`}
+                  >
+                    Open public page
+                  </Link>
+                ) : null}
               </div>
             </div>
             <textarea className="field-input mt-3 min-h-24" placeholder="Review notes" value={notes[row.id] ?? row.reviewNotes ?? ""} onChange={(event) => setNotes((current) => ({ ...current, [row.id]: event.target.value }))} />
@@ -845,6 +878,10 @@ function CredentialsPage() {
   return (
     <div className="grid gap-4 xl:grid-cols-[1.08fr_0.92fr]">
       <Card title="Probe credentials" kicker="Monitoring keys">
+        <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/62">
+          Use this lane for key rotation, revoke, or recovery work on an existing relay. New
+          approvals from the submission queue now activate monitoring automatically.
+        </div>
         <div className="space-y-2.5">
           {credentials.data.rows.map((row) => (
             <button

@@ -9,6 +9,7 @@ import { ZodError } from "zod";
 import { config } from "./config";
 import { createDb } from "./db";
 import type { Database } from "./db/types";
+import { runRelayMonitoringCycle } from "./lib/relay-monitoring";
 import { refreshPublicData } from "./lib/refresh-public-data";
 import { registerAdminRoutes } from "./routes/admin";
 import { registerProbeRoutes } from "./routes/probe";
@@ -93,12 +94,32 @@ export async function buildApp() {
   }
 
   if (config.ENABLE_SCHEDULER) {
+    let schedulerBusy = false;
+
     cron.schedule("*/5 * * * *", async () => {
+      if (schedulerBusy) {
+        app.log.warn("Skipped monitoring tick because the previous scheduler run is still active");
+        return;
+      }
+
+      schedulerBusy = true;
       try {
-        await refreshPublicData(db);
-        app.log.info("Refreshed public data snapshots");
+        const result = await runRelayMonitoringCycle(db);
+        app.log.info({
+          total: result.total,
+          succeeded: result.succeeded,
+          failed: result.failed,
+        }, "Completed relay monitoring cycle");
       } catch (error) {
-        app.log.error(error, "Failed to refresh public data snapshots");
+        app.log.error(error, "Failed to execute relay monitoring cycle");
+        try {
+          await refreshPublicData(db);
+          app.log.info("Recovered by refreshing public data snapshots only");
+        } catch (refreshError) {
+          app.log.error(refreshError, "Failed to refresh public data snapshots after monitoring error");
+        }
+      } finally {
+        schedulerBusy = false;
       }
     });
   }

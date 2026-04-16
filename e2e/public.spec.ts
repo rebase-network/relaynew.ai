@@ -85,7 +85,7 @@ test("public site renders the main discovery flow", async ({ page }) => {
   await page.getByLabel("Search relays").fill("Ember");
   await expect(page.getByRole("link", { name: "Ember Gateway" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Aurora Relay" })).toHaveCount(0);
-  await expect(page.getByText('Showing 1 of 3 rows for "Ember"')).toBeVisible();
+  await expect(page.getByText(/Showing 1 of \d+ rows for "Ember"/)).toBeVisible();
   await page.getByRole("button", { name: /Degraded/i }).click();
   await expect(page.getByText("No relays match this combination yet.")).toBeVisible();
   await page.locator(".directory-empty-state").getByRole("button", { name: "Reset filters" }).click();

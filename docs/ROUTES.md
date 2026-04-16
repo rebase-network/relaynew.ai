@@ -43,6 +43,19 @@ These routes live on the dedicated admin hostname. They are not mirrored under
 | `/sponsors` | Sponsor placement management | CSR in admin SPA | `GET /admin/sponsors` |
 | `/prices` | Price record management | CSR in admin SPA | `GET /admin/prices` |
 
+### Admin Intake Flow
+
+The expected operator path is:
+
+1. a submitter creates a pending record through `/submit` and provides a test key
+2. the initial bounded verification stays attached to the submission record
+3. an admin reviews the submission on `/submissions`
+4. `Approve & activate` creates or links the relay, moves the active credential to that relay,
+   flips the relay to `active`, runs the first relay-owned monitoring probe, and refreshes
+   public snapshots
+5. `/credentials` is used after approval for key rotation, revoke, or recovery work rather
+   than for the normal intake handoff
+
 ## Homepage Modules
 
 The homepage is expected to include:
@@ -125,4 +138,6 @@ The probe page is expected to include:
   rotation-friendly credential record, and return a concise initial probe summary
 - approving a submission should move the active credential from the submission owner
   into the target relay owner rather than duplicating keys across tables
+- approving a submission should immediately activate the relay and trigger its first
+  relay-owned monitoring run so the public site can pick it up without a second manual step
 - admin routes on `admin.relaynew.ai` should never rely on CDN-cached responses
