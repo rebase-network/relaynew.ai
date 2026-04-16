@@ -2812,9 +2812,6 @@ function ProbePage() {
                       </p>
                     </div>
                   </div>
-                  <div className="mt-4 flex flex-wrap gap-2 text-[0.68rem] uppercase tracking-[0.16em] text-black/48">
-                    <span className="signal-chip">{result.targetHost}</span>
-                  </div>
                 </div>
                 {result.message && !result.ok ? (
                   <div className="border border-[#b54708]/20 bg-[#fff7e8] p-4 text-sm leading-6 text-[#8a450c]">
