@@ -69,7 +69,7 @@ const PROBE_COMPATIBILITY_LABELS: Record<ProbeResolvedCompatibilityMode, string>
 const GITHUB_REPOSITORY_URL = "https://github.com/rebase-network/relaynews.ai";
 
 const FOOTER_FRIEND_LINKS = [
-  { label: "Rebase Network", href: "https://rebase.network" },
+  { label: "Rebase", href: "https://rebase.network" },
 ] as const;
 
 const HEALTH_STATUS_COPY: Record<string, string> = {
@@ -750,45 +750,31 @@ function AppShell({ children }: { children: React.ReactNode }) {
       <main className="site-main mx-auto max-w-7xl px-5 lg:px-10">{children}</main>
       <footer className="site-footer px-5 py-8 lg:px-10">
         <div className="site-footer-shell mx-auto max-w-7xl">
-          <div className="site-footer-primary">
-            <div className="site-footer-brand-block">
-              <p className="site-footer-brand-mark">relaynew.ai</p>
-              <p className="site-footer-slogan">Neutral relay rankings, operator probe tooling</p>
-            </div>
-            <div className="site-footer-nav">
-              <div className="site-footer-group">
-                <p className="site-footer-group-label">Friend links</p>
-                <div className="site-footer-link-list">
-                  {FOOTER_FRIEND_LINKS.map((item) => (
-                    <a
-                      key={item.href}
-                      className="site-footer-link"
-                      href={item.href}
-                      rel="noreferrer"
-                      target="_blank"
-                    >
-                      {item.label}
-                    </a>
-                  ))}
-                </div>
-              </div>
-              <div className="site-footer-group">
-                <p className="site-footer-group-label">Source</p>
+          <div className="site-footer-inline">
+            <p className="site-footer-meta">© {currentYear} relaynew.ai</p>
+            <div className="site-footer-link-list">
+              {FOOTER_FRIEND_LINKS.map((item) => (
                 <a
-                  aria-label="GitHub repository"
-                  className="site-footer-github"
-                  href={GITHUB_REPOSITORY_URL}
+                  key={item.href}
+                  className="site-footer-link"
+                  href={item.href}
                   rel="noreferrer"
                   target="_blank"
                 >
-                  <GitHubIcon className="h-[18px] w-[18px]" />
-                  <span>GitHub</span>
+                  {item.label}
                 </a>
-              </div>
+              ))}
+              <a
+                aria-label="GitHub repository"
+                className="site-footer-github"
+                href={GITHUB_REPOSITORY_URL}
+                rel="noreferrer"
+                target="_blank"
+              >
+                <GitHubIcon className="h-[18px] w-[18px]" />
+              </a>
             </div>
           </div>
-          <div className="site-footer-divider" />
-          <p className="site-footer-meta">© {currentYear} relaynew.ai</p>
         </div>
       </footer>
     </div>
