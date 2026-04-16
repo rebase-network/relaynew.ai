@@ -10,12 +10,12 @@ import {
   type ProbeResolvedCompatibilityMode,
   type PublicProbeResponse,
   type RelayHistoryResponse,
-  type RelayIncidentsResponse,
   type RelayModelsResponse,
   type RelayOverviewResponse,
   type RelayPricingHistoryResponse,
   type PublicSubmissionResponse,
 } from "@relaynews/shared";
+import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { useEffect, useMemo, useState } from "react";
 import {
   Link as RouterLink,
@@ -282,33 +282,34 @@ function buildDailyHistorySlots(
   });
 }
 
-function getLatencyToneClass(latencyMs: number | null) {
+function getLatencyToneColor(latencyMs: number | null) {
   if (latencyMs === null) {
-    return "bg-zinc-300";
+    return "#d4d4d8";
   }
 
   if (latencyMs < 1000) {
-    return "bg-emerald-500";
+    return "#10b981";
   }
 
   if (latencyMs < 2000) {
-    return "bg-yellow-400";
+    return "#facc15";
   }
 
   if (latencyMs < 4000) {
-    return "bg-orange-500";
+    return "#f97316";
   }
 
-  return "bg-red-500";
+  return "#ef4444";
 }
 
-function getLatencyBarHeight(latencyMs: number | null, ceilingMs: number) {
-  if (latencyMs === null) {
-    return 20;
-  }
-
-  const normalized = Math.min(latencyMs, ceilingMs) / ceilingMs;
-  return Math.max(24, Math.round(24 + normalized * 76));
+function getStatusToneColor(status: string) {
+  return status === "healthy"
+    ? "#10b981"
+    : status === "degraded"
+      ? "#f59e0b"
+      : status === "down"
+        ? "#ef4444"
+        : "#d4d4d8";
 }
 
 function getModelVendorKey(modelKey: string) {
@@ -1532,7 +1533,7 @@ function RelayPageSkeleton() {
         </div>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[1.16fr_0.84fr]">
+      <section className="grid gap-4 xl:grid-cols-2">
         <section className="panel">
           <div className="mb-4 space-y-2">
             <SkeletonBlock className="skeleton-kicker max-w-[8rem]" />
@@ -1559,10 +1560,6 @@ function RelayPageSkeleton() {
             {Array.from({ length: 2 }).map((_, index) => (
               <SkeletonBlock key={index} className="h-[4.2rem] w-full" />
             ))}
-          </div>
-          <div className="mt-3 space-y-2">
-            <SkeletonBlock className="skeleton-line max-w-[12rem]" />
-            <SkeletonBlock className="skeleton-line max-w-[10rem]" />
           </div>
         </section>
       </section>
@@ -2415,30 +2412,101 @@ function LeaderboardPage() {
   );
 }
 
-function MiniBars({
-  slots,
-  heightClassName = "h-36",
+type HistoryChartDatum = {
+  dateKey: string;
+  displayDate: string;
+  value: number;
+  fill: string;
+  barTestId: string;
+  tooltipValue: string;
+  tooltipMeta?: string;
+};
+
+function HistoryChartTooltip({
+  active,
+  payload,
 }: {
-  slots: DailyHistorySlot[];
-  heightClassName?: string;
+  active?: boolean;
+  payload?: Array<{ payload: HistoryChartDatum }>;
 }) {
-  const maxLatency = Math.max(...slots.map((slot) => slot.point?.latencyP95Ms ?? 0), 4000);
+  const datum = payload?.[0]?.payload;
+
+  if (!active || !datum) {
+    return null;
+  }
 
   return (
-    <div className={clsx("flex items-end gap-1", heightClassName)}>
-      {slots.map((slot) => {
-        const latencyMs = slot.point?.latencyP95Ms ?? null;
+    <div className="surface-card min-w-[10rem] px-3 py-2.5 shadow-[rgba(127,99,21,0.16)_0_12px_28px]">
+      <p className="font-mono text-[0.64rem] uppercase tracking-[0.18em] text-black/46">{datum.displayDate}</p>
+      <p className="mt-2 text-sm text-black/78">{datum.tooltipValue}</p>
+      {datum.tooltipMeta ? <p className="mt-1 text-xs text-black/56">{datum.tooltipMeta}</p> : null}
+    </div>
+  );
+}
 
-        return (
-          <div
-            key={slot.dateKey}
-            className={clsx("flex-1 rounded-[0.02rem]", getLatencyToneClass(latencyMs))}
-            data-testid="relay-latency-bar"
-            style={{ height: `${getLatencyBarHeight(latencyMs, maxLatency)}%` }}
-            title={`${new Date(`${slot.dateKey}T00:00:00.000Z`).toLocaleDateString()} · ${latencyMs === null ? "No sample" : `p95 ${latencyMs} ms`}`}
-          />
-        );
-      })}
+function TimelineBarShape({
+  x = 0,
+  y = 0,
+  width = 0,
+  height = 0,
+  fill = "#d4d4d8",
+  payload,
+}: {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  fill?: string;
+  payload?: HistoryChartDatum;
+}) {
+  return (
+    <rect
+      data-testid={payload?.barTestId}
+      fill={fill}
+      height={Math.max(height, 1)}
+      rx={1}
+      ry={1}
+      width={Math.max(width, 1)}
+      x={x}
+      y={y}
+    />
+  );
+}
+
+function RelayLatencyChart({ slots }: { slots: DailyHistorySlot[] }) {
+  const domainMax = Math.max(...slots.map((slot) => slot.point?.latencyP95Ms ?? 0), 4000);
+  const missingBarValue = Math.max(80, Math.round(domainMax * 0.03));
+  const data: HistoryChartDatum[] = slots.map((slot) => {
+    const latencyMs = slot.point?.latencyP95Ms ?? null;
+    const datum = {
+      dateKey: slot.dateKey,
+      displayDate: new Date(`${slot.dateKey}T00:00:00.000Z`).toLocaleDateString(),
+      value: latencyMs ?? missingBarValue,
+      fill: getLatencyToneColor(latencyMs),
+      barTestId: "relay-latency-bar",
+      tooltipValue: latencyMs === null ? "No latency sample" : `P95 ${formatLatency(latencyMs)}`,
+    };
+
+    return latencyMs === null
+      ? datum
+      : {
+          ...datum,
+          tooltipMeta: `Tier ${latencyMs < 1000 ? "<1s" : latencyMs < 2000 ? "1-2s" : latencyMs < 4000 ? "2-4s" : "4s+"}`,
+        };
+  });
+
+  return (
+    <div data-testid="relay-latency-chart" className="h-24 md:h-28">
+      <ResponsiveContainer height="100%" width="100%">
+        <BarChart barCategoryGap="20%" data={data} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}>
+          <Tooltip content={<HistoryChartTooltip />} cursor={false} />
+          <Bar dataKey="value" isAnimationActive={false} minPointSize={8} shape={<TimelineBarShape />}>
+            {data.map((entry) => (
+              <Cell key={entry.dateKey} fill={entry.fill} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
     </div>
   );
 }
@@ -2462,6 +2530,42 @@ function RelayLatencyLegend() {
   );
 }
 
+function RelayStatusChart({ slots }: { slots: DailyHistorySlot[] }) {
+  const data: HistoryChartDatum[] = slots.map((slot) => {
+    const status = slot.point ? getAvailabilityTrendStatus(slot.point.availability) : "unknown";
+    const datum = {
+      dateKey: slot.dateKey,
+      displayDate: new Date(`${slot.dateKey}T00:00:00.000Z`).toLocaleDateString(),
+      value: 100,
+      fill: getStatusToneColor(status),
+      barTestId: "relay-status-bar",
+      tooltipValue: slot.point ? status : "No sample",
+    };
+
+    return slot.point
+      ? {
+          ...datum,
+          tooltipMeta: formatAvailability(slot.point.availability),
+        }
+      : datum;
+  });
+
+  return (
+    <div data-testid="relay-status-chart" className="h-24 md:h-28">
+      <ResponsiveContainer height="100%" width="100%">
+        <BarChart barCategoryGap="20%" data={data} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}>
+          <Tooltip content={<HistoryChartTooltip />} cursor={false} />
+          <Bar dataKey="value" isAnimationActive={false} shape={<TimelineBarShape />}>
+            {data.map((entry) => (
+              <Cell key={entry.dateKey} fill={entry.fill} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
 function RelayStatusLegend() {
   return (
     <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-[0.64rem] uppercase tracking-[0.16em] text-black/48">
@@ -2475,40 +2579,6 @@ function RelayStatusLegend() {
           <span className={clsx("h-2 w-2 rounded-full", item.toneClassName)} />
           {item.label}
         </span>
-      ))}
-    </div>
-  );
-}
-
-function getStatusHistoryToneClass(point: RelayHistoryResponse["points"][number] | null) {
-  if (!point) {
-    return "bg-zinc-300";
-  }
-
-  return getStatusToneClass(getAvailabilityTrendStatus(point.availability));
-}
-
-function formatStatusHistoryTitle(slot: DailyHistorySlot) {
-  const displayDate = new Date(`${slot.dateKey}T00:00:00.000Z`).toLocaleDateString();
-
-  if (!slot.point) {
-    return `${displayDate} · No sample`;
-  }
-
-  const status = getAvailabilityTrendStatus(slot.point.availability);
-  return `${displayDate} · ${status} · ${formatAvailability(slot.point.availability)}`;
-}
-
-function StatusHistoryBars({ slots }: { slots: DailyHistorySlot[] }) {
-  return (
-    <div className="flex h-24 items-stretch gap-1 md:h-28">
-      {slots.map((slot) => (
-        <div
-          key={slot.dateKey}
-          className={clsx("flex-1 rounded-[0.02rem]", getStatusHistoryToneClass(slot.point))}
-          data-testid="relay-status-bar"
-          title={formatStatusHistoryTitle(slot)}
-        />
       ))}
     </div>
   );
@@ -2549,10 +2619,8 @@ function ScorePopover({ scoreSummary }: { scoreSummary: RelayOverviewResponse["s
 
 function StatusHistoryPanel({
   slots,
-  incidentCount,
 }: {
   slots: DailyHistorySlot[];
-  incidentCount: number;
 }) {
   const measuredSlots = slots.filter((slot) => slot.point);
 
@@ -2564,7 +2632,7 @@ function StatusHistoryPanel({
 
   return (
     <div className="space-y-3">
-      <StatusHistoryBars slots={slots} />
+      <RelayStatusChart slots={slots} />
       <RelayStatusLegend />
       <div className="grid gap-2 sm:grid-cols-2">
         <div className="surface-card px-3 py-2.5 text-sm">
@@ -2576,7 +2644,6 @@ function StatusHistoryPanel({
           <p className="mt-2 text-black/76">{measuredSlots.length} of {slots.length}</p>
         </div>
       </div>
-      <p className="text-sm text-black/60">{incidentCount === 0 ? "No incidents in 30d." : `${incidentCount} incidents in 30d.`}</p>
     </div>
   );
 }
@@ -2603,12 +2670,6 @@ function RelayPage() {
     () => fetchJson(`/public/relay/${slug}/pricing-history`),
     [slug],
   );
-  const incidents = useLoadable<RelayIncidentsResponse>(
-    `/public/relay/${slug}/incidents?window=30d`,
-    () => fetchJson(`/public/relay/${slug}/incidents?window=30d`),
-    [slug],
-  );
-
   if (overview.loading) return <RelayPageSkeleton />;
   if (overview.error || !overview.data) return <ErrorPanel message={overview.error ?? "Unable to load relay."} />;
 
@@ -2684,7 +2745,7 @@ function RelayPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[1.16fr_0.84fr]">
+      <section className="grid gap-4 xl:grid-cols-2">
         <Panel
           className="h-full"
           title="Latency profile"
@@ -2694,7 +2755,7 @@ function RelayPage() {
         >
           {history.loading || !history.data ? <p className="text-sm text-black/60">Loading trend...</p> : (
             <div className="space-y-3">
-              <MiniBars heightClassName="h-28" slots={historySlots} />
+              <RelayLatencyChart slots={historySlots} />
               <RelayLatencyLegend />
               <div className="grid gap-2 sm:grid-cols-3">
                 <div className="surface-card px-3 py-2.5 text-sm">
@@ -2722,10 +2783,10 @@ function RelayPage() {
           headerClassName="mb-3"
           titleClassName="text-[2.2rem] md:text-[2.45rem]"
         >
-          {history.loading || !history.data || incidents.loading || !incidents.data ? (
+          {history.loading || !history.data ? (
             <p className="text-sm text-black/60">Loading status...</p>
           ) : (
-            <StatusHistoryPanel incidentCount={incidents.data.rows.length} slots={historySlots} />
+            <StatusHistoryPanel slots={historySlots} />
           )}
         </Panel>
       </section>

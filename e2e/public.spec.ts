@@ -103,6 +103,11 @@ test("public site renders the main discovery flow", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Models" })).toBeVisible();
   await expect(page.getByTestId("relay-latency-bar")).toHaveCount(30);
   await expect(page.getByTestId("relay-status-bar")).toHaveCount(30);
+  const latencyChartBox = await page.getByTestId("relay-latency-chart").boundingBox();
+  const statusChartBox = await page.getByTestId("relay-status-chart").boundingBox();
+  expect(latencyChartBox).not.toBeNull();
+  expect(statusChartBox).not.toBeNull();
+  expect(Math.abs(latencyChartBox!.width - statusChartBox!.width)).toBeLessThan(2);
   await page.getByLabel("Inspect score breakdown").click();
   await expect(page.getByText("Score breakdown")).toBeVisible();
 });
