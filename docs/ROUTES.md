@@ -55,6 +55,8 @@ The expected operator path is:
    public snapshots
 5. `/credentials` is used after approval for key rotation, revoke, or recovery work rather
    than for the normal intake handoff
+6. `/relays` acts as the quickest post-approval checkpoint by surfacing relay status plus
+   the current monitoring-key state and deep-linking into key operations
 
 ## Homepage Modules
 

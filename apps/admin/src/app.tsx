@@ -1,5 +1,6 @@
 import { clsx } from "clsx";
 import {
+  type AdminProbeCredential,
   type AdminProbeCredentialCreate,
   type AdminProbeCredentialDetail,
   type AdminProbeCredentialMutationResponse,
@@ -15,7 +16,7 @@ import {
   type ProbeCredentialOwnerType,
 } from "@relaynews/shared";
 import { type Dispatch, type ReactNode, type SetStateAction, useEffect, useMemo, useState } from "react";
-import { Link, NavLink, Route, Routes } from "react-router-dom";
+import { Link, NavLink, Route, Routes, useSearchParams } from "react-router-dom";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ?? "http://127.0.0.1:8787";
@@ -138,6 +139,57 @@ function withoutFieldError<T extends string>(current: Partial<Record<T, string>>
   const next = { ...current };
   delete next[key];
   return next;
+}
+
+function credentialStatusPriority(status: AdminProbeCredential["status"]) {
+  if (status === "active") {
+    return 3;
+  }
+
+  if (status === "rotated") {
+    return 2;
+  }
+
+  return 1;
+}
+
+function pickPreferredCredential(current: AdminProbeCredential | undefined, next: AdminProbeCredential) {
+  if (!current) {
+    return next;
+  }
+
+  if (credentialStatusPriority(next.status) > credentialStatusPriority(current.status)) {
+    return next;
+  }
+
+  if ((next.lastVerifiedAt ?? "") > (current.lastVerifiedAt ?? "")) {
+    return next;
+  }
+
+  return current;
+}
+
+function buildCredentialRoute(params: {
+  credentialId?: string | null;
+  ownerType?: ProbeCredentialOwnerType;
+  ownerId?: string | null;
+}) {
+  const search = new URLSearchParams();
+
+  if (params.credentialId) {
+    search.set("credential", params.credentialId);
+  }
+
+  if (params.ownerType) {
+    search.set("ownerType", params.ownerType);
+  }
+
+  if (params.ownerId) {
+    search.set("ownerId", params.ownerId);
+  }
+
+  const suffix = search.toString();
+  return suffix ? `/credentials?${suffix}` : "/credentials";
 }
 
 function validateRelayForm(form: AdminRelayUpsert) {
@@ -425,12 +477,67 @@ function OverviewPage() {
   if (error || !data) return <ErrorCard message={error ?? "Unable to load admin overview."} />;
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      {Object.entries(data.totals).map(([label, value]) => (
-        <Card key={label} title={String(value)} kicker={label.replace(/[A-Z]/g, (match) => ` ${match.toLowerCase()}`)}>
-          <p className="text-sm text-white/60">Measured at {new Date(data.measuredAt).toLocaleTimeString()}</p>
+    <div className="space-y-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {Object.entries(data.totals).map(([label, value]) => (
+          <Card key={label} title={String(value)} kicker={label.replace(/[A-Z]/g, (match) => ` ${match.toLowerCase()}`)}>
+            <p className="text-sm text-white/60">Measured at {new Date(data.measuredAt).toLocaleTimeString()}</p>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+        <Card title="Primary flow" kicker="Daily operator path">
+          <div className="grid gap-3 md:grid-cols-3">
+            {[
+              {
+                step: "1",
+                title: "Review intake",
+                text: "Start with the submission queue. Pending rows already include the initial probe snapshot and submitter key preview.",
+                action: { href: "/submissions", label: "Open intake" },
+              },
+              {
+                step: "2",
+                title: "Approve & activate",
+                text: "Approval links or creates the relay, moves the active key, and starts the first relay-owned monitoring probe.",
+                action: { href: "/submissions", label: "Approve queue" },
+              },
+              {
+                step: "3",
+                title: "Operate later",
+                text: "Use relays for catalog edits and use credentials only when a monitoring key needs rotation, revoke, or repair.",
+                action: { href: "/relays", label: "Open relays" },
+              },
+            ].map((item) => (
+              <div key={item.step} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-white/38">Step {item.step}</p>
+                <p className="mt-2 text-lg tracking-[-0.03em]">{item.title}</p>
+                <p className="mt-2 text-sm leading-6 text-white/62">{item.text}</p>
+                <Link className="pill pill-idle mt-4 inline-flex" to={item.action.href}>
+                  {item.action.label}
+                </Link>
+              </div>
+            ))}
+          </div>
         </Card>
-      ))}
+
+        <Card title="Where to go" kicker="Fast lanes">
+          <div className="grid gap-3">
+            <Link className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition hover:bg-white/8" to="/submissions">
+              <p className="text-sm uppercase tracking-[0.16em] text-white/42">Intake</p>
+              <p className="mt-1 text-lg tracking-[-0.03em]">Work pending submissions first</p>
+            </Link>
+            <Link className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition hover:bg-white/8" to="/relays">
+              <p className="text-sm uppercase tracking-[0.16em] text-white/42">Catalog</p>
+              <p className="mt-1 text-lg tracking-[-0.03em]">Check relay status and metadata</p>
+            </Link>
+            <Link className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition hover:bg-white/8" to="/credentials">
+              <p className="text-sm uppercase tracking-[0.16em] text-white/42">Monitoring keys</p>
+              <p className="mt-1 text-lg tracking-[-0.03em]">Rotate or recover probe credentials</p>
+            </Link>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }
@@ -454,6 +561,26 @@ function RelaysPage() {
   const [fieldErrors, setFieldErrors] = useState<RelayFormErrors>({});
   const [mutation, setMutation] = useMutationState();
   const relays = useLoadable<AdminRelaysResponse>(() => fetchJson("/admin/relays"), []);
+  const credentials = useLoadable<AdminProbeCredentialsResponse>(() => fetchJson("/admin/probe-credentials"), []);
+
+  function beginEditingRelay(relay: AdminRelaysResponse["rows"][number]) {
+    setEditingId(relay.id);
+    setForm({
+      slug: relay.slug,
+      name: relay.name,
+      baseUrl: relay.baseUrl,
+      providerName: relay.providerName,
+      websiteUrl: relay.websiteUrl,
+      catalogStatus: relay.catalogStatus,
+      isFeatured: relay.isFeatured,
+      isSponsored: relay.isSponsored,
+      description: null,
+      docsUrl: null,
+      notes: null,
+    });
+    setFieldErrors({});
+    setMutation({ pending: false, error: null, success: null });
+  }
 
   function resetForm() {
     setEditingId(null);
@@ -484,38 +611,40 @@ function RelaysPage() {
     }
   }
 
-  if (relays.loading) return <LoadingCard />;
-  if (relays.error || !relays.data) return <ErrorCard message={relays.error ?? "Unable to load relays."} />;
+  const relayCredentialLookup = useMemo(() => {
+    const lookup = new Map<string, AdminProbeCredential>();
+
+    for (const row of credentials.data?.rows ?? []) {
+      if (row.ownerType !== "relay") {
+        continue;
+      }
+
+      lookup.set(row.ownerId, pickPreferredCredential(lookup.get(row.ownerId), row));
+    }
+
+    return lookup;
+  }, [credentials.data]);
+
+  if (relays.loading || credentials.loading) return <LoadingCard />;
+  if (relays.error || credentials.error || !relays.data || !credentials.data) {
+    return <ErrorCard message={relays.error ?? credentials.error ?? "Unable to load relays."} />;
+  }
 
   return (
     <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
       <Card title="Relay catalog" kicker="Current rows">
+        <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/62">
+          This is the fastest post-approval checkpoint. You can confirm catalog status, see whether
+          a monitoring key is attached, and jump straight into key rotation without hunting through
+          multiple pages.
+        </div>
         <div className="space-y-2.5">
           {relays.data.rows.map((relay) => (
-            <button
+            <div
               key={relay.id}
               className="admin-list-card w-full border border-white/10 bg-white/5 p-3.5 text-left transition hover:bg-white/8"
-              onClick={() => {
-                setEditingId(relay.id);
-                setForm({
-                  slug: relay.slug,
-                  name: relay.name,
-                  baseUrl: relay.baseUrl,
-                  providerName: relay.providerName,
-                  websiteUrl: relay.websiteUrl,
-                  catalogStatus: relay.catalogStatus,
-                  isFeatured: relay.isFeatured,
-                  isSponsored: relay.isSponsored,
-                  description: null,
-                  docsUrl: null,
-                  notes: null,
-                });
-                setFieldErrors({});
-                setMutation({ pending: false, error: null, success: null });
-              }}
-              type="button"
             >
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xl tracking-[-0.03em]">{relay.name}</p>
                   <p className="mt-1 text-xs uppercase tracking-[0.16em] text-white/45">{relay.slug} · {relay.catalogStatus}</p>
@@ -525,7 +654,50 @@ function RelaysPage() {
                   <p>{relay.isSponsored ? "sponsor hint" : "organic"}</p>
                 </div>
               </div>
-            </button>
+              {(() => {
+                const credential = relayCredentialLookup.get(relay.id);
+
+                return (
+                  <>
+                    <p className="mt-3 text-sm text-white/62">{relay.baseUrl}</p>
+                    <p className={clsx("mt-3 text-sm", credential ? "text-white/72" : "text-[#ffd06a]")}>
+                      {credential ? `Monitoring key · ${credential.status}` : "Monitoring key missing"}
+                    </p>
+                    <p className="mt-1 text-sm text-white/55">
+                      {credential
+                        ? `${credential.testModel} · ${credential.lastHealthStatus ?? "unknown"}${credential.lastHttpStatus ? ` · ${credential.lastHttpStatus}` : ""}`
+                        : "Attach a relay-owned key so scheduled probe runs can start."}
+                      {credential?.lastVerifiedAt
+                        ? ` · ${new Date(credential.lastVerifiedAt).toLocaleString()}`
+                        : ""}
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button className="pill pill-active" onClick={() => beginEditingRelay(relay)} type="button">
+                        Edit relay
+                      </button>
+                      <Link
+                        className="pill pill-idle"
+                        to={buildCredentialRoute({
+                          credentialId: credential?.id ?? null,
+                          ownerType: "relay",
+                          ownerId: relay.id,
+                        })}
+                      >
+                        {credential ? "Manage key" : "Add key"}
+                      </Link>
+                      <a
+                        className="pill pill-ghost"
+                        href={`${PUBLIC_SITE_URL}/relay/${relay.slug}`}
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        Public page
+                      </a>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
           ))}
         </div>
       </Card>
@@ -583,6 +755,7 @@ function RelaysPage() {
 
 function SubmissionsPage() {
   const submissions = useLoadable<AdminSubmissionsResponse>(() => fetchJson("/admin/submissions"), []);
+  const relays = useLoadable<AdminRelaysResponse>(() => fetchJson("/admin/relays"), []);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [mutation, setMutation] = useMutationState();
 
@@ -607,8 +780,25 @@ function SubmissionsPage() {
     }
   }
 
-  if (submissions.loading) return <LoadingCard />;
-  if (submissions.error || !submissions.data) return <ErrorCard message={submissions.error ?? "Unable to load submissions."} />;
+  const relayIdBySlug = useMemo(() => {
+    const lookup = new Map<string, string>();
+
+    for (const relay of relays.data?.rows ?? []) {
+      lookup.set(relay.slug, relay.id);
+    }
+
+    return lookup;
+  }, [relays.data]);
+
+  if (submissions.loading || relays.loading) return <LoadingCard />;
+  if (submissions.error || relays.error || !submissions.data || !relays.data) {
+    return <ErrorCard message={submissions.error ?? relays.error ?? "Unable to load submissions."} />;
+  }
+
+  const pendingRows = submissions.data.rows.filter((row) => row.status === "pending");
+  const approvedRows = submissions.data.rows.filter((row) => row.status === "approved");
+  const closedRows = submissions.data.rows.filter((row) => row.status === "rejected" || row.status === "archived");
+  const needsAttention = pendingRows.filter((row) => row.probeCredential?.lastProbeOk === false).length;
 
   return (
     <Card title="Submission queue" kicker="Review lane">
@@ -624,54 +814,155 @@ function SubmissionsPage() {
             Use the credentials page later for rotation, revoke, or recovery work.
           </p>
         </div>
-        {submissions.data.rows.map((row) => (
-          <div key={row.id} className="admin-list-card border border-white/10 bg-white/5 p-3.5">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <p className="text-xl tracking-[-0.03em]">{row.relayName}</p>
-                <p className="mt-1 text-sm text-white/60">{row.baseUrl}</p>
-                <p className="mt-2 text-xs uppercase tracking-[0.16em] text-white/40">{row.status} · {new Date(row.createdAt).toLocaleString()}</p>
-                {row.approvedRelay ? <p className="mt-2 text-sm text-emerald-300/80">Linked relay · {row.approvedRelay.name}</p> : null}
-                {row.probeCredential ? (
-                  <div className="mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white/65">
-                    <p>
-                      Credential · {row.probeCredential.status} · {row.probeCredential.apiKeyPreview}
-                    </p>
-                    <p>
-                      Probe · {row.probeCredential.testModel} · {row.probeCredential.lastHealthStatus ?? "unknown"}
-                      {row.probeCredential.lastHttpStatus ? ` · ${row.probeCredential.lastHttpStatus}` : ""}
-                      {row.probeCredential.lastVerifiedAt
-                        ? ` · ${new Date(row.probeCredential.lastVerifiedAt).toLocaleString()}`
-                        : ""}
-                    </p>
-                    {row.probeCredential.lastMessage ? <p className="text-white/48">{row.probeCredential.lastMessage}</p> : null}
-                  </div>
-                ) : null}
-                {!row.approvedRelay && row.status === "pending" ? (
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Pending</p>
+            <p className="mt-2 text-3xl tracking-[-0.04em]">{pendingRows.length}</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Approved</p>
+            <p className="mt-2 text-3xl tracking-[-0.04em]">{approvedRows.length}</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Needs attention</p>
+            <p className="mt-2 text-3xl tracking-[-0.04em]">{needsAttention}</p>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Pending intake</p>
+              <p className="mt-1 text-lg tracking-[-0.03em]">Review these first</p>
+            </div>
+            <p className="text-sm text-white/48">{pendingRows.length} pending</p>
+          </div>
+
+          {pendingRows.length === 0 ? (
+            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-5 text-sm text-white/58">
+              No pending submissions right now.
+            </div>
+          ) : pendingRows.map((row) => (
+            <div key={row.id} className="admin-list-card border border-white/10 bg-white/5 p-3.5">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <p className="text-xl tracking-[-0.03em]">{row.relayName}</p>
+                  <p className="mt-1 text-sm text-white/60">{row.baseUrl}</p>
+                  <p className="mt-2 text-xs uppercase tracking-[0.16em] text-white/40">{row.status} · {new Date(row.createdAt).toLocaleString()}</p>
+                  {row.probeCredential ? (
+                    <div className="mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white/65">
+                      <p>
+                        Credential · {row.probeCredential.status} · {row.probeCredential.apiKeyPreview}
+                      </p>
+                      <p>
+                        Probe · {row.probeCredential.testModel} · {row.probeCredential.lastHealthStatus ?? "unknown"}
+                        {row.probeCredential.lastHttpStatus ? ` · ${row.probeCredential.lastHttpStatus}` : ""}
+                        {row.probeCredential.lastVerifiedAt
+                          ? ` · ${new Date(row.probeCredential.lastVerifiedAt).toLocaleString()}`
+                          : ""}
+                      </p>
+                      {row.probeCredential.lastMessage ? <p className="text-white/48">{row.probeCredential.lastMessage}</p> : null}
+                    </div>
+                  ) : null}
                   <p className="mt-3 text-sm text-white/48">
                     Approval will activate this relay immediately and start public monitoring.
                   </p>
-                ) : null}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button className="pill pill-active" type="button" onClick={() => review(row.id, "approved")}>Approve &amp; activate</button>
+                  <button className="pill pill-idle" type="button" onClick={() => review(row.id, "rejected")}>Reject</button>
+                  <button className="pill pill-ghost" type="button" onClick={() => review(row.id, "archived")}>Archive</button>
+                </div>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <button className="pill pill-active" type="button" onClick={() => review(row.id, "approved")}>Approve &amp; activate</button>
-                <button className="pill pill-idle" type="button" onClick={() => review(row.id, "rejected")}>Reject</button>
-                <button className="pill pill-ghost" type="button" onClick={() => review(row.id, "archived")}>Archive</button>
-                {row.approvedRelay ? (
-                  <Link
-                    className="pill pill-idle"
-                    rel="noreferrer"
-                    target="_blank"
-                    to={`${PUBLIC_SITE_URL}/relay/${row.approvedRelay.slug}`}
-                  >
-                    Open public page
-                  </Link>
-                ) : null}
-              </div>
+              <textarea className="field-input mt-3 min-h-24" placeholder="Review notes" value={notes[row.id] ?? row.reviewNotes ?? ""} onChange={(event) => setNotes((current) => ({ ...current, [row.id]: event.target.value }))} />
             </div>
-            <textarea className="field-input mt-3 min-h-24" placeholder="Review notes" value={notes[row.id] ?? row.reviewNotes ?? ""} onChange={(event) => setNotes((current) => ({ ...current, [row.id]: event.target.value }))} />
+          ))}
+        </div>
+
+        {approvedRows.length > 0 ? (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Activated relays</p>
+                <p className="mt-1 text-lg tracking-[-0.03em]">Recently approved handoffs</p>
+              </div>
+              <p className="text-sm text-white/48">{approvedRows.length} approved</p>
+            </div>
+
+            {approvedRows.slice(0, 8).map((row) => (
+              <div key={row.id} className="admin-list-card border border-white/10 bg-white/5 p-3.5">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                  <div>
+                    <p className="text-xl tracking-[-0.03em]">{row.relayName}</p>
+                    <p className="mt-1 text-sm text-white/60">{row.baseUrl}</p>
+                    <p className="mt-2 text-xs uppercase tracking-[0.16em] text-white/40">{row.status} · {new Date(row.createdAt).toLocaleString()}</p>
+                    {row.approvedRelay ? <p className="mt-2 text-sm text-emerald-300/80">Linked relay · {row.approvedRelay.name}</p> : null}
+                    {row.probeCredential ? (
+                      <p className="mt-3 text-sm text-white/55">
+                        Intake credential snapshot · {row.probeCredential.testModel} · {row.probeCredential.lastHealthStatus ?? "unknown"}
+                        {row.probeCredential.lastVerifiedAt
+                          ? ` · ${new Date(row.probeCredential.lastVerifiedAt).toLocaleString()}`
+                          : ""}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {row.approvedRelay ? (
+                      <>
+                        {relayIdBySlug.get(row.approvedRelay.slug) ? (
+                          <Link
+                            className="pill pill-idle"
+                            to={buildCredentialRoute(
+                              (() => {
+                                const ownerId = relayIdBySlug.get(row.approvedRelay.slug);
+                                return ownerId
+                                  ? {
+                                    ownerType: "relay" as const,
+                                    ownerId,
+                                  }
+                                  : {};
+                              })(),
+                            )}
+                          >
+                            Manage key
+                          </Link>
+                        ) : null}
+                        <Link className="pill pill-idle" to="/relays">
+                          Open relay ops
+                        </Link>
+                        <a
+                          className="pill pill-ghost"
+                          href={`${PUBLIC_SITE_URL}/relay/${row.approvedRelay.slug}`}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          Open public page
+                        </a>
+                      </>
+                    ) : null}
+                  </div>
+                </div>
+                <textarea className="field-input mt-3 min-h-24" placeholder="Review notes" value={notes[row.id] ?? row.reviewNotes ?? ""} onChange={(event) => setNotes((current) => ({ ...current, [row.id]: event.target.value }))} />
+              </div>
+            ))}
           </div>
-        ))}
+        ) : null}
+
+        {closedRows.length > 0 ? (
+          <details className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+            <summary className="cursor-pointer list-none text-sm uppercase tracking-[0.16em] text-white/45">
+              Closed items · {closedRows.length}
+            </summary>
+            <div className="mt-3 space-y-2.5">
+              {closedRows.slice(0, 8).map((row) => (
+                <div key={row.id} className="rounded-2xl border border-white/10 bg-black/10 px-3 py-3 text-sm text-white/60">
+                  <p className="text-white/78">{row.relayName}</p>
+                  <p className="mt-1">{row.status} · {new Date(row.createdAt).toLocaleString()}</p>
+                </div>
+              ))}
+            </div>
+          </details>
+        ) : null}
       </div>
       <div className="mt-4"><Notice state={mutation} /></div>
     </Card>
@@ -682,6 +973,7 @@ function CredentialsPage() {
   const credentials = useLoadable<AdminProbeCredentialsResponse>(() => fetchJson("/admin/probe-credentials"), []);
   const relays = useLoadable<AdminRelaysResponse>(() => fetchJson("/admin/relays"), []);
   const submissions = useLoadable<AdminSubmissionsResponse>(() => fetchJson("/admin/submissions"), []);
+  const [searchParams] = useSearchParams();
   const [selectedCredentialId, setSelectedCredentialId] = useState<string | null>(null);
   const detail = useLoadable<AdminProbeCredentialDetail | null>(
     () => (selectedCredentialId ? fetchJson(`/admin/probe-credentials/${selectedCredentialId}`) : Promise.resolve(null)),
@@ -707,6 +999,9 @@ function CredentialsPage() {
   const [actionMutation, setActionMutation] = useMutationState();
   const [revealedKey, setRevealedKey] = useState(false);
   const [copiedKey, setCopiedKey] = useState(false);
+  const requestedCredentialId = searchParams.get("credential");
+  const requestedOwnerType = searchParams.get("ownerType") === "submission" ? "submission" : "relay";
+  const requestedOwnerId = searchParams.get("ownerId");
 
   useEffect(() => {
     if (!credentials.data?.rows.length) {
@@ -714,10 +1009,35 @@ function CredentialsPage() {
       return;
     }
 
+    if (requestedCredentialId && credentials.data.rows.some((row) => row.id === requestedCredentialId)) {
+      if (requestedCredentialId !== selectedCredentialId) {
+        setSelectedCredentialId(requestedCredentialId);
+      }
+      return;
+    }
+
+    if (requestedOwnerId) {
+      const ownerCredential = credentials.data.rows.find((row) =>
+        row.ownerId === requestedOwnerId && row.ownerType === requestedOwnerType,
+      );
+
+      if (ownerCredential) {
+        if (ownerCredential.id !== selectedCredentialId) {
+          setSelectedCredentialId(ownerCredential.id);
+        }
+        return;
+      }
+
+      if (selectedCredentialId !== null) {
+        setSelectedCredentialId(null);
+      }
+      return;
+    }
+
     if (!selectedCredentialId || !credentials.data.rows.some((row) => row.id === selectedCredentialId)) {
       setSelectedCredentialId(credentials.data.rows[0]?.id ?? null);
     }
-  }, [credentials.data, selectedCredentialId]);
+  }, [credentials.data, requestedCredentialId, requestedOwnerId, requestedOwnerType, selectedCredentialId]);
 
   useEffect(() => {
     if (!detail.data) {
@@ -737,6 +1057,18 @@ function CredentialsPage() {
     setRevealedKey(false);
     setCopiedKey(false);
   }, [detail.data]);
+
+  useEffect(() => {
+    if (!requestedOwnerId) {
+      return;
+    }
+
+    setCreateForm((current) => ({
+      ...current,
+      ownerType: requestedOwnerType,
+      ownerId: requestedOwnerId,
+    }));
+  }, [requestedOwnerId, requestedOwnerType]);
 
   const relayOwnerOptions = relays.data?.rows ?? [];
   const submissionOwnerOptions = submissions.data?.rows ?? [];
@@ -917,6 +1249,11 @@ function CredentialsPage() {
 
       <div className="space-y-4">
         <Card title="Create credential" kicker="Attach a key">
+          {requestedOwnerId ? (
+            <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/62">
+              This form is prefilled from the previous page so you can attach or replace the monitoring key without reselecting the owner.
+            </div>
+          ) : null}
           <div className="grid gap-2.5">
             <label className="field-label">
               Owner type

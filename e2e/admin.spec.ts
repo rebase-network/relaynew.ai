@@ -22,16 +22,19 @@ async function readOverviewMetric(page: Page, label: string) {
 
 async function readOverviewTotals(page: Page) {
   await page.goto(`${adminBaseUrl}/`);
+  const pendingSubmissionsCard = page.locator("section.card").filter({
+    has: page.getByText(/^pending submissions$/i),
+  }).first();
 
   try {
-    await page.getByText(/pending submissions/i).waitFor({ state: "visible", timeout: 8_000 });
+    await pendingSubmissionsCard.waitFor({ state: "visible", timeout: 8_000 });
   } catch {
     const fetchError = page.getByText("Failed to fetch");
     if (await fetchError.isVisible().catch(() => false)) {
       await page.reload();
     }
 
-    await page.getByText(/pending submissions/i).waitFor({ state: "visible", timeout: 8_000 });
+    await pendingSubmissionsCard.waitFor({ state: "visible", timeout: 8_000 });
   }
 
   return {
@@ -48,23 +51,23 @@ test("admin overview shows operating totals", async ({ page }) => {
   const overviewTotals = await readOverviewTotals(page);
   expect(overviewTotals.pendingSubmissions).toBeGreaterThanOrEqual(0);
 
-  await page.getByRole("link", { name: "Relays" }).click();
+  await page.getByRole("link", { name: "Relays", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`${adminBaseUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/relays$`));
   await expect(page.getByRole("heading", { name: "Relay catalog", exact: true })).toBeVisible();
 
-  await page.getByRole("link", { name: "Submissions" }).click();
+  await page.getByRole("link", { name: "Submissions", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`${adminBaseUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/submissions$`));
   await expect(page.getByRole("heading", { name: "Submission queue", exact: true })).toBeVisible();
 
-  await page.getByRole("link", { name: "Credentials" }).click();
+  await page.getByRole("link", { name: "Credentials", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`${adminBaseUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/credentials$`));
   await expect(page.getByRole("heading", { name: "Probe credentials", exact: true })).toBeVisible();
 
-  await page.getByRole("link", { name: "Sponsors" }).click();
+  await page.getByRole("link", { name: "Sponsors", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`${adminBaseUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/sponsors$`));
   await expect(page.getByRole("heading", { name: "Sponsor placements", exact: true })).toBeVisible();
 
-  await page.getByRole("link", { name: "Prices" }).click();
+  await page.getByRole("link", { name: "Prices", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`${adminBaseUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/prices$`));
   await expect(page.getByRole("heading", { name: "Price history", exact: true })).toBeVisible();
 });
@@ -236,6 +239,14 @@ test("admin can review submissions, create sponsors, and add prices", async ({ p
 
   await page.goto(`${webBaseUrl}/leaderboard/openai-gpt-5.4`);
   await expect(page.getByRole("link", { name: relayName })).toBeVisible();
+
+  await page.goto(`${adminBaseUrl}/relays`);
+  const relayCard = page.locator(".admin-list-card").filter({ hasText: relayName }).first();
+  await expect(relayCard).toContainText(/Monitoring key · active/i);
+  await relayCard.getByRole("link", { name: "Manage key" }).click();
+  await expect(page).toHaveURL(/\/credentials\?/);
+  await expect(page.getByRole("heading", { name: "Credential detail", exact: true })).toBeVisible();
+  await expect(page.getByText(relayName).first()).toBeVisible();
 
   await page.goto(`${adminBaseUrl}/sponsors`);
   await page.getByLabel("Name").fill(sponsorName);
