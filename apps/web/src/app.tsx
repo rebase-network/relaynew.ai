@@ -403,7 +403,7 @@ function Link(props: RouterLinkProps) {
     onMouseDown: props.onMouseDown,
   });
 
-  return <RouterLink {...props} {...prefetchHandlers} />;
+  return <RouterLink {...props} {...prefetchHandlers} viewTransition={props.viewTransition ?? true} />;
 }
 
 function NavLink(props: RouterNavLinkProps) {
@@ -415,7 +415,7 @@ function NavLink(props: RouterNavLinkProps) {
     onMouseDown: props.onMouseDown,
   });
 
-  return <RouterNavLink {...props} {...prefetchHandlers} />;
+  return <RouterNavLink {...props} {...prefetchHandlers} viewTransition={props.viewTransition ?? true} />;
 }
 
 function getProbeEndpointPath(value: string | null | undefined) {
