@@ -186,10 +186,6 @@ function formatProbeHttpStatus(value: number | null | undefined) {
   return value ? String(value) : "n/a";
 }
 
-function formatProbeRequestCount(value: number) {
-  return `${value} request${value === 1 ? "" : "s"}`;
-}
-
 function formatAvailability(value: number) {
   return `${(value * 100).toFixed(2)}%`;
 }
@@ -419,18 +415,6 @@ function NavLink(props: RouterNavLinkProps) {
   });
 
   return <RouterNavLink {...props} {...prefetchHandlers} viewTransition={props.viewTransition ?? true} />;
-}
-
-function getProbeEndpointPath(value: string | null | undefined) {
-  if (!value) {
-    return null;
-  }
-
-  try {
-    return new URL(value).pathname || "/";
-  } catch {
-    return null;
-  }
 }
 
 function getProbeResultTone(result: PublicProbeResponse) {
@@ -767,22 +751,6 @@ function useProbeController(initialState: ProbeFormState = DEFAULT_PROBE_STATE) 
   const resultTone = useMemo(() => (result ? getProbeResultTone(result) : null), [result]);
   const failureGuidance = useMemo(() => (result ? getProbeFailureGuidance(result) : null), [result]);
   const attemptTrace = result?.attemptTrace ?? [];
-  const usedEndpointPath = useMemo(() => getProbeEndpointPath(result?.usedUrl), [result?.usedUrl]);
-  const requestSummary = useMemo(() => {
-    if (!result) {
-      return null;
-    }
-
-    if (result.ok) {
-      return attemptTrace.length <= 1
-        ? "Matched on the first request"
-        : `Matched after ${formatProbeRequestCount(attemptTrace.length)}`;
-    }
-
-    return attemptTrace.length > 0
-      ? `Checked ${formatProbeRequestCount(attemptTrace.length)}`
-      : "Probe did not reach the upstream route";
-  }, [attemptTrace.length, result]);
 
   return {
     attemptTrace,
@@ -791,13 +759,11 @@ function useProbeController(initialState: ProbeFormState = DEFAULT_PROBE_STATE) 
     failureGuidance,
     handleCopyUsedUrl,
     handleSubmit,
-    requestSummary,
     result,
     resultTone,
     setState,
     state,
     submitting,
-    usedEndpointPath,
   };
 }
 
@@ -2697,13 +2663,11 @@ function ProbePage() {
     failureGuidance,
     handleCopyUsedUrl,
     handleSubmit,
-    requestSummary,
     result,
     resultTone,
     setState,
     state,
     submitting,
-    usedEndpointPath,
   } = useProbeController(getProbeStateFromSearchParams(searchParams));
 
   return (
@@ -2849,9 +2813,7 @@ function ProbePage() {
                     </div>
                   </div>
                   <div className="mt-4 flex flex-wrap gap-2 text-[0.68rem] uppercase tracking-[0.16em] text-black/48">
-                    <span className="signal-chip">{requestSummary}</span>
-                    {usedEndpointPath ? <span className="signal-chip">{usedEndpointPath}</span> : null}
-                    <span className="signal-chip">{formatProbeRequestCount(attemptTrace.length)}</span>
+                    <span className="signal-chip">{result.targetHost}</span>
                   </div>
                 </div>
                 {result.message && !result.ok ? (
@@ -2860,9 +2822,8 @@ function ProbePage() {
                   </div>
                 ) : null}
                 <details className="surface-card p-4">
-                  <summary className="flex cursor-pointer items-center justify-between gap-3 font-mono text-[0.72rem] uppercase tracking-[0.16em] text-black/68">
-                    <span>Execution trace</span>
-                    <span>{attemptTrace.length} request{attemptTrace.length === 1 ? "" : "s"}</span>
+                  <summary className="cursor-pointer font-mono text-[0.72rem] uppercase tracking-[0.16em] text-black/68">
+                    Execution trace
                   </summary>
                   {attemptTrace.length > 0 ? (
                     <div className="mt-4 space-y-3">
