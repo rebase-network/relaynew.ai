@@ -2399,9 +2399,8 @@ function RelayPage() {
               {HEALTH_STATUS_COPY[overview.data.healthStatus] ?? "Recent evidence is still being accumulated for this relay."}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {overview.data.badges.map((badge) => <span key={badge} className="signal-chip">{badge}</span>)}
-            {overview.data.relay.websiteUrl ? (
+          {overview.data.relay.websiteUrl ? (
+            <div className="flex flex-wrap gap-2">
               <a
                 className="signal-chip"
                 href={overview.data.relay.websiteUrl}
@@ -2410,9 +2409,8 @@ function RelayPage() {
               >
                 Website
               </a>
-            ) : null}
-            <Link className="signal-chip" to="/leaderboard">Leaderboard</Link>
-          </div>
+            </div>
+          ) : null}
           <MetricGrid
             columnsClassName="grid-cols-2 lg:grid-cols-5"
             items={snapshotMetrics.map((item) => ({
