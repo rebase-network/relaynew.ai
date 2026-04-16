@@ -120,6 +120,8 @@ const PROBE_OUTPUT_CARDS = [
   },
 ] as const;
 
+const HOME_LEADERBOARD_ROW_LIMIT = 3;
+
 function formatProbeCompatibilityMode(mode: ProbeResolvedCompatibilityMode | null | undefined) {
   return mode ? PROBE_COMPATIBILITY_LABELS[mode] : "Not detected";
 }
@@ -159,6 +161,14 @@ function formatProbeHttpStatus(value: number | null | undefined) {
 
 function formatProbeRequestCount(value: number) {
   return `${value} request${value === 1 ? "" : "s"}`;
+}
+
+function formatAvailability(value: number) {
+  return `${(value * 100).toFixed(2)}%`;
+}
+
+function formatLatency(value: number | null) {
+  return value === null ? "n/a" : `${value} ms`;
 }
 
 function getProbeEndpointPath(value: string | null | undefined) {
@@ -847,6 +857,63 @@ function MetricGrid({
   );
 }
 
+function LeaderboardPreviewCard({
+  board,
+  rowLimit,
+}: {
+  board: HomeSummaryResponse["leaderboards"][number];
+  rowLimit?: number;
+}) {
+  const rows = board.rows.slice(0, rowLimit ?? board.rows.length);
+
+  return (
+    <section className="panel h-full">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="kicker">{board.modelKey}</p>
+          <h2 className="text-3xl leading-[0.94] tracking-[-0.05em]">{board.modelName}</h2>
+          <p className="mt-2 text-sm uppercase tracking-[0.16em] text-black/50">
+            Snapshot {new Date(board.measuredAt).toLocaleString()}
+          </p>
+        </div>
+        <Link className="signal-chip" to={`/leaderboard/${board.modelKey}`}>
+          Open full board
+        </Link>
+      </div>
+      <div className="mt-5 space-y-2.5">
+        {rows.map((row) => (
+          <Link
+            key={row.relay.slug}
+            className="surface-link flex items-center justify-between gap-4 p-3.5"
+            to={`/relay/${row.relay.slug}`}
+          >
+            <div>
+              <p className="text-xs uppercase tracking-[0.16em] text-black/55">#{row.rank}</p>
+              <p className="text-xl tracking-[-0.03em]">{row.relay.name}</p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {row.badges.slice(0, 2).map((badge) => (
+                  <span key={badge} className="signal-chip">
+                    {badge}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="min-w-[8.5rem] text-right text-sm">
+              <div className="flex items-center justify-end gap-2 uppercase tracking-[0.12em]">
+                <StatusDot status={row.healthStatus} /> {row.healthStatus}
+              </div>
+              <p className="mt-1">{row.score.toFixed(1)} score</p>
+              <p className="mt-1 text-xs uppercase tracking-[0.14em] text-black/54">
+                {formatAvailability(row.availability24h)} · {formatLatency(row.latencyP50Ms)}
+              </p>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function HomePage() {
   const { data, loading, error } = useLoadable<HomeSummaryResponse>(() => fetchJson("/public/home-summary"), []);
   const quickProbe = useProbeController(DEFAULT_PROBE_STATE);
@@ -906,40 +973,21 @@ function HomePage() {
       </section>
 
       <Panel title="Leaderboard directory" kicker="Featured leaderboards">
-        <div className="space-y-3">
+        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <p className="max-w-3xl text-sm leading-6 text-black/68">
+            The homepage highlights a curated set of model lanes. Open any board to inspect the full ranked table, then compare pricing, stability, and latency in more detail.
+          </p>
+          <Link className="button-cream" to="/leaderboard">
+            Browse all boards
+          </Link>
+        </div>
+        <div className="grid gap-4 xl:grid-cols-2">
           {data.leaderboards.map((board) => (
-            <div key={board.modelKey} className="surface-card p-3.5">
-              <div className="grid gap-3 lg:grid-cols-[0.85fr_1.15fr_auto] lg:items-center">
-                <div>
-                  <p className="kicker">{board.modelKey}</p>
-                  <h3 className="text-xl tracking-[-0.04em] md:text-2xl">{board.modelName}</h3>
-                  <p className="mt-2 text-xs uppercase tracking-[0.16em] text-black/48">
-                    Snapshot {new Date(board.measuredAt).toLocaleTimeString()}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {board.rows.slice(0, 3).map((row) => (
-                    <Link
-                      key={row.relay.slug}
-                      className="inline-flex items-center gap-2 border border-black/10 bg-white/70 px-3 py-2 text-sm tracking-[-0.02em] transition hover:border-[#fa520f]/25 hover:bg-white"
-                      to={`/relay/${row.relay.slug}`}
-                    >
-                      <span className="font-mono text-[0.64rem] uppercase tracking-[0.16em] text-black/50">#{row.rank}</span>
-                      <span>{row.relay.name}</span>
-                    </Link>
-                  ))}
-                </div>
-                <div className="flex items-center gap-3 lg:justify-self-end">
-                  <div className="flex items-center gap-2 text-sm uppercase tracking-[0.12em] text-black/62">
-                    <StatusDot status={board.rows[0]?.healthStatus ?? "unknown"} />
-                    {board.rows[0]?.healthStatus ?? "unknown"}
-                  </div>
-                  <Link className="signal-chip" to={`/leaderboard/${board.modelKey}`}>
-                    Open board
-                  </Link>
-                </div>
-              </div>
-            </div>
+            <LeaderboardPreviewCard
+              key={board.modelKey}
+              board={board}
+              rowLimit={HOME_LEADERBOARD_ROW_LIMIT}
+            />
           ))}
         </div>
       </Panel>
@@ -1023,40 +1071,7 @@ function LeaderboardIndexPage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         {data.leaderboards.map((board) => (
-          <section key={board.modelKey} className="panel">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <p className="kicker">{board.modelKey}</p>
-                <h2 className="text-3xl leading-[0.94] tracking-[-0.05em]">{board.modelName}</h2>
-                <p className="mt-2 text-sm uppercase tracking-[0.16em] text-black/50">
-                  Snapshot {new Date(board.measuredAt).toLocaleString()}
-                </p>
-              </div>
-              <Link className="signal-chip" to={`/leaderboard/${board.modelKey}`}>
-                Open full board
-              </Link>
-            </div>
-            <div className="mt-5 space-y-2.5">
-              {board.rows.map((row) => (
-                <Link
-                  key={row.relay.slug}
-                  className="surface-link flex items-center justify-between gap-4 p-3.5"
-                  to={`/relay/${row.relay.slug}`}
-                >
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.16em] text-black/55">#{row.rank}</p>
-                    <p className="text-xl tracking-[-0.03em]">{row.relay.name}</p>
-                  </div>
-                  <div className="text-right text-sm">
-                    <div className="flex items-center justify-end gap-2 uppercase tracking-[0.12em]">
-                      <StatusDot status={row.healthStatus} /> {row.healthStatus}
-                    </div>
-                    <p>{row.score.toFixed(1)} score</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
+          <LeaderboardPreviewCard key={board.modelKey} board={board} />
         ))}
       </div>
     </div>

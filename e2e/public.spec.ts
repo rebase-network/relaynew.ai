@@ -38,9 +38,19 @@ test("public site renders the main discovery flow", async ({ page }) => {
   await expect(page).toHaveURL(/\/leaderboard$/);
   await expect(page.getByText("Leaderboard directory")).toBeVisible();
 
-  await page.locator("section").filter({ has: page.getByRole("heading", { name: "GPT-4.1" }) }).getByRole("link", { name: "Open full board" }).click();
-  await expect(page).toHaveURL(/leaderboard\/openai-gpt-4\.1/);
-  await expect(page.getByRole("heading", { name: "GPT-4.1" })).toBeVisible();
+  await page.goto("/");
+  const featuredSection = page.locator("section").filter({ has: page.getByText("Featured leaderboards") }).first();
+  await expect(featuredSection.getByRole("heading", { name: "Sonnet 4.6" })).toBeVisible();
+  await expect(featuredSection.getByRole("heading", { name: "Opus 4.6" })).toBeVisible();
+  await expect(featuredSection.getByRole("heading", { name: "GPT 5.4" })).toBeVisible();
+  await expect(featuredSection.getByRole("heading", { name: "Gemini 3.1" })).toBeVisible();
+  const firstBoardLink = featuredSection.getByRole("link", { name: "Open full board" }).first();
+  const firstBoardHref = await firstBoardLink.getAttribute("href");
+  expect(firstBoardHref).not.toBeNull();
+  const escapedBoardHref = firstBoardHref!.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  await firstBoardLink.click();
+  await expect(page).toHaveURL(new RegExp(`${escapedBoardHref}$`));
+  await expect(page.getByText("Ranked relay rows")).toBeVisible();
 
   await page.getByRole("link", { name: "Aurora Relay" }).first().click();
   await expect(page).toHaveURL(/relay\/aurora-relay/);
