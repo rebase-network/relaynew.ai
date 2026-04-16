@@ -196,6 +196,19 @@ test("public mobile navigation exposes the primary routes", async ({ page }) => 
   await expect(mobileNav.getByRole("link", { name: "Probe" })).toBeVisible();
 });
 
+test("probe page stays compact on mobile", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/probe");
+
+  await expect(page.locator(".input-helper-mobile")).toHaveCount(3);
+  await expect(page.locator(".input-helper-desktop")).toHaveCount(3);
+  await expect(page.locator(".input-helper-mobile").first()).toBeVisible();
+  await expect(page.locator(".input-helper-desktop").first()).toBeHidden();
+  await expect(page.locator("details").filter({ has: page.getByText("Before you run") })).toBeVisible();
+  await expect(page.locator("details").filter({ has: page.getByText("What the result includes") })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Run probe" })).toBeVisible();
+});
+
 test("leaderboard remains readable on mobile", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/leaderboard");

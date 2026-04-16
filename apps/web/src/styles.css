@@ -978,6 +978,20 @@ textarea {
   font-family: var(--font-display);
 }
 
+.input-helper-desktop {
+  display: none;
+}
+
+@media (min-width: 48rem) {
+  .input-helper-mobile {
+    display: none;
+  }
+
+  .input-helper-desktop {
+    display: block;
+  }
+}
+
 .field-error {
   display: block;
   margin-top: 0.45rem;

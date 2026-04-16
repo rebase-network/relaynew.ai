@@ -46,6 +46,7 @@ const PROBE_FIELD_META = {
     placeholder: "https://relay.example.ai or https://relay.example.ai/openai",
     helper:
       "Paste the relay root or provider prefix. The probe can add `/v1` and protocol-specific route suffixes automatically.",
+    helperCompact: "Paste the relay root or provider prefix; the probe can add `/v1` and route suffixes.",
     autoComplete: "url",
     inputMode: "url" as const,
   },
@@ -53,6 +54,7 @@ const PROBE_FIELD_META = {
     placeholder: "Paste a relay API key",
     helper:
       "Used only for this bounded server-side request path. The result UI never prints the key back out.",
+    helperCompact: "Used only for this request. The result UI never prints the key back out.",
     autoComplete: "off",
     inputMode: "text" as const,
   },
@@ -60,6 +62,7 @@ const PROBE_FIELD_META = {
     placeholder: "gpt-5.3-codex",
     helper:
       "Use the exact model identifier you call in production. Automatic mode infers the adapter order from it.",
+    helperCompact: "Use the same model ID you call in production.",
     autoComplete: "off",
     inputMode: "text" as const,
   },
@@ -839,9 +842,14 @@ function ProbeFormFields({
               required
             />
             {showHelpers ? (
-              <span className="input-helper">
-                {PROBE_FIELD_META[key].helper}
-              </span>
+              <>
+                <span className="input-helper input-helper-mobile">
+                  {PROBE_FIELD_META[key].helperCompact}
+                </span>
+                <span className="input-helper input-helper-desktop">
+                  {PROBE_FIELD_META[key].helper}
+                </span>
+              </>
             ) : null}
           </div>
         </label>
@@ -2658,19 +2666,28 @@ function ProbePage() {
         <p className="kicker">Self-check probe</p>
         <div className="grid gap-4 xl:grid-cols-[1.08fr_0.92fr] xl:items-start">
           <div>
-            <h1 className="max-w-3xl text-4xl leading-[0.92] tracking-[-0.06em] md:text-5xl">
+            <h1 className="max-w-3xl text-[2.45rem] leading-[0.92] tracking-[-0.06em] md:text-5xl">
               Check the exact relay route your operators rely on.
             </h1>
-            <p className="mt-4 max-w-2xl text-base leading-7 text-black/72">
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-black/72 md:mt-4 md:text-base md:leading-7">
               Run a bounded server-side probe for connectivity, compatibility detection, and endpoint resolution. Start with automatic mode unless you already know the required API family.
             </p>
-            <div className="mt-5 flex flex-wrap gap-2">
+            <div className="mt-4 flex flex-wrap gap-2 md:mt-5">
               <span className="signal-chip">No persistent key storage</span>
               <span className="signal-chip">Auto detect first</span>
               <span className="signal-chip">Copy resolved endpoint</span>
             </div>
+            <details className="surface-card mt-4 p-4 md:hidden">
+              <summary className="cursor-pointer font-mono text-[0.68rem] uppercase tracking-[0.18em] text-black/70">
+                Before you run
+              </summary>
+              <div className="mt-3 space-y-2 text-sm leading-6 text-black/68">
+                <p>Paste the relay root or provider prefix you use in production.</p>
+                <p>If auto detect looks wrong, rerun with a manual compatibility override.</p>
+              </div>
+            </details>
           </div>
-          <div className="surface-card p-4">
+          <div className="hidden surface-card p-4 xl:block">
             <p className="kicker">Before you run</p>
             <div className="space-y-3 text-sm leading-6 text-black/68">
               <p>Paste the relay root or provider prefix you use in production. The probe can add protocol-specific suffixes automatically.</p>
@@ -2684,7 +2701,12 @@ function ProbePage() {
       <section className="grid gap-4 xl:grid-cols-[1.08fr_0.92fr] xl:items-start">
         <form className="panel form-shell" onSubmit={handleSubmit}>
           <div className="form-note text-sm leading-6">
-            Use the same base URL, key, and model that your application sends in production. The result panel below will show the resolved route and request trace.
+            <span className="md:hidden">
+              Use your production base URL, key, and model. The result will show the resolved route and request trace.
+            </span>
+            <span className="hidden md:inline">
+              Use the same base URL, key, and model that your application sends in production. The result panel below will show the resolved route and request trace.
+            </span>
           </div>
           <ProbeFormFields setState={setState} state={state} />
           <details className="surface-card p-4">
@@ -2713,7 +2735,21 @@ function ProbePage() {
           <button className="button-dark" disabled={submitting} type="submit">{submitting ? "Checking..." : "Run probe"}</button>
         </form>
 
-        <Panel title="What the result includes" kicker="Output preview" className="panel-soft">
+        <details className="panel-soft border border-black/8 px-4 py-4 md:hidden">
+          <summary className="cursor-pointer font-mono text-[0.68rem] uppercase tracking-[0.18em] text-black/70">
+            What the result includes
+          </summary>
+          <div className="mt-4 space-y-3">
+            {PROBE_OUTPUT_CARDS.map((item) => (
+              <div key={item.title} className="surface-card p-3.5">
+                <p className="kicker !text-black/52">{item.title}</p>
+                <p className="text-sm leading-6 text-black/68">{item.body}</p>
+              </div>
+            ))}
+          </div>
+        </details>
+
+        <Panel title="What the result includes" kicker="Output preview" className="panel-soft hidden md:block">
           <div className="space-y-3">
             {PROBE_OUTPUT_CARDS.map((item) => (
               <div key={item.title} className="surface-card p-3.5">
