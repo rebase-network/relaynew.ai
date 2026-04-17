@@ -14,7 +14,7 @@ const manualCompatibilityLabels: Record<string, string> = {
 };
 
 async function gotoHome(page: Page) {
-  const heroHeading = page.getByRole("heading", { name: /快速发现优质 relay/i });
+  const heroHeading = page.getByRole("heading", { name: /发现优质中转站点/i });
   const fetchError = page.getByText("Failed to fetch");
 
   await page.goto("/");
@@ -65,20 +65,10 @@ async function expectRelayDetailModules(page: Page) {
   await expect(page.getByTestId("score-popover")).toHaveCount(0);
 }
 
-async function expectRecentIncidentsModule(page: Page) {
-  const incidentsSection = page.locator("section").filter({
-    has: page.getByRole("heading", { name: "最近事件" }),
-  }).first();
-
-  await expect(incidentsSection).toBeVisible();
-  await expect(incidentsSection).toContainText("与重点榜单、赞助位分别独立展示");
-  await expect(incidentsSection).toContainText(/仍在影响中|已记录|当前快照里还没有需要公开提示的最新异常事件。/);
-}
-
 async function expectLeaderboardRules(page: Page) {
   await expect(page.getByText("当前表格不含赞助位")).toBeVisible();
   await expect(page.getByText("本页只呈现当前模型赛道的自然排序结果")).toBeVisible();
-  await expect(page.getByText("赞助展示只会出现在独立模块，不会混入自然排名表格")).toBeVisible();
+  await expect(page.getByText("赞助方展示只会出现在独立模块，不会混入排名，也不会影响这里的实测结果。")).toBeVisible();
 }
 
 async function expectVisibleText(locator: Locator, pattern: RegExp) {
@@ -112,18 +102,17 @@ async function expectPageMetadata(page: Page, expectation: {
 
 test("public site renders the main discovery flow", async ({ page }) => {
   await gotoHome(page);
-  await expect(page.getByRole("heading", { name: /快速发现优质 relay/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /发现优质中转站点/i })).toBeVisible();
   await expect(page.getByRole("link", { name: "Admin" })).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "开始探测" })).toBeVisible();
-  await expect(page.getByText("快速探测")).toBeVisible();
-  await expect(page.getByRole("link", { name: "打开完整探测页" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "赞助位" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "最近事件" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "开始测试" })).toBeVisible();
+  await expect(page.getByText("快速测试", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "打开完整测试页" })).toBeVisible();
+  await expect(page.getByText("赞助商")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "最近事件" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Watchlist" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Incidents" })).toHaveCount(0);
   await expect(page.getByText("赞助展示会保持清晰可辨，绝不会改写自然榜单中的实测排序。"))
     .toHaveCount(0);
-  await expectRecentIncidentsModule(page);
 
   if (isDeployedRun) {
     await page.getByRole("link", { name: "榜单" }).click();
@@ -131,18 +120,18 @@ test("public site renders the main discovery flow", async ({ page }) => {
     await expect(page.getByRole("heading", { name: "GPT 5.4" })).toBeVisible();
     await expectLeaderboardRules(page);
 
-    await page.getByRole("link", { name: "方法论" }).click();
+    await page.getByRole("link", { name: "评测方式" }).click();
     await expect(page).toHaveURL(/\/methodology$/);
     await expect(page.getByText("方法论")).toBeVisible();
 
     await page.getByRole("link", { name: "Relay 探测" }).click();
     await expect(page).toHaveURL(/\/probe$/);
-    await expect(page.getByRole("heading", { name: "运行探测" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "运行测试" })).toBeVisible();
     return;
   }
 
-  await expect(page.getByRole("heading", { name: "重点榜单" })).toBeVisible();
-  await page.getByRole("link", { name: "查看全部赛道" }).click();
+  await expect(page.getByRole("heading", { name: "站点榜单" })).toBeVisible();
+  await page.getByRole("link", { name: "查看全部站点" }).click();
   await expect(page).toHaveURL(/\/leaderboard\/directory$/);
   await expect(page.getByText("榜单目录")).toBeVisible();
   await expect(page.getByLabel("Search lanes")).toHaveCount(0);
@@ -151,7 +140,7 @@ test("public site renders the main discovery flow", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Sonnet 4.6" })).toHaveCount(0);
 
   await gotoHome(page);
-  const featuredSection = page.locator("section").filter({ has: page.getByRole("heading", { name: "重点榜单" }) }).first();
+  const featuredSection = page.locator("section").filter({ has: page.getByRole("heading", { name: "站点榜单" }) }).first();
   await expect(featuredSection.getByRole("heading", { name: "Sonnet 4.6" })).toBeVisible();
   await expect(featuredSection.getByRole("heading", { name: "Opus 4.6" })).toBeVisible();
   await expect(featuredSection.getByRole("heading", { name: "GPT 5.4" })).toBeVisible();
@@ -189,30 +178,30 @@ test("submit flow works from the public site", async ({ page }) => {
   const relayBaseUrl = `https://example.com/relay/${Date.now()}`;
 
   await page.goto("/submit");
-  await expect(page.getByRole("heading", { name: /把你的 relay 提交到监测、排名或赞助审核流程中。/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /把你的Relay站点信息提交，收录到站点目录中/i })).toBeVisible();
   await expect(page.getByText("运营审批与赞助展示会独立处理，不会影响自然排名逻辑。")).toBeVisible();
   await page.getByLabel("中转站名称").fill(relayName);
-  await page.getByLabel("基础 URL").fill(relayBaseUrl);
+  await page.getByLabel("Base URL").fill(relayBaseUrl);
   await page.getByLabel("网站地址").fill("https://example.com");
   await page.getByLabel("中转站简介").fill("Playwright 中文提交流程覆盖，用于验证公开 relay 审核入口。");
   await page.getByLabel("联系邮箱").fill("ops@example.com");
-  await page.getByLabel("测试 API 密钥").fill("sk-submit-check");
+  await page.getByLabel("测试API Key").fill("sk-submit-check");
   await page.getByLabel("测试模型").fill("gpt-5.4");
-  await page.getByRole("button", { name: "提交 Relay" }).click();
+  await page.getByRole("button", { name: "提交" }).click();
 
   await expect(page.getByText("提交成功，记录 ID：")).toBeVisible();
-  await expect(page.getByText(/^初始探测：/)).toBeVisible();
+  await expect(page.getByText(/^初始测试：/)).toBeVisible();
 });
 
 test("submit flow validates malformed relay URLs before sending", async ({ page }) => {
   await page.goto("/submit");
   await page.getByLabel("中转站名称").fill("Broken Relay");
-  await page.getByLabel("基础 URL").fill("relay.example.ai");
+  await page.getByLabel("Base URL").fill("relay.example.ai");
   await page.getByLabel("网站地址").fill("not-a-url");
   await page.getByLabel("中转站简介").fill("");
   await page.getByLabel("联系邮箱").fill("ops@");
   await page.getByLabel("测试模型").fill("");
-  await page.getByRole("button", { name: "提交 Relay" }).click();
+  await page.getByRole("button", { name: "提交" }).click();
 
   await expect(page.getByText("请先修正高亮字段后再提交。")).toBeVisible();
   await expect(page.getByText("请输入完整的 HTTPS 基础 URL，例如 https://relay.example.ai/v1。")).toBeVisible();
@@ -229,12 +218,12 @@ test("public probe flow returns a diagnostic result", async ({ page }) => {
   const probeModel = process.env.LLM_MODEL ?? "openai-gpt-4.1";
 
   await page.goto("/probe");
-  await page.getByLabel("基础 URL").fill(probeUrl);
-  await page.getByLabel("API 密钥").fill(probeKey);
-  await page.getByLabel("目标模型").fill(probeModel);
-  await page.getByRole("button", { name: "开始探测" }).click();
+  await page.getByLabel("Base URL").fill(probeUrl);
+  await page.getByLabel("API Key").fill(probeKey);
+  await page.getByLabel("模型").fill(probeModel);
+  await page.getByRole("button", { name: "开始测试" }).click();
 
-  await expect(page.getByText("探测结果")).toBeVisible();
+  await expect(page.getByText("测试结果")).toBeVisible();
   await expect(page.getByText(/探测通过|协议状态降级|协议检查失败|连通性失败/)).toBeVisible();
   await expect(page.getByTestId("probe-host-value")).toContainText(new URL(probeUrl).host);
   await expect(page.getByTestId("probe-connectivity-value")).toHaveText(/\S+/);
@@ -253,14 +242,14 @@ test("public probe supports manual compatibility override", async ({ page }) => 
 
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.goto("/probe");
-  await page.getByLabel("基础 URL").fill(probeUrl);
-  await page.getByLabel("API 密钥").fill(probeKey);
-  await page.getByLabel("目标模型").fill(probeModel);
+  await page.getByLabel("Base URL").fill(probeUrl);
+  await page.getByLabel("API Key").fill(probeKey);
+  await page.getByLabel("模型").fill(probeModel);
   await page.locator("summary").filter({ hasText: "高级选项 / 接口类型" }).click();
   await page.getByLabel("兼容模式").selectOption(manualCompatibilityMode);
-  await page.getByRole("button", { name: "开始探测" }).click();
+  await page.getByRole("button", { name: "开始测试" }).click();
 
-  await expect(page.getByText("探测结果")).toBeVisible();
+  await expect(page.getByText("测试结果")).toBeVisible();
   await expect(page.getByText("探测通过")).toBeVisible();
   await expect(page.getByTestId("probe-connectivity-value")).toHaveText("正常");
   await expect(page.getByTestId("probe-protocol-value")).toHaveText("健康");
@@ -282,7 +271,7 @@ test("public mobile navigation exposes the primary routes", async ({ page }) => 
 
   await expect(mobileNav.getByRole("link", { name: "首页" })).toBeVisible();
   await expect(mobileNav.getByRole("link", { name: "榜单" })).toBeVisible();
-  await expect(mobileNav.getByRole("link", { name: "方法论" })).toBeVisible();
+  await expect(mobileNav.getByRole("link", { name: "评测方式" })).toBeVisible();
   await expect(mobileNav.getByRole("link", { name: "提交 Relay" })).toBeVisible();
   await expect(mobileNav.getByRole("link", { name: "Relay 探测" })).toBeVisible();
 });
@@ -291,8 +280,8 @@ test("homepage prioritizes quick probe on mobile", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await gotoHome(page);
 
-  const quickProbeHeading = page.getByText("快速探测");
-  const heroHeading = page.getByRole("heading", { name: /快速发现优质 relay/i });
+  const quickProbeHeading = page.getByText("快速测试", { exact: true });
+  const heroHeading = page.getByRole("heading", { name: /发现优质中转站点/i });
   const quickProbeBox = await quickProbeHeading.boundingBox();
   const heroHeadingBox = await heroHeading.boundingBox();
 
@@ -305,15 +294,15 @@ test("probe page stays compact on mobile", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/probe");
 
-  await expect(page.getByRole("heading", { name: "运行探测" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "探测结果" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "运行测试" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "测试结果" })).toBeVisible();
   await expect(page.locator(".input-helper-mobile")).toHaveCount(3);
   await expect(page.locator(".input-helper-desktop")).toHaveCount(3);
   await expect(page.locator(".input-helper-mobile").first()).toBeVisible();
   await expect(page.locator(".input-helper-desktop").first()).toBeHidden();
   await expect(page.getByText("Before you run")).toHaveCount(0);
   await expect(page.getByText("What the result includes")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "开始探测" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "开始测试" })).toBeVisible();
 });
 
 test("leaderboard remains readable on mobile", async ({ page }) => {
@@ -324,7 +313,7 @@ test("leaderboard remains readable on mobile", async ({ page }) => {
   await expect(page.getByRole("link", { name: "Aurora Relay" })).toBeVisible();
   await expect(page.getByText("24h 可用性").first()).toBeVisible();
   await expect(page.getByText("P50 延迟").first()).toBeVisible();
-  await expectVisibleText(page.locator("main"), /自然排名|方法论入口|赞助分离/);
+  await expectVisibleText(page.locator("main"), /评测排名|评测方式|赞助分离/);
   await expect(page.getByText("当前表格不含赞助位")).toBeVisible();
 });
 
