@@ -2157,7 +2157,7 @@ function HomePage() {
             评测方式
           </Link>
           <Link className="home-bridge-link" to="/policy">
-            评估政策
+            我们怎么做
           </Link>
         </div>
       </section>
