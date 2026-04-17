@@ -49,15 +49,15 @@ const PROBE_FIELD_META = {
   baseUrl: {
     placeholder: "https://relay.example.ai 或 https://relay.example.ai/openai",
     helper:
-      "请输入 relay 根地址或服务商前缀。探测会自动补全 `/v1` 以及协议对应的路由后缀。",
-    helperCompact: "请输入 relay 根地址或服务商前缀；探测会自动补全 `/v1` 和路由后缀。",
+      "请输入站点根地址或服务商前缀。测试会自动补全 `/v1` 以及协议对应的路由后缀。",
+    helperCompact: "请输入站点根地址或服务商前缀；测试会自动补全 `/v1` 和路由后缀。",
     autoComplete: "url",
     inputMode: "url" as const,
   },
   apiKey: {
-    placeholder: "请输入 relay API Key",
+    placeholder: "请输入 API Key",
     helper:
-      "仅用于本次受限的服务端探测请求。结果页不会回显你的密钥。",
+      "仅用于本次受限的服务端测试请求。结果页不会回显你的密钥。",
     helperCompact: "仅用于本次请求，结果页不会回显密钥。",
     autoComplete: "off",
     inputMode: "text" as const,
@@ -83,43 +83,43 @@ const REBASE_NETWORK_URL = "https://rebase.network";
 
 const HEALTH_STATUS_COPY: Record<string, string> = {
   healthy: "最近观测窗口内响应稳定、可用性可靠，整体表现持续正常。",
-  degraded: "该 relay 仍可访问，但延迟、错误率或协议行为已出现明显下滑。",
-  down: "在当前模型族的测试路径上，该 relay 暂时无法提供可用服务。",
-  paused: "该 relay 正处于人工复核或运营处理阶段，当前不参与公开排序。",
+  degraded: "该站点仍可访问，但延迟、错误率或协议行为已出现明显下滑。",
+  down: "在当前模型分类的测试路径上，该站点暂时无法提供可用服务。",
+  paused: "该站点正处于人工复核或运营处理阶段，当前不参与公开排序。",
   unknown: "测试样本数据不足，暂时无法给出明确的评价判断",
 };
 
 const BADGE_COPY: Record<string, string> = {
-  "low-latency": "在当前模型赛道中多次测得低延迟表现。",
+  "low-latency": "在当前模型分类中多次测得低延迟表现。",
   "high-stability": "观测窗口内波动较小，连续性表现较强。",
-  "high-value": "相较同赛道其他中转站，价格与质量的平衡更有竞争力。",
+  "high-value": "相较同模型分类其他中转站，价格与质量的平衡更有竞争力。",
   "sample-size-low": "当前样本量仍偏少，解读结论时需要保留谨慎。",
-  "under-observation": "该 relay 已公开展示，但证据仍在继续积累或复核中。",
+  "under-observation": "该站点已公开展示，但证据仍在继续积累或复核中。",
 };
 
 const POLICY_PILLARS = [
   {
     title: "中立收录",
-    body: "Relay 通过运营者提交与审核进入目录。被收录并不代表会自动获得靠前排名。",
+    body: "站点通过运营者提交与审核进入目录。被收录并不代表会自动获得靠前排名。",
   },
   {
     title: "可观测证据",
-    body: "自然排名由各模型赛道的实测可用性、延迟、稳定性与性价比信号共同决定。",
+    body: "评测排名由各模型分类的实测可用性、延迟、稳定性与性价比信号共同决定。",
   },
   {
     title: "赞助分离",
-    body: "赞助展示会保持清晰可辨，绝不会改写自然榜单中的实测排序。",
+    body: "赞助方展示会保持清晰可辨，绝不会改写评测榜单中的实测排序。",
   },
   {
     title: "可申诉纠偏",
-    body: "如果 relay 被错误归类，运营者可以提交修正、最新地址或申诉证据供平台复核。",
+    body: "如果站点被错误归类，运营者可以提交修正、最新地址或申诉证据供平台复核。",
   },
 ] as const;
 
 const PROBE_OUTPUT_CARDS = [
   {
     title: "连通性",
-    body: "展示基础可达性结果，以及对目标 relay 主机的受限延迟测量。",
+    body: "展示基础可达性结果，以及对目标站点主机的受限延迟测量。",
   },
   {
     title: "协议健康度",
@@ -127,7 +127,7 @@ const PROBE_OUTPUT_CARDS = [
   },
   {
     title: "执行轨迹",
-    body: "你可以查看公开探测实际使用的端点路径与请求尝试记录。",
+    body: "你可以查看公开测试实际使用的端点路径与请求尝试记录。",
   },
 ] as const;
 
@@ -393,7 +393,7 @@ function formatPricingSourceLabel(source: RelayPricingHistoryResponse["rows"][nu
     {
       manual: "人工维护",
       scraped: "抓取同步",
-      detected: "探测发现",
+      detected: "测试发现",
       api: "接口同步",
     }[source] ?? source
   );
@@ -707,7 +707,7 @@ function getProbeResultTone(result: PublicProbeResponse) {
   if (!result.connectivity.ok) {
     return {
       label: "连通性失败",
-      description: "该 relay 未通过基础网络检查。请重新核对上游地址、认证信息和网络路径。",
+      description: "该站点未通过基础网络检查。请重新核对上游地址、认证信息和网络路径。",
       className: "border-[#b42318]/20 bg-[#fff2ef] text-[#8d2d17]",
     };
   }
@@ -715,7 +715,7 @@ function getProbeResultTone(result: PublicProbeResponse) {
   if (!result.protocol.ok || result.protocol.healthStatus === "down") {
     return {
       label: "协议检查失败",
-      description: "端点有响应，但兼容性探测没有拿到有效且健康的协议返回。",
+      description: "端点有响应，但兼容性测试没有拿到有效且健康的协议返回。",
       className: "border-[#b42318]/20 bg-[#fff2ef] text-[#8d2d17]",
     };
   }
@@ -723,13 +723,13 @@ function getProbeResultTone(result: PublicProbeResponse) {
   if (result.protocol.healthStatus === "degraded" || !result.ok) {
     return {
       label: "协议状态降级",
-      description: "该 relay 可以访问，但探测发现当前兼容协议形态对应的上游状态已降级。",
+      description: "该站点可以访问，但测试发现当前兼容协议形态对应的上游状态已降级。",
       className: "border-[#b54708]/20 bg-[#fff7e8] text-[#8a450c]",
     };
   }
 
   return {
-    label: "探测通过",
+    label: "测试通过",
     description: "连通性、协议校验与兼容模式识别都已针对所选模型成功完成。",
     className: "border-[#027a48]/20 bg-[#edfdf3] text-[#066649]",
   };
@@ -777,7 +777,7 @@ function getProbeFailureGuidance(result: PublicProbeResponse) {
   if (!result.connectivity.ok || status === null) {
     return {
       source: "网络或目标可达性",
-      meaning: "公开探测未能完成有效的上游 HTTP 交互。",
+      meaning: "公开测试未能完成有效的上游 HTTP 交互。",
       nextStep: "请检查 DNS、HTTPS 是否可用、主机是否被允许访问，以及 base URL 是否能从公网正常连通。",
     };
   }
@@ -785,9 +785,9 @@ function getProbeFailureGuidance(result: PublicProbeResponse) {
   if (status === 400) {
     return {
       source: "上游 API 返回 HTTP 400",
-      meaning: "该 relay 可访问，但它拒绝了当前适配器或模型对应的请求结构。",
+      meaning: "该站点可访问，但它拒绝了当前适配器或模型对应的请求结构。",
       nextStep: result.detectionMode === "auto"
-        ? "建议尝试手动指定兼容模式。如果 relay 兼容 OpenAI，但不支持 Responses，可切换到 Chat Completions。"
+        ? "建议尝试手动指定兼容模式。如果站点兼容 OpenAI，但不支持 Responses，可切换到 Chat Completions。"
         : "请重新核对所选兼容模式、模型可用性，以及 base URL 是否已经包含 `/openai` 或 `/v1` 前缀。",
     };
   }
@@ -803,9 +803,9 @@ function getProbeFailureGuidance(result: PublicProbeResponse) {
   if (status === 404) {
     return {
       source: "上游路由不匹配",
-      meaning: "该 relay 有响应，但当前测试的兼容路径不存在。",
+      meaning: "该站点有响应，但当前测试的兼容路径不存在。",
       nextStep: result.detectionMode === "auto"
-        ? "建议尝试手动指定兼容模式，或调整 base URL，让探测能拼出正确的 `/v1` 路径。"
+        ? "建议尝试手动指定兼容模式，或调整 base URL，让测试能拼出正确的 `/v1` 路径。"
         : "请检查 base URL 是否已经包含 `/v1`、`/openai` 或其他服务商专用前缀。",
     };
   }
@@ -829,7 +829,7 @@ function getProbeFailureGuidance(result: PublicProbeResponse) {
   if (status === 429) {
     return {
       source: "上游触发限流",
-      meaning: "该 relay 可以访问，但服务商当前正在对探测请求进行限流。",
+      meaning: "该站点可以访问，但服务商当前正在对测试请求进行限流。",
       nextStep: "请在冷却时间后重试，或改用仍有配额的密钥与模型。",
     };
   }
@@ -837,14 +837,14 @@ function getProbeFailureGuidance(result: PublicProbeResponse) {
   if (status >= 500) {
     return {
       source: "上游服务错误",
-      meaning: "该 relay 已接收请求，但在处理时发生了内部错误。",
-      nextStep: "建议稍后重试，或将测得状态与端点路径反馈给 relay 运营者。",
+      meaning: "该站点已接收请求，但在处理时发生了内部错误。",
+      nextStep: "建议稍后重试，或将测得状态与端点路径反馈给站点运营者。",
     };
   }
 
   return {
     source: `上游 API 返回 HTTP ${status}`,
-    meaning: "请求已到达 relay，但上游响应与所选兼容协议形态不匹配。",
+    meaning: "请求已到达站点，但上游响应与所选兼容协议形态不匹配。",
     nextStep: "请核对 base URL、兼容模式和模型支持情况，再用最可能正确的适配器重试。",
   };
 }
@@ -924,7 +924,7 @@ function validateSubmitForm(state: SubmitFormState) {
   const testModel = state.testModel.trim();
 
   if (!relayName) {
-    errors.relayName = "请填写 relay 名称。";
+    errors.relayName = "请填写中转站名称。";
   }
 
   if (!baseUrl) {
@@ -938,7 +938,7 @@ function validateSubmitForm(state: SubmitFormState) {
   }
 
   if (!description) {
-    errors.description = "请补充简要说明，帮助审核队列快速理解这个 relay。";
+    errors.description = "请补充简要说明，帮助审核队列快速理解这个站点。";
   }
 
   if (submitterEmail && !isValidEmail(submitterEmail)) {
@@ -946,7 +946,7 @@ function validateSubmitForm(state: SubmitFormState) {
   }
 
   if (!testApiKey) {
-    errors.testApiKey = "初始 relay 探测需要测试密钥。";
+    errors.testApiKey = "初始测试需要测试API Key。";
   }
 
   if (!testModel) {
@@ -1019,7 +1019,7 @@ function useProbeController(initialState: ProbeFormState = DEFAULT_PROBE_STATE) 
       });
       setResult(response);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "探测失败。");
+      setError(reason instanceof Error ? reason.message : "测试失败。");
     } finally {
       setSubmitting(false);
     }
@@ -1147,7 +1147,7 @@ function InlineProbeSummary({
   if (error) {
     return (
       <p className="quick-probe-inline-summary quick-probe-inline-summary-error" role="alert">
-        探测失败：{error}
+        测试失败：{error}
       </p>
     );
   }
@@ -1155,7 +1155,7 @@ function InlineProbeSummary({
   if (!result || !resultTone) {
     return (
       <p className="quick-probe-inline-summary">
-        探测完成后，这里会显示状态、延迟、HTTP 状态码与接口兼容类型。
+        测试完成后，这里会显示状态、延迟、HTTP 状态码与接口兼容类型。
       </p>
     );
   }
@@ -1248,8 +1248,8 @@ function AppShell({ children }: { children: React.ReactNode }) {
     ["/", "首页"],
     ["/leaderboard", "榜单"],
     ["/methodology", "评测方式"],
-    ["/submit", "提交 Relay"],
-    ["/probe", "Relay 探测"],
+    ["/submit", "提交站点"],
+    ["/probe", "站点测试"],
   ] as const;
 
   useEffect(() => {
@@ -2066,7 +2066,7 @@ function HomePage() {
             <div className="mt-5 flex flex-wrap gap-2.5">
               <Link className="button-dark" to="/leaderboard">查看榜单</Link>
               <Link className="button-cream" to="/probe">开始测试</Link>
-              <Link className="button-cream" to="/submit">提交 Relay</Link>
+              <Link className="button-cream" to="/submit">提交站点</Link>
             </div>
           </div>
           <div className="order-1 space-y-3 md:order-2">
@@ -2179,7 +2179,7 @@ function LeaderboardIndexPage() {
     [],
   );
   usePageMetadata({
-    title: "Relay 榜单目录｜relaynew.ai",
+    title: "站点榜单目录｜relaynew.ai",
     description: "按主流模型分类查看已跟踪站点榜单目录，快速进入单榜单详情，对比健康状态、延迟与价格信息。",
     canonicalPath: LEADERBOARD_DIRECTORY_PATH,
   });
@@ -2233,7 +2233,7 @@ function LeaderboardIndexPage() {
               先浏览所有主流模型分类，再进入你关心的单个榜单。
             </h1>
             <p className="mt-4 max-w-2xl text-base leading-7 text-black/72">
-              目录会按照模型聚合 relay。打开任意模型榜单，即可查看该赛道的完整排名、健康状态、延迟与价格信息。
+              目录会按照模型聚合站点。打开任意模型榜单，即可查看该模型分类下的完整排名、健康状态、延迟与价格信息。
             </p>
           </div>
           <div className="flex flex-wrap gap-2.5 xl:justify-end">
@@ -2281,7 +2281,7 @@ function LeaderboardIndexPage() {
       {filteredBoards.length === 0 ? (
         <section className="directory-empty-state">
           <p className="kicker">没有匹配项</p>
-          <h2 className="text-3xl leading-[0.96] tracking-[-0.04em]">当前筛选条件下没有匹配的榜单赛道。</h2>
+          <h2 className="text-3xl leading-[0.96] tracking-[-0.04em]">当前筛选条件下没有匹配的模型榜单。</h2>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-black/68">
             请切换服务商筛选条件，恢复完整目录视图。
           </p>
@@ -2317,7 +2317,7 @@ function LeaderboardPage() {
   const degradedRelayCount = rows.filter((row) => row.healthStatus === "degraded").length;
   const modelName = data?.model.name ?? "Relay";
   usePageMetadata({
-    title: `${modelName} Relay 榜单｜relaynew.ai`,
+    title: `${modelName} 站点榜单｜relaynew.ai`,
     description:
       data
         ? `查看 ${data.model.name} 模型分类下的站点评测排名，基于可用性、延迟、稳定性、价格与可信度；赞助方展示与排名严格分离。`
@@ -2336,7 +2336,7 @@ function LeaderboardPage() {
             <h1 className="text-4xl leading-[0.92] tracking-[-0.06em] md:text-5xl">{data.model.name}</h1>
             <p className="mt-2 text-sm uppercase tracking-[0.16em] text-black/60">北京时间 {formatDateTime(data.measuredAt)}</p>
             <div className="mt-4 flex flex-wrap gap-2">
-              <span className="signal-chip">已跟踪 {trackedRelayCount} 个 relay</span>
+              <span className="signal-chip">已跟踪 {trackedRelayCount} 个站点</span>
               <span className="signal-chip">健康 {healthyRelayCount} 个</span>
               <span className="signal-chip">降级 {degradedRelayCount} 个</span>
             </div>
@@ -2351,7 +2351,7 @@ function LeaderboardPage() {
         <section className="panel-soft border border-black/8 px-4 py-4">
           <div className="flex flex-col gap-3">
             <div className="flex justify-end">
-              <p className="directory-filter-meta">共 {directory.data.boards.length} 个已跟踪赛道</p>
+              <p className="directory-filter-meta">共 {directory.data.boards.length} 个已跟踪模型</p>
             </div>
             <div className="leaderboard-model-switcher">
               {directory.data.boards.map((board) => (
@@ -2396,7 +2396,7 @@ function LeaderboardPage() {
           </Link>
         </div>
       </section>
-      <Panel title="Relay 排名">
+      <Panel title="站点评测排名">
         <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
           <p className="max-w-3xl text-sm leading-6 text-black/68">
             本页只呈现当前模型分类下的评测结果。赞助方展示不会插入排名，理解分数口径请配合评测方式一起阅读。
@@ -2449,9 +2449,9 @@ function LeaderboardPage() {
         ) : (
           <div className="directory-empty-state">
             <p className="kicker">暂无排名</p>
-            <h2 className="text-3xl leading-[0.96] tracking-[-0.04em]">这个赛道暂时还没有 relay 进入排名。</h2>
+            <h2 className="text-3xl leading-[0.96] tracking-[-0.04em]">这个模型分类暂时还没有站点进入排名。</h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-black/68">
-              可在下一轮测量完成后再来查看，或从上方切换到其他模型。
+              可在下一轮评测完成后再来查看，或从上方切换到其他模型。
             </p>
           </div>
         )}
@@ -3010,7 +3010,7 @@ function RelayPage() {
     description:
       overview.data
         ? `查看 ${overview.data.relay.name} 的 24h 可用性、延迟走势、模型支持、价格历史与近 30 天事故时间线。`
-        : "查看 relay 的 24h 可用性、延迟走势、模型支持、价格历史与近 30 天事故时间线。",
+        : "查看站点的 24h 可用性、延迟走势、模型支持、价格历史与近 30 天事故时间线。",
   });
   if (overview.loading) return <RelayPageSkeleton />;
   if (overview.error || !overview.data) return <ErrorPanel message={overview.error ?? "Relay 详情加载失败。"} />;
@@ -3066,7 +3066,7 @@ function RelayPage() {
               <h1 className="text-4xl leading-[0.92] tracking-[-0.06em] md:text-[4.2rem]">{overview.data.relay.name}</h1>
               <p className="mt-2 break-all font-mono text-[0.8rem] text-black/62">{overview.data.relay.baseUrl}</p>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-black/72">
-                {HEALTH_STATUS_COPY[overview.data.healthStatus] ?? "这个 relay 的近期证据仍在持续积累中。"}
+                {HEALTH_STATUS_COPY[overview.data.healthStatus] ?? "这个站点的近期证据仍在持续积累中。"}
               </p>
             </div>
             {overview.data.relay.websiteUrl ? (
@@ -3155,7 +3155,7 @@ function RelayPage() {
           titleClassName="text-[2.2rem] md:text-[2.45rem]"
         >
           {models.loading || !models.data ? <p className="text-sm text-black/60">正在加载模型...</p> : (
-            modelPricingRows.length === 0 ? <p className="text-sm text-black/60">这个 relay 还没有公开模型信息。</p> : (
+            modelPricingRows.length === 0 ? <p className="text-sm text-black/60">这个站点还没有公开模型信息。</p> : (
             <>
               <div className="space-y-2.5 lg:hidden">
                 {modelPricingRows.map((row) => (
@@ -3236,7 +3236,7 @@ function MethodologyPage() {
     [],
   );
   usePageMetadata({
-    title: "Relay 评测方式｜relaynew.ai",
+    title: "站点评测方式｜relaynew.ai",
     description: "解释站点评分构成、健康状态定义、徽章含义与榜单阅读方式，帮助运营和用户理解评测依据。",
     canonicalPath: "/methodology",
   });
@@ -3339,7 +3339,7 @@ function PolicyPage() {
               这里会解释哪些决策由测量结果驱动，哪些属于运营或编辑判断，以及运营者如何修正收录信息。
             </p>
             <div className="mt-5 flex flex-wrap gap-2.5">
-              <Link className="button-dark" to="/submit">提交 Relay</Link>
+              <Link className="button-dark" to="/submit">提交站点</Link>
               <Link className="button-cream" to="/methodology">查看评测方式</Link>
             </div>
           </div>
@@ -3357,8 +3357,8 @@ function PolicyPage() {
         <Panel title="哪些因素会影响榜单顺序" kicker="测量输入">
           <div className="space-y-3 text-sm leading-6 text-black/72">
             <div className="surface-card p-3.5">实测可用性，以及请求成功的连续性表现。</div>
-            <div className="surface-card p-3.5">特定模型赛道下的延迟分布与近期一致性。</div>
-            <div className="surface-card p-3.5">相对同类 relay 的价格效率与性价比。</div>
+            <div className="surface-card p-3.5">特定模型分类下的延迟分布与近期一致性。</div>
+            <div className="surface-card p-3.5">相对同类站点的价格效率与性价比。</div>
             <div className="surface-card p-3.5">稳定性信号、事故新鲜度，以及样本量带来的置信度。</div>
           </div>
         </Panel>
@@ -3375,7 +3375,7 @@ function PolicyPage() {
         <Panel title="运营者复核路径" kicker="纠错与申诉">
           <div className="space-y-3 text-sm leading-6 text-black/72">
             <p className="surface-card p-3.5">
-              如果你的 relay 端点、支持模型或公开信息发生变化，请使用最新的基础 URL 与运营者联系方式重新提交更新。
+              如果你的站点端点、支持模型或公开信息发生变化，请使用最新的基础 URL 与运营者联系方式重新提交更新。
             </p>
             <p className="surface-card p-3.5">
               如果你认为公开状态不准确，请提供可复现的测试数据、受影响模型与需要复查的时间窗口。
@@ -3393,7 +3393,7 @@ function PolicyPage() {
             </div>
             <div className="surface-card p-3.5">
               <p className="kicker !text-black/52">2. 提交</p>
-              <p className="text-sm leading-6 text-black/68">提交规范的 URL 与运营者联系信息，让 relay 带着上下文进入审核队列。</p>
+              <p className="text-sm leading-6 text-black/68">提交规范的 URL 与运营者联系信息，让站点带着上下文进入审核队列。</p>
             </div>
             <div className="surface-card p-3.5">
               <p className="kicker !text-black/52">3. 观察</p>
@@ -3463,7 +3463,7 @@ function SubmitPage() {
       });
       setFieldErrors({});
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "提交 Relay 失败。");
+      setError(reason instanceof Error ? reason.message : "提交失败。");
     } finally {
       setSubmitting(false);
     }
@@ -3472,13 +3472,13 @@ function SubmitPage() {
   return (
     <section className="grid gap-4 lg:grid-cols-[1fr_0.9fr]">
       <div className="panel hero-panel min-h-0">
-        <p className="kicker">提交 Relay</p>
+        <p className="kicker">提交站点</p>
         <h1 className="text-4xl leading-[0.92] tracking-[-0.06em] md:text-5xl">把你的Relay站点信息提交，收录到站点目录中，有机会进入榜单排行，获得更多用户的认可</h1>
         <p className="mt-4 max-w-xl text-black/70">通过表单把站点信息送入审核队列。运营审批与赞助方展示会独立处理，不会影响评测排名逻辑。</p>
         <div className="mt-6 grid gap-2.5 sm:grid-cols-3">
           <div className="surface-card p-3.5">
             <p className="kicker !text-black/52">先审核</p>
-            <p className="text-sm leading-6 text-black/72">每个 relay 都会先进入运营审核队列，确认后才会出现在公开页面。</p>
+            <p className="text-sm leading-6 text-black/72">每个站点都会先进入运营审核队列，确认后才会出现在公开页面。</p>
           </div>
           <div className="surface-card p-3.5">
             <p className="kicker !text-black/52">验证信息</p>
@@ -3623,8 +3623,8 @@ function ProbePage() {
     submitting,
   } = useProbeController(getProbeStateFromSearchParams(searchParams));
   usePageMetadata({
-    title: "Relay 测试｜relaynew.ai",
-    description: "在线测试 relay 连通性、协议兼容模式、HTTP 状态与请求轨迹，快速定位接入问题。",
+    title: "站点测试｜relaynew.ai",
+    description: "在线测试站点连通性、协议兼容模式、HTTP 状态与请求轨迹，快速定位接入问题。",
     canonicalPath: "/probe",
   });
 
@@ -3664,7 +3664,7 @@ function ProbePage() {
                 自动模式会根据模型推断适配顺序；手动模式则会把测试锁定在单一兼容协议形态上。
               </p>
             </details>
-            <button className="button-dark" disabled={submitting} type="submit">{submitting ? "检测中..." : "开始测试"}</button>
+            <button className="button-dark" disabled={submitting} type="submit">{submitting ? "测试中..." : "开始测试"}</button>
           </form>
         </section>
 
@@ -3835,7 +3835,7 @@ function ProbePage() {
           ) : error ? (
             <div className="border border-[#b42318]/20 bg-[#fff2ef] px-4 py-4 text-[#8d2d17]" role="alert">
               <p className="kicker !text-current/70">测试请求失败</p>
-              <p className="text-xl tracking-[-0.04em]">这次 relay 检查未能完成。</p>
+              <p className="text-xl tracking-[-0.04em]">本次站点测试未能完成。</p>
               <p className="mt-3 text-sm leading-6 text-current/85">{error}</p>
               <p className="mt-2 text-sm leading-6 text-current/80">
                 请重新检查基础 URL、密钥、兼容模式和上游路由后再重试。
@@ -3847,7 +3847,7 @@ function ProbePage() {
                 结果面板会展示连通性、协议状态、兼容模式识别结果、最终解析端点，以及到达上游路由时使用的请求轨迹。
               </p>
               <ul className="m-0 list-disc space-y-2 pl-5 text-black/66">
-                <li>连通性会展示目标 relay 主机是否可达，以及对应延迟。</li>
+                <li>连通性会展示目标站点主机是否可达，以及对应延迟。</li>
                 <li>协议检查会确认所选 API 协议族是否返回有效结构和健康状态。</li>
                 <li>轨迹详情会展示测试实际使用的端点路径与请求尝试记录。</li>
               </ul>

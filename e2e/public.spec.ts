@@ -124,7 +124,7 @@ test("public site renders the main discovery flow", async ({ page }) => {
     await expect(page).toHaveURL(/\/methodology$/);
     await expect(page.getByText("评测方式")).toBeVisible();
 
-    await page.getByRole("link", { name: "Relay 探测" }).click();
+    await page.getByRole("link", { name: "站点测试" }).click();
     await expect(page).toHaveURL(/\/probe$/);
     await expect(page.getByRole("heading", { name: "运行测试" })).toBeVisible();
     return;
@@ -183,7 +183,7 @@ test("submit flow works from the public site", async ({ page }) => {
   await page.getByLabel("中转站名称").fill(relayName);
   await page.getByLabel("Base URL").fill(relayBaseUrl);
   await page.getByLabel("网站地址").fill("https://example.com");
-  await page.getByLabel("中转站简介").fill("Playwright 中文提交流程覆盖，用于验证公开 relay 审核入口。");
+  await page.getByLabel("中转站简介").fill("Playwright 中文提交流程覆盖，用于验证公开站点审核入口。");
   await page.getByLabel("联系邮箱").fill("ops@example.com");
   await page.getByLabel("测试API Key").fill("sk-submit-check");
   await page.getByLabel("测试模型").fill("gpt-5.4");
@@ -206,9 +206,9 @@ test("submit flow validates malformed relay URLs before sending", async ({ page 
   await expect(page.getByText("请先修正高亮字段后再提交。")).toBeVisible();
   await expect(page.getByText("请输入完整的 HTTPS 基础 URL，例如 https://relay.example.ai/v1。")).toBeVisible();
   await expect(page.getByText("请输入有效的网站地址，例如 https://relay.example.ai。")).toBeVisible();
-  await expect(page.getByText("请补充简要说明，帮助审核队列快速理解这个 relay。")).toBeVisible();
+  await expect(page.getByText("请补充简要说明，帮助审核队列快速理解这个站点。")).toBeVisible();
   await expect(page.getByText("请输入有效的联系邮箱。")).toBeVisible();
-  await expect(page.getByText("初始 relay 探测需要测试密钥。")).toBeVisible();
+  await expect(page.getByText("初始测试需要测试API Key。")).toBeVisible();
   await expect(page.getByText("请填写测试模型。")).toBeVisible();
   await expect(page.getByText("提交成功，记录 ID：")).toHaveCount(0);
 });
@@ -224,7 +224,7 @@ test("public probe flow returns a diagnostic result", async ({ page }) => {
   await page.getByRole("button", { name: "开始测试" }).click();
 
   await expect(page.getByText("测试结果")).toBeVisible();
-  await expect(page.getByText(/探测通过|协议状态降级|协议检查失败|连通性失败/)).toBeVisible();
+  await expect(page.getByText(/测试通过|协议状态降级|协议检查失败|连通性失败/)).toBeVisible();
   await expect(page.getByTestId("probe-host-value")).toContainText(new URL(probeUrl).host);
   await expect(page.getByTestId("probe-connectivity-value")).toHaveText(/\S+/);
   await expect(page.getByTestId("probe-protocol-value")).toHaveText(/\S+/);
@@ -250,7 +250,7 @@ test("public probe supports manual compatibility override", async ({ page }) => 
   await page.getByRole("button", { name: "开始测试" }).click();
 
   await expect(page.getByText("测试结果")).toBeVisible();
-  await expect(page.getByText("探测通过")).toBeVisible();
+  await expect(page.getByText("测试通过")).toBeVisible();
   await expect(page.getByTestId("probe-connectivity-value")).toHaveText("正常");
   await expect(page.getByTestId("probe-protocol-value")).toHaveText("健康");
   await expect(page.getByTestId("probe-detection-value")).toHaveText("手动指定");
@@ -272,8 +272,8 @@ test("public mobile navigation exposes the primary routes", async ({ page }) => 
   await expect(mobileNav.getByRole("link", { name: "首页" })).toBeVisible();
   await expect(mobileNav.getByRole("link", { name: "榜单" })).toBeVisible();
   await expect(mobileNav.getByRole("link", { name: "评测方式" })).toBeVisible();
-  await expect(mobileNav.getByRole("link", { name: "提交 Relay" })).toBeVisible();
-  await expect(mobileNav.getByRole("link", { name: "Relay 探测" })).toBeVisible();
+  await expect(mobileNav.getByRole("link", { name: "提交站点" })).toBeVisible();
+  await expect(mobileNav.getByRole("link", { name: "站点测试" })).toBeVisible();
 });
 
 test("homepage prioritizes quick probe on mobile", async ({ page }) => {
@@ -331,7 +331,7 @@ test.describe("public metadata smoke", () => {
     await expectPageMetadata(page, {
       canonicalPath: "/leaderboard",
       descriptionPattern: /评测排名|赞助方展示|relay/i,
-      titlePattern: /GPT 5\.4|Relay 榜单|relaynew\.ai/i,
+      titlePattern: /GPT 5\.4|站点榜单|relaynew\.ai/i,
     });
 
     await page.goto("/relay/aurora-relay?from=metadata");
