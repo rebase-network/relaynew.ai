@@ -2380,7 +2380,7 @@ function LeaderboardPage() {
         <div className="surface-card p-4">
           <p className="kicker">评测方式</p>
           <p className="mt-3 text-sm leading-6 text-black/72">
-            如果你想理解总分、健康状态与徽章含义，可以先阅读评分口径，再回到榜单做比较。
+            如果你想理解总分、健康状态等含义，可以先阅读评测方式，再回到榜单做比较。
           </p>
           <Link className="mt-4 inline-flex text-sm underline underline-offset-4" to="/methodology">
             查看方法论
