@@ -2656,20 +2656,20 @@ function StatusHistoryPanel({
 
 function RelayModelsTable({ rows }: { rows: RelayModelPricingRow[] }) {
   return (
-    <div className="data-table relay-models-table" data-testid="relay-models-table">
+    <div className="data-table relay-models-table px-1.5" data-testid="relay-models-table">
       <table className="w-full text-left">
         <thead>
           <tr className="border-b border-black/10">
-            <th className="pb-2.5">Model</th>
+            <th className="pb-2.5 pl-2">Model</th>
             <th className="w-[5.5rem] whitespace-nowrap pb-2.5">Status</th>
             <th className="w-[5.5rem] whitespace-nowrap pb-2.5 text-right">Input</th>
-            <th className="w-[5.7rem] whitespace-nowrap pb-2.5 text-right">Output</th>
+            <th className="w-[5.7rem] whitespace-nowrap pb-2.5 pr-2 text-right">Output</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => (
             <tr key={row.modelKey} className="align-top">
-              <td className="border-b border-black/8 py-3 pr-3 last:border-b-0">
+              <td className="border-b border-black/8 py-3 pl-2 pr-3 last:border-b-0">
                 <p className="break-words text-[0.96rem] leading-5 tracking-[-0.03em] [overflow-wrap:anywhere]">{row.modelName}</p>
                 <p className="mt-1 font-mono text-[0.64rem] uppercase tracking-[0.16em] text-black/44">{row.vendor}</p>
               </td>
@@ -2679,7 +2679,7 @@ function RelayModelsTable({ rows }: { rows: RelayModelPricingRow[] }) {
               <td className="border-b border-black/8 py-3 pr-3 text-right text-sm tabular-nums whitespace-nowrap last:border-b-0">
                 {formatPricePerMillion(row.currentPrice?.inputPricePer1M ?? null, row.currentPrice?.currency ?? "USD")}
               </td>
-              <td className="border-b border-black/8 py-3 text-right text-sm tabular-nums whitespace-nowrap last:border-b-0">
+              <td className="border-b border-black/8 py-3 pr-2 text-right text-sm tabular-nums whitespace-nowrap last:border-b-0">
                 {formatPricePerMillion(row.currentPrice?.outputPricePer1M ?? null, row.currentPrice?.currency ?? "USD")}
               </td>
             </tr>
