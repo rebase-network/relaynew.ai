@@ -2076,12 +2076,12 @@ function HomePage() {
                   <p className="quick-probe-heading">快速测试</p>
                 </div>
                 <Link
-                  aria-label="打开完整探测页"
+                  aria-label="打开完整测试页"
                   className="quick-probe-link"
-                  title="打开完整探测页"
+                  title="打开完整测试页"
                   to="/probe"
                 >
-                  完整探测
+                  完整测试
                 </Link>
               </div>
               <ProbeFormFields
