@@ -3258,7 +3258,7 @@ function MethodologyPage() {
             </p>
             <div className="mt-5 flex flex-wrap gap-2.5">
               <Link className="button-dark" to="/policy">我们如何评估</Link>
-              <Link className="button-cream" to="/probe">开始一次探测</Link>
+              <Link className="button-cream" to="/probe">开始测试</Link>
             </div>
             <p className="mt-4 text-xs uppercase tracking-[0.16em] text-black/50">
               快照时间：北京时间 {formatDateTime(data.measuredAt)}
