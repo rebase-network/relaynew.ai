@@ -103,7 +103,7 @@ test("admin overview shows operating totals", async ({ page }) => {
 
   await page.getByRole("link", { name: "Keys", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`${adminBaseUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/credentials$`));
-  await expect(page.getByRole("heading", { name: "Relay keys", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Relay monitoring keys", exact: true })).toBeVisible();
 
   await page.getByRole("link", { name: "Sponsors", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`${adminBaseUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/sponsors$`));
@@ -183,42 +183,25 @@ test("admin can soft delete a relay without removing its row", async ({ page, re
   const relayCard = page.locator(".admin-list-card").filter({ hasText: relayName }).first();
   await expect(relayCard).toBeVisible();
   await relayCard.getByRole("button", { name: "Soft delete" }).click();
-  await expect(relayCard.getByRole("button", { name: "Confirm delete" })).toBeVisible();
-  await expect(relayCard.getByRole("button", { name: "Cancel" })).toBeVisible();
-  await relayCard.getByRole("button", { name: "Confirm delete" }).click();
-  await expect(page.getByText("Relay archived. The row stays in Postgres and drops out of public surfaces.")).toBeVisible();
-  await expect(page.getByText("Archived relays", { exact: true })).toBeVisible();
+  const confirmDialog = page.getByRole("dialog");
+  await expect(confirmDialog).toBeVisible();
+  await expect(confirmDialog.getByRole("heading", { name: `Archive ${relayName}?` })).toBeVisible();
+  await confirmDialog.getByRole("button", { name: "Archive relay" }).click();
+  await expect(page.getByText("Relay archived. It is hidden from relay operations but stays in Postgres.")).toBeVisible();
+  await expect(page.locator(".admin-list-card").filter({ hasText: relayName })).toHaveCount(0);
 
   await page.reload();
-  const archivedCard = page
-    .locator(".admin-list-card")
-    .filter({ hasText: relayName })
-    .filter({ has: page.getByText("Archived", { exact: true }) })
-    .first();
-  await expect(page.getByText("Soft-deleted rows kept in the system")).toBeVisible();
-  await expect(archivedCard).toContainText(/archived/i);
+  await expect(page.locator(".admin-list-card").filter({ hasText: relayName })).toHaveCount(0);
+
+  const publicOverviewResponse = await request.get(`${apiBaseUrl}/public/relay/${relaySlug}/overview`);
+  expect(publicOverviewResponse.status()).toBe(404);
 
   await openAdmin(page, "/credentials");
   const keyCreateCard = page.locator("section.card").filter({
-    has: page.getByRole("heading", { name: "Attach key", exact: true }),
+    has: page.getByRole("heading", { name: "Attach monitoring key", exact: true }),
   }).first();
-  const ownerRecordSelect = keyCreateCard.getByLabel("Owner record");
-  await expect(ownerRecordSelect.locator("option").filter({ hasText: relayName })).toHaveCount(0);
-
-  await openAdmin(page, "/relays");
-  const archivedRelayCard = page
-    .locator(".admin-list-card")
-    .filter({ hasText: relayName })
-    .filter({ has: page.getByText("Archived", { exact: true }) })
-    .first();
-  await archivedRelayCard.getByRole("link", { name: "Manage key" }).click();
-  await expect(page).toHaveURL(/\/credentials\?/);
-  const prefilledOwnerSelect = page
-    .locator("section.card")
-    .filter({ has: page.getByRole("heading", { name: "Attach key", exact: true }) })
-    .first()
-    .getByLabel("Owner record");
-  await expect(prefilledOwnerSelect.locator("option").filter({ hasText: `${relayName} · archived` })).toHaveCount(1);
+  const relaySelect = keyCreateCard.getByLabel("Relay");
+  await expect(relaySelect.locator("option").filter({ hasText: relayName })).toHaveCount(0);
 
   await openAdmin(page, "/sponsors");
   await expect(page.getByLabel("Relay").locator("option").filter({ hasText: relayName })).toHaveCount(0);
@@ -266,19 +249,20 @@ test("admin can create and manage probe credentials", async ({ page, request }) 
 
   await openAdmin(page, "/credentials");
   const createCard = page.locator("section.card").filter({
-    has: page.getByRole("heading", { name: "Attach key", exact: true }),
+    has: page.getByRole("heading", { name: "Attach monitoring key", exact: true }),
   }).first();
-  await createCard.getByLabel("Owner record").selectOption({ label: relayName });
+  await expect(createCard.getByLabel("Owner type")).toHaveCount(0);
+  await createCard.getByLabel("Relay").selectOption({ label: relayName });
   await createCard.getByLabel("API key").fill("sk-credential-initial");
   await createCard.getByLabel("Test model").fill("gpt-5.4");
-  await createCard.getByRole("button", { name: "Attach key" }).click();
-  await expect(page.getByText(/Key attached\./)).toBeVisible();
+  await createCard.getByRole("button", { name: "Attach monitoring key" }).click();
+  await expect(page.getByText(/Monitoring key attached\./)).toBeVisible();
 
   const credentialCard = page.locator(".admin-list-card").filter({ hasText: relayName }).first();
   await expect(credentialCard).toBeVisible();
   await credentialCard.click();
   const detailCard = page.locator("section.card").filter({
-    has: page.getByRole("heading", { name: "Key detail", exact: true }),
+    has: page.getByRole("heading", { name: "Monitoring key detail", exact: true }),
   }).first();
   await page.getByRole("button", { name: "Reveal key" }).click();
   await expect(page.getByText("sk-credential-initial")).toBeVisible();
@@ -296,13 +280,15 @@ test("admin can create and manage probe credentials", async ({ page, request }) 
 
   await page.getByLabel("New API key").fill("sk-credential-rotated");
   await page.getByRole("button", { name: "Rotate key" }).click();
-  await expect(page.getByText(/Key rotated\./)).toBeVisible();
+  await expect(page.getByText(/Monitoring key rotated\./)).toBeVisible();
   await page.getByRole("button", { name: "Reveal key" }).click();
   await expect(page.getByText("sk-credential-rotated")).toBeVisible();
 
-  await detailCard.getByRole("button", { name: "Revoke", exact: true }).click();
-  await expect(page.getByText("Key revoked.")).toBeVisible();
-  await expect(page.locator(".admin-list-card").filter({ hasText: relayName }).first()).toContainText("revoked");
+  await detailCard.getByRole("button", { name: "Delete key", exact: true }).click();
+  const deleteKeyDialog = page.getByRole("dialog");
+  await expect(deleteKeyDialog).toBeVisible();
+  await deleteKeyDialog.getByRole("button", { name: "Delete key" }).click();
+  await expect(page.getByText("Monitoring key deleted.")).toBeVisible();
 });
 
 test("admin can review submissions, create sponsors, and add prices", async ({ page, request }) => {
@@ -375,7 +361,7 @@ test("admin can review submissions, create sponsors, and add prices", async ({ p
   await expect(relayCard).toContainText(/Monitoring key · active/i);
   await relayCard.getByRole("link", { name: "Manage key" }).click();
   await expect(page).toHaveURL(/\/credentials\?/);
-  await expect(page.getByRole("heading", { name: "Key detail", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Monitoring key detail", exact: true })).toBeVisible();
   await expect(page.getByText(relayName).first()).toBeVisible();
 
   await openAdmin(page, "/sponsors");

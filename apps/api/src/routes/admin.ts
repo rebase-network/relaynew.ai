@@ -663,6 +663,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
 
   app.get("/admin/probe-credentials", async () => {
     const rows = (await probeCredentialBaseQuery(app.db)
+      .where("pc.relay_id", "is not", null)
       .orderBy("pc.updated_at", "desc")
       .execute()) as ProbeCredentialRow[];
 
@@ -680,6 +681,9 @@ export async function registerAdminRoutes(app: FastifyInstance) {
 
   app.post("/admin/probe-credentials", async (request, reply) => {
     const body = adminProbeCredentialCreateSchema.parse(request.body ?? {});
+    if (body.ownerType !== "relay") {
+      throw app.httpErrors.badRequest("Admin-managed monitoring keys must attach to relays.");
+    }
     const owner = await resolveProbeCredentialOwnerTarget(app.db, body.ownerType, body.ownerId);
     const id = await app.db.transaction().execute(async (trx) =>
       createProbeCredentialForOwner(trx, owner, {
@@ -712,6 +716,18 @@ export async function registerAdminRoutes(app: FastifyInstance) {
       id,
       probe: toSubmissionProbeSummary(probeResult),
     });
+  });
+
+  app.delete("/admin/probe-credentials/:id", async (request) => {
+    const params = request.params as { id: string };
+    const credential = await getProbeCredentialRowById(app.db, params.id);
+
+    await app.db
+      .deleteFrom("probe_credentials")
+      .where("id", "=", credential.id)
+      .executeTakeFirst();
+
+    return { ok: true };
   });
 
   app.post("/admin/probe-credentials/:id/reprobe", async (request) => {

@@ -262,9 +262,31 @@ button {
   border-color: rgba(255, 161, 16, 0.2);
 }
 
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.2rem;
+  background: rgba(10, 9, 8, 0.72);
+  backdrop-filter: blur(10px);
+}
+
+.confirm-dialog {
+  width: min(100%, 32rem);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(49, 37, 18, 0.96), rgba(26, 24, 22, 0.98));
+  box-shadow: var(--shadow);
+  padding: 1.2rem;
+}
+
 @media (max-width: 767px) {
   .admin-header-bar,
-  .card {
+  .card,
+  .confirm-dialog {
     padding: 0.95rem;
   }
 
@@ -279,7 +301,8 @@ button {
   }
 
   .admin-header-bar,
-  .card {
+  .card,
+  .confirm-dialog {
     padding: 1.35rem;
   }
 }
