@@ -217,6 +217,10 @@ Cloudflare-CDN-Cache-Control: public, max-age=60, stale-while-revalidate=300, st
 - never cache admin or internal endpoints
 - avoid `Set-Cookie` on public endpoints
 - purge by URL or tag after snapshot rebuilds when necessary
+- implement the public cache headers centrally in the API service so every
+  `GET /public/*` response stays consistent
+- exclude write-style public endpoints such as `POST /public/probe/check` and
+  `POST /public/submissions` from CDN caching
 
 ## Monitoring Data Flow
 
