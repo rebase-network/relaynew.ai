@@ -10,6 +10,7 @@ import {
   type ProbeResolvedCompatibilityMode,
   type PublicProbeResponse,
   type RelayHistoryResponse,
+  type RelayIncidentsResponse,
   type RelayModelsResponse,
   type RelayOverviewResponse,
   type RelayPricingHistoryResponse,
@@ -294,6 +295,38 @@ function formatScoreMetricLabel(label: keyof RelayOverviewResponse["scoreSummary
       value: "性价比",
       stability: "稳定性",
     }[label] ?? label
+  );
+}
+
+function formatIncidentSeverityLabel(severity: string) {
+  return (
+    {
+      degraded: "降级",
+      down: "中断",
+      paused: "已暂停",
+      unknown: "待确认",
+    }[severity] ?? severity
+  );
+}
+
+function getIncidentToneClasses(severity: string) {
+  return severity === "down"
+    ? "border-[#b42318]/20 bg-[#fff2ef] text-[#8d2d17]"
+    : severity === "degraded"
+      ? "border-[#b54708]/20 bg-[#fff7e8] text-[#8a450c]"
+      : severity === "paused"
+        ? "border-black/12 bg-black/[0.03] text-black/72"
+      : "border-black/10 bg-white/72 text-black/70";
+}
+
+function formatPricingSourceLabel(source: RelayPricingHistoryResponse["rows"][number]["source"]) {
+  return (
+    {
+      manual: "人工维护",
+      scraped: "抓取同步",
+      detected: "探测发现",
+      api: "接口同步",
+    }[source] ?? source
   );
 }
 
@@ -1852,6 +1885,48 @@ function LeaderboardPreviewCard({
   );
 }
 
+function HomeIncidentCard({
+  incident,
+}: {
+  incident: HomeSummaryResponse["latestIncidents"][number];
+}) {
+  const incidentOngoing = incident.endedAt === null;
+
+  return (
+    <Link
+      className={clsx(
+        "surface-link flex h-full flex-col justify-between gap-4 border p-4 transition-transform hover:-translate-y-[1px]",
+        getIncidentToneClasses(incident.severity),
+      )}
+      to={`/relay/${incident.relay.slug}`}
+    >
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="signal-chip bg-white/70">{formatIncidentSeverityLabel(incident.severity)}</span>
+          <span className="text-[0.68rem] uppercase tracking-[0.16em] text-current/72">
+            {incidentOngoing ? "仍在影响中" : "已记录"}
+          </span>
+        </div>
+        <div>
+          <p className="text-[1.08rem] tracking-[-0.03em] text-current">{incident.title}</p>
+          <p className="mt-2 text-sm leading-6 text-current/82">{incident.summary}</p>
+        </div>
+      </div>
+      <div className="space-y-2 text-sm leading-6 text-current/80">
+        <p className="font-mono text-[0.64rem] uppercase tracking-[0.18em] text-current/64">
+          {incident.relay.name}
+        </p>
+        <p>开始：北京时间 {formatDateTime(incident.startedAt)}</p>
+        <p>
+          {incidentOngoing
+            ? "结束：仍在观察中"
+            : `结束：北京时间 ${formatDateTime(incident.endedAt ?? incident.startedAt)}`}
+        </p>
+      </div>
+    </Link>
+  );
+}
+
 function LeaderboardRowCard({ row }: { row: LeaderboardResponse["rows"][number] }) {
   return (
     <article className="surface-card leaderboard-mobile-row p-3.5 md:hidden">
@@ -1976,6 +2051,29 @@ function HomePage() {
             />
           ))}
         </div>
+      </Panel>
+
+      <Panel title="最近事件" kicker="异常与退化" titleClassName="text-[2.2rem] md:text-[2.45rem]">
+        <div className="mb-4 flex flex-col gap-2.5 lg:flex-row lg:items-end lg:justify-between">
+          <p className="max-w-3xl text-sm leading-6 text-black/68">
+            这里仅展示最近观测到的异常、退化或暂停事件，帮助普通用户快速判断风险，
+            也帮助节点运营者确认哪些问题已经进入公开视野。
+          </p>
+          <p className="text-xs uppercase tracking-[0.16em] text-black/48">
+            与重点榜单、赞助位分别独立展示
+          </p>
+        </div>
+        {data.latestIncidents.length > 0 ? (
+          <div className="grid gap-3 lg:grid-cols-2">
+            {data.latestIncidents.map((incident) => (
+              <HomeIncidentCard key={incident.id} incident={incident} />
+            ))}
+          </div>
+        ) : (
+          <div className="surface-card p-4 text-sm leading-6 text-black/68">
+            当前快照里还没有需要公开提示的最新异常事件。榜单和赞助位会继续保持独立展示。
+          </div>
+        )}
       </Panel>
 
       <section className="home-bridge">
@@ -2217,7 +2315,41 @@ function LeaderboardPage() {
           </div>
         </section>
       ) : null}
+      <section className="grid gap-4 xl:grid-cols-3">
+        <div className="surface-card p-4">
+          <p className="kicker">自然排名</p>
+          <p className="mt-3 text-sm leading-6 text-black/72">
+            下方表格只由公开测量结果生成，综合可用性、延迟、稳定性与价格效率，不接受赞助调位。
+          </p>
+        </div>
+        <div className="surface-card p-4">
+          <p className="kicker">方法论入口</p>
+          <p className="mt-3 text-sm leading-6 text-black/72">
+            如果你想理解总分、健康状态与徽章含义，可以先阅读评分口径，再回到榜单做比较。
+          </p>
+          <Link className="mt-4 inline-flex text-sm underline underline-offset-4" to="/methodology">
+            查看方法论
+          </Link>
+        </div>
+        <div className="surface-card p-4">
+          <p className="kicker">赞助分离</p>
+          <p className="mt-3 text-sm leading-6 text-black/72">
+            赞助展示只会出现在独立模块，不会混入自然排名表格，也不会影响这里的实测顺序。
+          </p>
+          <Link className="mt-4 inline-flex text-sm underline underline-offset-4" to="/policy">
+            查看评估政策
+          </Link>
+        </div>
+      </section>
       <Panel title="Relay 排名" kicker="自然排序">
+        <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+          <p className="max-w-3xl text-sm leading-6 text-black/68">
+            本页只呈现当前模型赛道的自然排序结果。赞助展示不会插入表格，理解分数口径请配合方法论一起阅读。
+          </p>
+          <p className="text-xs uppercase tracking-[0.16em] text-black/48">
+            当前表格不含赞助位
+          </p>
+        </div>
         {rows.length ? (
           <>
             <div className="space-y-3 md:hidden">
@@ -2632,6 +2764,164 @@ function RelayModelsTable({ rows }: { rows: Array<RelayModelPricingRow | null> }
   );
 }
 
+function RelayPricingHistoryPanel({
+  rows,
+  modelNames,
+}: {
+  rows: RelayPricingHistoryResponse["rows"];
+  modelNames: Record<string, string>;
+}) {
+  if (rows.length === 0) {
+    return <p className="text-sm text-black/60">当前还没有公开价格历史。</p>;
+  }
+
+  const pricingGroups = Array.from(
+    rows.reduce((map, row) => {
+      const existing = map.get(row.modelKey);
+
+      if (existing) {
+        existing.rows.push(row);
+      } else {
+        map.set(row.modelKey, { modelKey: row.modelKey, rows: [row] });
+      }
+
+      return map;
+    }, new Map<string, { modelKey: string; rows: RelayPricingHistoryResponse["rows"][number][] }>() ).values(),
+  ).map((group) => {
+    const sortedRows = [...group.rows].sort(
+      (left, right) => new Date(right.effectiveFrom).getTime() - new Date(left.effectiveFrom).getTime(),
+    );
+    const latestRow = sortedRows[0];
+    const oldestRow = sortedRows.at(-1) ?? latestRow;
+
+    if (!latestRow || !oldestRow) {
+      return null;
+    }
+
+    return {
+      modelKey: group.modelKey,
+      modelName: modelNames[group.modelKey] ?? modelsLabelFromPricingRows(sortedRows),
+      latestRow,
+      oldestRow,
+      rows: sortedRows,
+    };
+  }).filter((group): group is NonNullable<typeof group> => group !== null);
+
+  return (
+    <div className="space-y-3">
+      {pricingGroups.map((group) => (
+        <div key={group.modelKey} className="surface-card p-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <p className="text-[1.05rem] tracking-[-0.03em] text-black/88">{group.modelName}</p>
+              <p className="mt-1 text-xs uppercase tracking-[0.16em] text-black/48">
+                最近生效：北京时间 {formatDateTime(group.latestRow.effectiveFrom)}
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:min-w-[18rem]">
+              <div className="border border-black/8 bg-white/72 px-3 py-2.5">
+                <p className="font-mono text-[0.64rem] uppercase tracking-[0.18em] text-black/46">最新输入 / 1M</p>
+                <p className="mt-2 text-sm leading-5 text-black/78">
+                  {formatPricePerMillion(group.latestRow.inputPricePer1M, group.latestRow.currency)}
+                </p>
+              </div>
+              <div className="border border-black/8 bg-white/72 px-3 py-2.5">
+                <p className="font-mono text-[0.64rem] uppercase tracking-[0.18em] text-black/46">最新输出 / 1M</p>
+                <p className="mt-2 text-sm leading-5 text-black/78">
+                  {formatPricePerMillion(group.latestRow.outputPricePer1M, group.latestRow.currency)}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+            <div className="border border-black/8 bg-white/72 px-3 py-2.5 text-sm">
+              <p className="font-mono text-[0.64rem] uppercase tracking-[0.18em] text-black/46">价格变更次数</p>
+              <p className="mt-2 text-black/76">{group.rows.length} 次</p>
+            </div>
+            <div className="border border-black/8 bg-white/72 px-3 py-2.5 text-sm">
+              <p className="font-mono text-[0.64rem] uppercase tracking-[0.18em] text-black/46">首个记录</p>
+              <p className="mt-2 text-black/76">北京时间 {formatDateTime(group.oldestRow.effectiveFrom)}</p>
+            </div>
+            <div className="border border-black/8 bg-white/72 px-3 py-2.5 text-sm">
+              <p className="font-mono text-[0.64rem] uppercase tracking-[0.18em] text-black/46">来源</p>
+              <p className="mt-2 text-black/76">{formatPricingSourceLabel(group.latestRow.source)}</p>
+            </div>
+          </div>
+          <div className="mt-4 space-y-2">
+            {group.rows.map((row) => (
+              <div
+                key={`${row.modelKey}-${row.effectiveFrom}-${row.source}`}
+                className="flex flex-col gap-2 border-l-2 border-black/12 pl-3 text-sm leading-6 text-black/72 sm:flex-row sm:items-start sm:justify-between"
+              >
+                <div>
+                  <p className="font-mono text-[0.64rem] uppercase tracking-[0.18em] text-black/46">
+                    北京时间 {formatDateTime(row.effectiveFrom)}
+                  </p>
+                  <p className="mt-1">
+                    输入 {formatPricePerMillion(row.inputPricePer1M, row.currency)} / 输出{" "}
+                    {formatPricePerMillion(row.outputPricePer1M, row.currency)}
+                  </p>
+                </div>
+                <span className="text-xs uppercase tracking-[0.16em] text-black/48">
+                  来源 {formatPricingSourceLabel(row.source)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function modelsLabelFromPricingRows(rows: RelayPricingHistoryResponse["rows"]) {
+  return rows[0]?.modelKey ?? "未命名模型";
+}
+
+function RelayIncidentTimeline({
+  rows,
+}: {
+  rows: RelayIncidentsResponse["rows"];
+}) {
+  if (rows.length === 0) {
+    return <p className="text-sm text-black/60">近 30 天没有公开事故记录。</p>;
+  }
+
+  return (
+    <div className="space-y-3">
+      {rows.map((incident) => (
+        <div
+          key={incident.id}
+          className={clsx("border p-4", getIncidentToneClasses(incident.severity))}
+        >
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="signal-chip bg-white/70">{formatIncidentSeverityLabel(incident.severity)}</span>
+                <span className="text-[0.68rem] uppercase tracking-[0.16em] text-current/70">
+                  {incident.endedAt ? "已结束" : "进行中"}
+                </span>
+              </div>
+              <div>
+                <p className="text-[1.05rem] tracking-[-0.03em] text-current">{incident.title}</p>
+                <p className="mt-2 text-sm leading-6 text-current/82">{incident.summary}</p>
+              </div>
+            </div>
+            <div className="min-w-[12rem] space-y-1 text-sm leading-6 text-current/78">
+              <p>开始：北京时间 {formatDateTime(incident.startedAt)}</p>
+              <p>
+                {incident.endedAt
+                  ? `结束：北京时间 ${formatDateTime(incident.endedAt)}`
+                  : "结束：仍在观察中"}
+              </p>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function RelayPage() {
   const { slug = "aurora-relay" } = useParams();
   const overview = useLoadable<RelayOverviewResponse>(
@@ -2652,6 +2942,11 @@ function RelayPage() {
   const pricing = useLoadable<RelayPricingHistoryResponse>(
     `/public/relay/${slug}/pricing-history`,
     () => fetchJson(`/public/relay/${slug}/pricing-history`),
+    [slug],
+  );
+  const incidents = useLoadable<RelayIncidentsResponse>(
+    `/public/relay/${slug}/incidents?window=30d`,
+    () => fetchJson(`/public/relay/${slug}/incidents?window=30d`),
     [slug],
   );
   if (overview.loading) return <RelayPageSkeleton />;
@@ -2677,6 +2972,9 @@ function RelayPage() {
     ...row,
     currentPrice: latestPricingByModelKey.get(row.modelKey) ?? null,
   })) ?? [];
+  const modelNames = Object.fromEntries(
+    (models.data?.rows ?? []).map((row) => [row.modelKey, row.modelName]),
+  );
   const modelRowsPerColumn = Math.ceil(modelPricingRows.length / 2);
   const modelTableColumns: Array<Array<RelayModelPricingRow | null>> = [
     modelPricingRows.slice(0, modelRowsPerColumn),
@@ -2826,6 +3124,33 @@ function RelayPage() {
               </div>
             </>
             )
+          )}
+        </Panel>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-2">
+        <Panel
+          title="价格历史"
+          kicker="最近公开变更"
+          headerClassName="mb-3"
+          titleClassName="text-[2.2rem] md:text-[2.45rem]"
+        >
+          {pricing.loading || !pricing.data ? (
+            <p className="text-sm text-black/60">正在加载价格历史...</p>
+          ) : (
+            <RelayPricingHistoryPanel modelNames={modelNames} rows={pricing.data.rows} />
+          )}
+        </Panel>
+        <Panel
+          title="事故时间线"
+          kicker="近 30 天"
+          headerClassName="mb-3"
+          titleClassName="text-[2.2rem] md:text-[2.45rem]"
+        >
+          {incidents.loading || !incidents.data ? (
+            <p className="text-sm text-black/60">正在加载事故时间线...</p>
+          ) : (
+            <RelayIncidentTimeline rows={incidents.data.rows} />
           )}
         </Panel>
       </section>
