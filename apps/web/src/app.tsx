@@ -2025,11 +2025,11 @@ function LeaderboardRowCard({ row }: { row: LeaderboardResponse["rows"][number] 
           <p className="mt-2 text-sm leading-5 text-black/78">{formatLatency(row.latencyP50Ms)}</p>
         </div>
         <div className="border border-black/8 bg-white/72 px-3 py-2.5">
-          <p className="text-[0.64rem] uppercase tracking-[0.18em] text-black/46">输入 / 1M</p>
+          <p className="text-[0.64rem] uppercase tracking-[0.18em] text-black/46">输入价格 / 1M</p>
           <p className="mt-2 text-sm leading-5 text-black/78">{row.inputPricePer1M ?? "-"}</p>
         </div>
         <div className="border border-black/8 bg-white/72 px-3 py-2.5">
-          <p className="text-[0.64rem] uppercase tracking-[0.18em] text-black/46">输出 / 1M</p>
+          <p className="text-[0.64rem] uppercase tracking-[0.18em] text-black/46">输出价格 / 1M</p>
           <p className="mt-2 text-sm leading-5 text-black/78">{row.outputPricePer1M ?? "-"}</p>
         </div>
       </div>
@@ -2422,8 +2422,8 @@ function LeaderboardPage() {
                     <th className="pb-2.5">评分</th>
                     <th className="pb-2.5">24h 可用性</th>
                     <th className="pb-2.5">P50 延迟</th>
-                    <th className="pb-2.5">输入</th>
-                    <th className="pb-2.5">输出</th>
+                    <th className="pb-2.5">输入价格</th>
+                    <th className="pb-2.5">输出价格</th>
                   </tr>
                 </thead>
                 <tbody>
