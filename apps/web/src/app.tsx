@@ -2392,7 +2392,7 @@ function LeaderboardPage() {
             赞助方展示只会出现在独立模块，不会混入排名，也不会影响这里的实测结果。
           </p>
           <Link className="mt-4 inline-flex text-sm underline underline-offset-4" to="/policy">
-            查看评估政策
+            查看我们怎么做
           </Link>
         </div>
       </section>
