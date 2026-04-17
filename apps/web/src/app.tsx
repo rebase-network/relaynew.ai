@@ -3549,7 +3549,7 @@ function SubmitPage() {
           {fieldErrors.relayName ? <span className="field-error">{fieldErrors.relayName}</span> : null}
         </label>
         <label className="form-field">
-          基础 URL
+          Base URL
           <input
             className="input-shell mt-2"
             type="url"
