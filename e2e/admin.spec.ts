@@ -87,6 +87,13 @@ async function readOverviewTotals(page: Page) {
   };
 }
 
+async function openRelayForEditing(page: Page, relayName: string) {
+  const relayCard = page.locator(".admin-list-card").filter({ hasText: relayName }).first();
+  await expect(relayCard).toBeVisible();
+  await relayCard.getByRole("button", { name: "编辑中转站" }).click();
+  return relayCard;
+}
+
 test("admin overview shows operating totals", async ({ page }) => {
   await openAdmin(page, "/");
   await expect(page.getByText("统一管理中转站目录、赞助位与价格记录。", { exact: true })).toBeVisible();
@@ -149,6 +156,55 @@ test("admin can create a relay", async ({ page }) => {
 
   const after = await readOverviewTotals(page);
   expect(after.relays).toBe(before.relays + 1);
+});
+
+test("admin can edit relay description, docs URL, and notes and keep them after reload", async ({ page, request }) => {
+  test.skip(
+    isDeployedRun && !allowDeployedWrites,
+    "Relay editing is skipped on deployed runs unless E2E_ALLOW_DEPLOYED_WRITES=1.",
+  );
+  const runId = Date.now();
+  const relaySlug = `relay-metadata-${runId}`;
+  const relayName = `Relay Metadata ${runId}`;
+  const relayBaseUrl = `https://example.com/relay/${relaySlug}`;
+  const description = "这是用于后台编辑能力覆盖的站点介绍。";
+  const docsUrl = `https://example.com/docs/${relaySlug}`;
+  const notes = "后台备注：用于验证刷新后仍能看到已保存内容。";
+
+  const relayResponse = await request.post(`${apiBaseUrl}/admin/relays`, {
+    headers: getAdminApiHeaders(),
+    data: {
+      slug: relaySlug,
+      name: relayName,
+      baseUrl: relayBaseUrl,
+      providerName: "Relay Metadata Ops",
+      websiteUrl: "https://example.com",
+      catalogStatus: "active",
+      isFeatured: false,
+      isSponsored: false,
+      description: null,
+      docsUrl: null,
+      notes: null,
+    },
+  });
+  expect(relayResponse.ok()).toBeTruthy();
+
+  await openAdmin(page, "/relays");
+  await openRelayForEditing(page, relayName);
+
+  await page.getByLabel(/(中转站介绍|站点介绍|description)/i).fill(description);
+  await page.getByLabel(/(文档地址|文档 URL|docsUrl)/i).fill(docsUrl);
+  await page.getByLabel(/(内部备注|备注|notes)/i).fill(notes);
+  await page.getByRole("button", { name: "更新" }).click();
+
+  await expect(page.getByText("中转站已更新。", { exact: true })).toBeVisible();
+
+  await page.reload();
+  await openRelayForEditing(page, relayName);
+
+  await expect(page.getByLabel(/(中转站介绍|站点介绍|description)/i)).toHaveValue(description);
+  await expect(page.getByLabel(/(文档地址|文档 URL|docsUrl)/i)).toHaveValue(docsUrl);
+  await expect(page.getByLabel(/(内部备注|备注|notes)/i)).toHaveValue(notes);
 });
 
 test("admin can soft delete a relay without removing its row", async ({ page, request }) => {
@@ -401,4 +457,23 @@ test("admin can review submissions, create sponsors, and add prices", async ({ p
   expect(after.pendingSubmissions).toBe(before.pendingSubmissions - 1);
   expect(after.activeSponsors).toBe(before.activeSponsors + 1);
   expect(after.priceRecords).toBe(before.priceRecords + 1);
+});
+
+test("admin overview can trigger a manual public snapshot refresh", async ({ page }) => {
+  test.skip(
+    isDeployedRun && !allowDeployedWrites,
+    "Manual public snapshot refresh is skipped on deployed runs unless E2E_ALLOW_DEPLOYED_WRITES=1.",
+  );
+
+  await openAdmin(page, "/");
+  const refreshButton = page.getByRole("button", { name: /手动刷新.*公开快照/i });
+  await expect(refreshButton).toBeVisible();
+
+  const refreshResponse = page.waitForResponse((response) =>
+    response.url().includes("/admin/refresh-public") && response.request().method() === "POST",
+  );
+  await refreshButton.click();
+  expect((await refreshResponse).ok()).toBeTruthy();
+
+  await expect(page.getByText(/公开快照已刷新/i)).toBeVisible();
 });

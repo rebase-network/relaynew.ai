@@ -8,6 +8,7 @@ import {
   type AdminOverviewResponse,
   type AdminPriceCreate,
   type AdminPricesResponse,
+  type AdminRefreshPublicResponse,
   type AdminRelayUpsert,
   type AdminRelaysResponse,
   type AdminSubmissionsResponse,
@@ -820,6 +821,28 @@ function AdminLogin({ onAuthenticated }: { onAuthenticated: (authorization: stri
 
 function OverviewPage() {
   const { data, loading, error } = useLoadable<AdminOverviewResponse>(() => fetchJson("/admin/overview"), []);
+  const [refreshMutation, setRefreshMutation] = useMutationState();
+
+  async function refreshPublicSnapshot() {
+    setRefreshMutation({ pending: true, error: null, success: null });
+    try {
+      const response = await fetchJson<AdminRefreshPublicResponse>("/admin/refresh-public", {
+        method: "POST",
+      });
+      setRefreshMutation({
+        pending: false,
+        error: null,
+        success: `公开快照已刷新：${formatDateTime(response.measuredAt)}。`,
+      });
+    } catch (reason) {
+      setRefreshMutation({
+        pending: false,
+        error: reason instanceof Error ? reason.message : "无法刷新公开快照。",
+        success: null,
+      });
+    }
+  }
+
   if (loading) return <LoadingCard />;
   if (error || !data) return <ErrorCard message={error ?? "无法加载管理概览。"} />;
 
@@ -882,6 +905,26 @@ function OverviewPage() {
               <p className="text-sm uppercase tracking-[0.16em] text-white/42">Relay 密钥</p>
               <p className="mt-1 text-lg tracking-[-0.03em]">轮换或恢复监测密钥</p>
             </Link>
+            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+              <p className="text-sm uppercase tracking-[0.16em] text-white/42">公开快照</p>
+              <p className="mt-1 text-lg tracking-[-0.03em]">手动触发一次公开数据刷新</p>
+              <p className="mt-2 text-sm leading-6 text-white/58">
+                审核、价格和赞助位写操作通常会自动刷新；如需人工确认同步结果，可在这里强制刷新一次。
+              </p>
+              <button
+                className="pill pill-active mt-4"
+                disabled={refreshMutation.pending}
+                onClick={() => {
+                  void refreshPublicSnapshot();
+                }}
+                type="button"
+              >
+                {refreshMutation.pending ? "刷新中..." : "手动刷新公开快照"}
+              </button>
+              <div className="mt-3">
+                <Notice state={refreshMutation} />
+              </div>
+            </div>
           </div>
         </Card>
       </div>
@@ -922,9 +965,9 @@ function RelaysPage() {
       catalogStatus: relay.catalogStatus,
       isFeatured: relay.isFeatured,
       isSponsored: relay.isSponsored,
-      description: null,
-      docsUrl: null,
-      notes: null,
+      description: relay.description,
+      docsUrl: relay.docsUrl,
+      notes: relay.notes,
     });
     setFieldErrors({});
     setMutation({ pending: false, error: null, success: null });
@@ -1048,6 +1091,39 @@ function RelaysPage() {
                 return (
                   <>
                     <p className="mt-3 text-sm text-white/62">{relay.baseUrl}</p>
+                    {relay.description ? (
+                      <p className="mt-3 text-sm leading-6 text-white/58">{relay.description}</p>
+                    ) : null}
+                    {relay.docsUrl || relay.websiteUrl ? (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {relay.websiteUrl ? (
+                          <a
+                            className="pill pill-ghost"
+                            href={relay.websiteUrl}
+                            rel="noreferrer"
+                            target="_blank"
+                          >
+                            官网
+                          </a>
+                        ) : null}
+                        {relay.docsUrl ? (
+                          <a
+                            className="pill pill-ghost"
+                            href={relay.docsUrl}
+                            rel="noreferrer"
+                            target="_blank"
+                          >
+                            文档
+                          </a>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    {relay.notes ? (
+                      <div className="mt-3 rounded-2xl border border-white/10 bg-black/10 px-3 py-2.5">
+                        <p className="text-[11px] uppercase tracking-[0.18em] text-white/35">内部备注</p>
+                        <p className="mt-2 text-sm leading-6 text-white/54">{relay.notes}</p>
+                      </div>
+                    ) : null}
                     <p className={clsx("mt-3 text-sm", credential ? "text-white/72" : "text-[#ffd06a]")}>
                       {credential ? `监测密钥 · ${formatCredentialStatus(credential.status)}` : "缺少监测密钥"}
                     </p>
@@ -1123,6 +1199,7 @@ function RelaysPage() {
             { label: "基础 URL", key: "baseUrl", placeholder: "https://northwind.example.ai/v1", type: "url" },
             { label: "提供方", key: "providerName", placeholder: "Northwind Labs", type: "text" },
             { label: "官网地址", key: "websiteUrl", placeholder: "https://northwind.example.ai", type: "url" },
+            { label: "文档地址", key: "docsUrl", placeholder: "https://northwind.example.ai/docs", type: "url" },
           ] as const).map(({ label, key, placeholder, type }) => (
             <label key={key} className="field-label">
               {label}
@@ -1144,6 +1221,30 @@ function RelaysPage() {
               <FieldError message={fieldErrors[key]} />
             </label>
           ))}
+          <label className="field-label">
+            中转站介绍
+            <textarea
+              className="field-input min-h-28"
+              placeholder="用于前台目录说明的站点介绍、支持模型范围、价格说明摘要等。"
+              value={form.description ?? ""}
+              onChange={(event) => {
+                setForm((current) => ({ ...current, description: event.target.value || null }));
+                setMutation((current) => ({ ...current, error: null }));
+              }}
+            />
+          </label>
+          <label className="field-label">
+            内部备注
+            <textarea
+              className="field-input min-h-24"
+              placeholder="仅供运营内部记录，例如跟进事项、沟通状态、风险备注。"
+              value={form.notes ?? ""}
+              onChange={(event) => {
+                setForm((current) => ({ ...current, notes: event.target.value || null }));
+                setMutation((current) => ({ ...current, error: null }));
+              }}
+            />
+          </label>
           <label className="field-label">
             目录状态
             <select className="field-input" value={form.catalogStatus} onChange={(event) => setForm((current) => ({ ...current, catalogStatus: event.target.value as AdminRelayUpsert["catalogStatus"] }))}>

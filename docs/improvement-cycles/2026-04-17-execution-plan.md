@@ -372,11 +372,9 @@
   - `apps/api/src/app.ts`
   - `packages/shared/src/admin.ts`
 - 已确保文档描述不会误导运营同学去执行当前 UI 尚未提供的操作，例如：
-  - 手动刷新公开快照
   - 编辑已有赞助位
   - 编辑或删除既有价格记录
-  - 修改 Relay 的 `description` / `docsUrl` / `notes`
 
 遗留问题：
 
-- 如果后续补上 sponsor / price 编辑界面、手动刷新入口或更完整的 Relay 字段编辑，需同步更新本手册。
+- 如果后续补上 sponsor / price 编辑界面或更多后台写操作入口，需同步更新本手册。

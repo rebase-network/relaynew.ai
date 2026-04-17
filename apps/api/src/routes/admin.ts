@@ -7,6 +7,7 @@ import {
   adminProbeCredentialsResponseSchema,
   adminPriceCreateSchema,
   adminPricesResponseSchema,
+  adminRefreshPublicResponseSchema,
   adminRelayUpsertSchema,
   adminRelaysResponseSchema,
   adminSubmissionReviewSchema,
@@ -418,6 +419,9 @@ export async function registerAdminRoutes(app: FastifyInstance) {
         "base_url as baseUrl",
         "provider_name as providerName",
         "website_url as websiteUrl",
+        "description",
+        "docs_url as docsUrl",
+        "notes",
         "status as catalogStatus",
         "is_featured as isFeatured",
         "is_sponsored as isSponsored",
@@ -1073,6 +1077,9 @@ export async function registerAdminRoutes(app: FastifyInstance) {
 
   app.post("/admin/refresh-public", async () => {
     const result = await refreshPublicData(app.db);
-    return { ok: true, measuredAt: result.measuredAt };
+    return adminRefreshPublicResponseSchema.parse({
+      ok: true,
+      measuredAt: result.measuredAt,
+    });
   });
 }

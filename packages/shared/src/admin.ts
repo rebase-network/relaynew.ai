@@ -34,6 +34,11 @@ export const adminOverviewResponseSchema = z.object({
   measuredAt: isoTimestampSchema,
 });
 
+export const adminRefreshPublicResponseSchema = z.object({
+  ok: z.literal(true),
+  measuredAt: isoTimestampSchema,
+});
+
 export const adminRelaySchema = z.object({
   id: internalIdSchema,
   slug: z.string().min(1),
@@ -41,6 +46,9 @@ export const adminRelaySchema = z.object({
   baseUrl: requiredUrlSchema,
   providerName: z.string().nullable(),
   websiteUrl: nullableUrlSchema,
+  description: z.string().nullable(),
+  docsUrl: nullableUrlSchema,
+  notes: z.string().nullable(),
   catalogStatus: catalogStatusSchema,
   isFeatured: z.boolean(),
   isSponsored: z.boolean(),
@@ -217,6 +225,7 @@ export const adminRelayModelSchema = z.object({
 });
 
 export type AdminOverviewResponse = z.infer<typeof adminOverviewResponseSchema>;
+export type AdminRefreshPublicResponse = z.infer<typeof adminRefreshPublicResponseSchema>;
 export type AdminRelay = z.infer<typeof adminRelaySchema>;
 export type AdminRelaysResponse = z.infer<typeof adminRelaysResponseSchema>;
 export type AdminRelayUpsert = z.infer<typeof adminRelayUpsertSchema>;
