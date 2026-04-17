@@ -2097,7 +2097,7 @@ function HomePage() {
                   resultTone={quickProbe.resultTone}
                 />
                 <button className="button-dark quick-probe-action" disabled={quickProbe.submitting} type="submit">
-                  {quickProbe.submitting ? "检测中..." : "立即探测"}
+                  {quickProbe.submitting ? "检测中..." : "立即测试"}
                 </button>
               </div>
             </form>
