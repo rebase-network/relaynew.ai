@@ -316,3 +316,39 @@
 - 当前 SEO 仍属于 CSR 条件下的基础能力，尚未覆盖 SSR / 预渲染、结构化数据、OG 图片等更强能力。
 - Probe 更强的安全硬化（限流、Turnstile、上线前边界）仍需继续推进。
 - 若后续准备面向搜索流量或公开更大规模使用，应优先继续处理 SEO 与 Probe 安全项。
+
+### 文档复审补充：已完成
+
+已完成内容：
+
+- 针对“文档是否落后于实现”追加完成两轮收口：
+  - `d6f99f7` `docs(review): refresh product and api status`
+  - `730dda6` `docs(review): refresh deployment and schema notes`
+- 已补齐或修正的重点文档包括：
+  - `DESIGN.md`
+  - `docs/ARCHITECTURE.md`
+  - `docs/API_CONTRACT_V1.md`
+  - `docs/DEVELOPMENT_PLAN.md`
+  - `docs/PROBE_SECURITY.md`
+  - `docs/ROUTES.md`
+  - `docs/TESTING_STRATEGY.md`
+  - `docs/DATABASE_SCHEMA.md`
+  - `docs/DEPLOYMENT.md`
+  - `docs/CLOUDFLARE_WORKERS_BUILDS.md`
+  - `docs/INTERNAL_API_NOTES.md`
+- 本轮还新增了第 2 次文档复审记录：
+  - `docs/improvement-cycles/2026-04-17-audit-round-02.md`
+
+验证记录：
+
+- 已将文档内容与当前迁移、public/probe 路由实现、shared contract、部署脚本和 Workers 配置逐项对齐。
+- 重点收口了以下容易误导后续开发与运营的过时点：
+  - 数据库 schema 已不再只是 `0001_initial.sql`
+  - `POST /public/submissions` 与 `POST /public/probe/check` 的 key 持久化边界不同
+  - `relaynew.ai` / `admin.relaynew.ai` 的生产发布必须走 GitHub-triggered Workers Builds
+  - 当前仓库尚未暴露独立 `/internal/*` HTTP surface
+
+遗留问题：
+
+- `docs/ADMIN_OPERATIONS.md` 仍未正式落库，中文运营手册还需要补齐。
+- 如果后续再引入 staging frontend 域名、更多 region 或独立 internal route，需要同步更新上述文档，避免再次漂移。
