@@ -3664,7 +3664,7 @@ function ProbePage() {
                 自动模式会根据模型推断适配顺序；手动模式则会把探测锁定在单一兼容协议形态上。
               </p>
             </details>
-            <button className="button-dark" disabled={submitting} type="submit">{submitting ? "检测中..." : "开始探测"}</button>
+            <button className="button-dark" disabled={submitting} type="submit">{submitting ? "检测中..." : "开始测试"}</button>
           </form>
         </section>
 
