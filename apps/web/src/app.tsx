@@ -3575,7 +3575,7 @@ function SubmitPage() {
           中转站简介
           <textarea
             className="input-shell mt-2 min-h-28"
-            placeholder="请说明这个 relay 适合什么场景、由谁运营，以及测试前审核队列需要知道的事项。"
+            placeholder="请提供中转站点的介绍，支持的模型、价格信息等等，这些信息将由社区运营志愿者整理后作为站点说明和价格表"
             required
             value={state.description}
             onChange={(event) => updateField("description", event.target.value)}
