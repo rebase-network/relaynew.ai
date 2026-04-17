@@ -2372,7 +2372,7 @@ function LeaderboardPage() {
       ) : null}
       <section className="grid gap-4 xl:grid-cols-3">
         <div className="surface-card p-4">
-          <p className="kicker">自然排名</p>
+          <p className="kicker">评测排名</p>
           <p className="mt-3 text-sm leading-6 text-black/72">
             下方表格只由公开测量结果生成，综合可用性、延迟、稳定性与价格效率，不接受赞助调位。
           </p>
