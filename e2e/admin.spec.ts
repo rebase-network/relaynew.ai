@@ -186,6 +186,11 @@ test("admin can soft delete a relay without removing its row", async ({ page, re
   const confirmDialog = page.getByRole("dialog");
   await expect(confirmDialog).toBeVisible();
   await expect(confirmDialog.getByRole("heading", { name: `Archive ${relayName}?` })).toBeVisible();
+  await expect
+    .poll(async () =>
+      page.evaluate(() => document.querySelector(".confirm-backdrop")?.parentElement === document.body),
+    )
+    .toBe(true);
   await confirmDialog.getByRole("button", { name: "Archive relay" }).click();
   await expect(page.getByText("Relay archived. It is hidden from relay operations but stays in Postgres.")).toBeVisible();
   await expect(page.locator(".admin-list-card").filter({ hasText: relayName })).toHaveCount(0);

@@ -16,6 +16,7 @@ import {
   type ProbeCredentialOwnerType,
 } from "@relaynews/shared";
 import { type Dispatch, type ReactNode, type SetStateAction, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, Navigate, NavLink, Route, Routes, useSearchParams } from "react-router-dom";
 
 const API_BASE_URL =
@@ -581,7 +582,11 @@ function ConfirmDialog({
     return null;
   }
 
-  return (
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  return createPortal((
     <div
       aria-hidden={pending ? "true" : undefined}
       className="confirm-backdrop"
@@ -607,7 +612,7 @@ function ConfirmDialog({
         </div>
       </section>
     </div>
-  );
+  ), document.body);
 }
 
 function LoadingCard() {
