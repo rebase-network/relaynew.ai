@@ -2654,7 +2654,7 @@ function StatusHistoryPanel({
   );
 }
 
-function RelayModelsTable({ rows }: { rows: RelayModelPricingRow[] }) {
+function RelayModelsTable({ rows }: { rows: Array<RelayModelPricingRow | null> }) {
   return (
     <div className="data-table relay-models-table px-1.5" data-testid="relay-models-table">
       <table className="w-full text-left">
@@ -2667,21 +2667,35 @@ function RelayModelsTable({ rows }: { rows: RelayModelPricingRow[] }) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr key={row.modelKey} className="align-top">
-              <td className="border-b border-black/8 py-3 pl-2 pr-3 last:border-b-0">
-                <p className="break-words text-[0.96rem] leading-5 tracking-[-0.03em] [overflow-wrap:anywhere]">{row.modelName}</p>
-                <p className="mt-1 font-mono text-[0.64rem] uppercase tracking-[0.16em] text-black/44">{row.vendor}</p>
-              </td>
-              <td className="border-b border-black/8 py-3 pr-3 text-[0.68rem] uppercase tracking-[0.18em] text-black/52 whitespace-nowrap last:border-b-0">
-                {row.supportStatus}
-              </td>
-              <td className="border-b border-black/8 py-3 pr-3 text-right text-sm tabular-nums whitespace-nowrap last:border-b-0">
-                {formatPricePerMillion(row.currentPrice?.inputPricePer1M ?? null, row.currentPrice?.currency ?? "USD")}
-              </td>
-              <td className="border-b border-black/8 py-3 pr-2 text-right text-sm tabular-nums whitespace-nowrap last:border-b-0">
-                {formatPricePerMillion(row.currentPrice?.outputPricePer1M ?? null, row.currentPrice?.currency ?? "USD")}
-              </td>
+          {rows.map((row, index) => (
+            <tr key={row?.modelKey ?? `placeholder-${index}`} className="align-top">
+              {row ? (
+                <>
+                  <td className="border-b border-black/8 py-3 pl-2 pr-3 last:border-b-0">
+                    <p className="break-words text-[0.96rem] leading-5 tracking-[-0.03em] [overflow-wrap:anywhere]">{row.modelName}</p>
+                    <p className="mt-1 font-mono text-[0.64rem] uppercase tracking-[0.16em] text-black/44">{row.vendor}</p>
+                  </td>
+                  <td className="border-b border-black/8 py-3 pr-3 text-[0.68rem] uppercase tracking-[0.18em] text-black/52 whitespace-nowrap last:border-b-0">
+                    {row.supportStatus}
+                  </td>
+                  <td className="border-b border-black/8 py-3 pr-3 text-right text-sm tabular-nums whitespace-nowrap last:border-b-0">
+                    {formatPricePerMillion(row.currentPrice?.inputPricePer1M ?? null, row.currentPrice?.currency ?? "USD")}
+                  </td>
+                  <td className="border-b border-black/8 py-3 pr-2 text-right text-sm tabular-nums whitespace-nowrap last:border-b-0">
+                    {formatPricePerMillion(row.currentPrice?.outputPricePer1M ?? null, row.currentPrice?.currency ?? "USD")}
+                  </td>
+                </>
+              ) : (
+                <>
+                  <td className="border-b border-transparent py-3 pl-2 pr-3" aria-hidden="true">
+                    <span className="block h-5" />
+                    <span className="mt-1 block h-3" />
+                  </td>
+                  <td className="border-b border-transparent py-3 pr-3" aria-hidden="true" />
+                  <td className="border-b border-transparent py-3 pr-3" aria-hidden="true" />
+                  <td className="border-b border-transparent py-3 pr-2" aria-hidden="true" />
+                </>
+              )}
             </tr>
           ))}
         </tbody>
@@ -2735,11 +2749,13 @@ function RelayPage() {
     ...row,
     currentPrice: latestPricingByModelKey.get(row.modelKey) ?? null,
   })) ?? [];
-  const modelMidpoint = Math.ceil(modelPricingRows.length / 2);
-  const modelTableColumns = [
-    modelPricingRows.slice(0, modelMidpoint),
-    modelPricingRows.slice(modelMidpoint),
-  ].filter((rows) => rows.length > 0);
+  const modelRowsPerColumn = Math.ceil(modelPricingRows.length / 2);
+  const modelTableColumns: Array<Array<RelayModelPricingRow | null>> = [
+    modelPricingRows.slice(0, modelRowsPerColumn),
+    modelPricingRows.slice(modelRowsPerColumn),
+  ]
+    .filter((rows) => rows.length > 0)
+    .map((rows) => [...rows, ...Array.from({ length: Math.max(0, modelRowsPerColumn - rows.length) }, () => null)]);
   const historySlots = history.data ? buildDailyHistorySlots(history.data.points, history.data.measuredAt) : [];
   const measuredHistorySlotCount = historySlots.filter((slot) => slot.point).length;
   const latestMeasuredHistoryPoint = [...historySlots].reverse().find((slot) => slot.point?.latencyP95Ms !== null)?.point ?? null;
