@@ -3257,7 +3257,7 @@ function MethodologyPage() {
               赞助展示不会并入这个评分，因此实测排序始终保持清晰可读。
             </p>
             <div className="mt-5 flex flex-wrap gap-2.5">
-              <Link className="button-dark" to="/policy">阅读评估政策</Link>
+              <Link className="button-dark" to="/policy">我们如何评估</Link>
               <Link className="button-cream" to="/probe">开始一次探测</Link>
             </div>
             <p className="mt-4 text-xs uppercase tracking-[0.16em] text-black/50">
