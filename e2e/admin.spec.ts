@@ -139,8 +139,9 @@ test("admin can approve a submission and move it into history plus relay list", 
   await expect(page.locator(".admin-list-card").filter({ hasText: relayName })).toHaveCount(0);
 
   await page.goto(`${adminBaseUrl}/intake/history`);
-  await expect(page.locator(".admin-list-card").filter({ hasText: relayName })).toBeVisible();
-  await expect(page.getByText("已关联 Relay", { exact: false })).toBeVisible();
+  const historyCard = page.locator(".admin-list-card").filter({ hasText: relayName }).first();
+  await expect(historyCard).toBeVisible();
+  await expect(historyCard.getByText("已关联 Relay", { exact: false })).toBeVisible();
 
   await page.goto(`${adminBaseUrl}/relays`);
   await expect(page.locator(".admin-list-card").filter({ hasText: relayName })).toBeVisible();
