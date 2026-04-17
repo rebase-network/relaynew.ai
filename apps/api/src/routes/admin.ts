@@ -1015,6 +1015,18 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     return { ok: true };
   });
 
+  app.delete("/admin/sponsors/:id", async (request) => {
+    const params = request.params as { id: string };
+
+    await app.db
+      .deleteFrom("sponsors")
+      .where("id", "=", params.id)
+      .executeTakeFirst();
+
+    await refreshPublicData(app.db);
+    return { ok: true };
+  });
+
   app.get("/admin/prices", async () => {
     const rows = await app.db
       .selectFrom("relay_prices as rp")

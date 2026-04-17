@@ -300,6 +300,14 @@ test("admin can edit sponsors and unbind relay after reload", async ({ page, req
   await expect(page.getByLabel("状态")).toHaveValue("paused");
   await expect(page.getByLabel("开始时间")).toHaveValue(updatedStartAt);
   await expect(page.getByLabel("结束时间")).toHaveValue(updatedEndAt);
+
+  const updatedSponsorCard = page.locator(".admin-list-card").filter({ hasText: updatedSponsorName }).first();
+  await updatedSponsorCard.getByRole("button", { name: "删除赞助位" }).click();
+  const deleteSponsorDialog = page.getByRole("dialog");
+  await expect(deleteSponsorDialog).toBeVisible();
+  await deleteSponsorDialog.getByRole("button", { name: "删除赞助位" }).click();
+  await expect(page.getByText("赞助位已删除。", { exact: true })).toBeVisible();
+  await expect(page.locator(".admin-list-card").filter({ hasText: updatedSponsorName })).toHaveCount(0);
 });
 
 test("admin can edit and delete price records after reload", async ({ page, request }) => {
@@ -617,6 +625,23 @@ test("admin can review submissions, create sponsors, and add prices", async ({ p
   }).first();
   await expect(approvedCard).toContainText("已通过");
   await expect(approvedCard).toContainText("已关联中转站");
+
+  await expect
+    .poll(async () => {
+      const response = await request.get(`${apiBaseUrl}/public/leaderboard/openai-gpt-5.4`);
+      if (!response.ok()) {
+        return false;
+      }
+
+      const payload = (await response.json()) as {
+        rows?: Array<{ relay?: { name?: string } }>;
+      };
+
+      return (payload.rows ?? []).some((row) => row.relay?.name === relayName);
+    }, {
+      timeout: 30_000,
+    })
+    .toBe(true);
 
   await page.goto(`${webBaseUrl}/leaderboard/openai-gpt-5.4`);
   await expect(page.getByRole("link", { name: relayName })).toBeVisible();

@@ -2054,6 +2054,7 @@ function SponsorsPage() {
   const sponsors = useLoadable<AdminSponsorsResponse>(() => fetchJson("/admin/sponsors"), []);
   const relays = useLoadable<AdminRelaysResponse>(() => fetchJson("/admin/relays"), []);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [sponsorDeleteTarget, setSponsorDeleteTarget] = useState<AdminSponsorsResponse["rows"][number] | null>(null);
   const [form, setForm] = useState<SponsorFormState>(createDefaultSponsorFormState);
   const [fieldErrors, setFieldErrors] = useState<SponsorFormErrors>({});
   const [mutation, setMutation] = useMutationState();
@@ -2061,6 +2062,7 @@ function SponsorsPage() {
 
   function resetForm() {
     setEditingId(null);
+    setSponsorDeleteTarget(null);
     setForm(createDefaultSponsorFormState());
     setFieldErrors({});
     setMutation({ pending: false, error: null, success: null });
@@ -2068,6 +2070,7 @@ function SponsorsPage() {
 
   function beginEditingSponsor(row: AdminSponsorsResponse["rows"][number]) {
     setEditingId(row.id);
+    setSponsorDeleteTarget(null);
     setForm({
       relayId: row.relayId ?? "",
       name: row.name,
@@ -2108,6 +2111,30 @@ function SponsorsPage() {
     }
   }
 
+  async function deleteSponsor(row: AdminSponsorsResponse["rows"][number]) {
+    setMutation({ pending: true, error: null, success: null });
+    try {
+      await fetchJson<{ ok: true }>(`/admin/sponsors/${row.id}`, {
+        method: "DELETE",
+      });
+      setSponsorDeleteTarget(null);
+      if (editingId === row.id) {
+        setEditingId(null);
+        setForm(createDefaultSponsorFormState());
+        setFieldErrors({});
+      }
+      setMutation({ pending: false, error: null, success: "赞助位已删除。" });
+      await sponsors.reload();
+    } catch (reason) {
+      setSponsorDeleteTarget(null);
+      setMutation({
+        pending: false,
+        error: reason instanceof Error ? reason.message : "无法删除赞助位。",
+        success: null,
+      });
+    }
+  }
+
   if (sponsors.loading || relays.loading) return <LoadingCard />;
   if (sponsors.error || !sponsors.data || relays.error || !relays.data) return <ErrorCard message={sponsors.error ?? relays.error ?? "无法加载赞助位。"} />;
 
@@ -2135,6 +2162,9 @@ function SponsorsPage() {
                 <button className="pill pill-idle" onClick={() => beginEditingSponsor(row)} type="button">
                   编辑赞助位
                 </button>
+                <button className="pill pill-ghost" disabled={mutation.pending} onClick={() => setSponsorDeleteTarget(row)} type="button">
+                  删除赞助位
+                </button>
               </div>
             </div>
           ))}
@@ -2160,6 +2190,24 @@ function SponsorsPage() {
           <Notice state={mutation} />
         </div>
       </Card>
+      <ConfirmDialog
+        confirmLabel="删除赞助位"
+        confirmPendingLabel="删除中..."
+        message={
+          sponsorDeleteTarget
+            ? `${sponsorDeleteTarget.name} 将从赞助位列表中移除。只有在确认是误建或重复记录时才建议删除。`
+            : ""
+        }
+        onCancel={() => setSponsorDeleteTarget(null)}
+        onConfirm={() => {
+          if (sponsorDeleteTarget) {
+            void deleteSponsor(sponsorDeleteTarget);
+          }
+        }}
+        open={Boolean(sponsorDeleteTarget)}
+        pending={mutation.pending}
+        title={sponsorDeleteTarget ? `确认删除 ${sponsorDeleteTarget.name}？` : ""}
+      />
     </div>
   );
 }
