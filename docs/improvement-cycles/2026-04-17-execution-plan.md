@@ -350,5 +350,33 @@
 
 遗留问题：
 
-- `docs/ADMIN_OPERATIONS.md` 仍未正式落库，中文运营手册还需要补齐。
 - 如果后续再引入 staging frontend 域名、更多 region 或独立 internal route，需要同步更新上述文档，避免再次漂移。
+
+### 运营手册补充：已完成
+
+已完成内容：
+
+- 已新增中文运营后台操作手册：
+  - `docs/ADMIN_OPERATIONS.md`
+- 手册内容已经对齐当前后台的真实能力边界，包括：
+  - 登录与时区口径
+  - `概览`、`审核队列`、`中转站`、`密钥`、`赞助位`、`价格` 的页面职责
+  - 提交审核、Relay 接管、密钥轮换、价格追加等日常流程
+  - 当前 UI 未覆盖、需要工程介入的限制项
+
+验证记录：
+
+- 已根据以下实现逐项核对手册内容：
+  - `apps/admin/src/app.tsx`
+  - `apps/api/src/routes/admin.ts`
+  - `apps/api/src/app.ts`
+  - `packages/shared/src/admin.ts`
+- 已确保文档描述不会误导运营同学去执行当前 UI 尚未提供的操作，例如：
+  - 手动刷新公开快照
+  - 编辑已有赞助位
+  - 编辑或删除既有价格记录
+  - 修改 Relay 的 `description` / `docsUrl` / `notes`
+
+遗留问题：
+
+- 如果后续补上 sponsor / price 编辑界面、手动刷新入口或更完整的 Relay 字段编辑，需同步更新本手册。
