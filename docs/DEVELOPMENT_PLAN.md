@@ -83,6 +83,45 @@ and reduce the maintenance cost caused by oversized frontend entry files.
   - relay pause/archive/reactivation
   - active-only public visibility and monitoring
 
+### Desktop Web UI Polish Plan
+
+The next public-web polish pass should prioritize desktop readability and visual
+hierarchy before any further mobile-specific refresh.
+
+Primary findings from the current desktop audit:
+- page containers, data cards, and helper cards overuse the same warm `panel` and
+  `surface-card` treatment, flattening visual hierarchy
+- large Chinese headlines are set too tightly, while many helper labels rely on
+  very small uppercase mono text that feels cramped and noisy
+- the homepage hero, leaderboard hero, and submit-page hero each compete with nearby
+  functional modules instead of establishing one clear desktop focal point
+- explanatory copy is often split across multiple medium-weight cards, pushing the
+  main task content below the fold on desktop
+- information pages such as `评测方式` and `我们怎么做` read like card stacks rather than
+  designed editorial pages
+
+Execution order for the desktop polish pass:
+1. shared visual system
+   - reduce decorative density in secondary cards
+   - establish clearer tiers for page shell, primary task blocks, and helper blocks
+   - relax desktop headline spacing and reduce reliance on ultra-small uppercase labels
+2. homepage and leaderboard
+   - keep one obvious hero focal point
+   - demote helper explanations so rankings and discovery remain the first desktop task
+   - distinguish sponsor presentation more clearly from natural ranking previews
+3. submit, probe, and relay detail
+   - simplify nested card structures
+   - make public forms feel like guided consumer workflows rather than admin tooling
+   - give result and detail pages clearer desktop reading order
+4. methodology and policy
+   - shift from repeated card stacks toward more editorial, grouped, and comparative layouts
+
+Acceptance goals for the desktop pass:
+- each first screen should present one clear primary action or information target
+- helper copy should no longer outweigh the main task content on desktop
+- sponsor, ranking, explanation, and form surfaces should feel visually distinct
+- Playwright coverage should continue to pass for critical public flows and metadata
+
 ## Delivery Principles
 
 - keep the MVP simple and explicit
