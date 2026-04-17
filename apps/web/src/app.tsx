@@ -2383,7 +2383,7 @@ function LeaderboardPage() {
             如果你想理解总分、健康状态等含义，可以先阅读评测方式，再回到榜单做比较。
           </p>
           <Link className="mt-4 inline-flex text-sm underline underline-offset-4" to="/methodology">
-            查看方法论
+            查看评测方式
           </Link>
         </div>
         <div className="surface-card p-4">
