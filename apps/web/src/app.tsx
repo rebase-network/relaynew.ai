@@ -3286,7 +3286,7 @@ function MethodologyPage() {
         </div>
       </section>
       <section className="grid gap-4 lg:grid-cols-[0.96fr_1.04fr]">
-        <Panel title="公开状态说明" kicker="状态口径">
+        <Panel title="公开状态说明">
           <div className="space-y-3">
             {data.healthStatuses.map((status) => (
               <div key={status} className="surface-card p-3.5">
@@ -3301,7 +3301,7 @@ function MethodologyPage() {
           </div>
         </Panel>
         <div className="space-y-4">
-          <Panel title="徽章含义" kicker="置信提示">
+          <Panel title="徽章含义">
             <div className="grid gap-3 sm:grid-cols-2">
               {data.badges.map((badge) => (
                 <div key={badge} className="surface-card p-3.5">
