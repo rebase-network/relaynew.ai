@@ -3631,7 +3631,7 @@ function SubmitPage() {
             </select>
           </label>
         </div>
-        <button className="button-dark" disabled={submitting} type="submit">{submitting ? "提交中..." : "提交 Relay"}</button>
+        <button className="button-dark" disabled={submitting} type="submit">{submitting ? "提交中..." : "提交"}</button>
         {result ? (
           <div className="surface-card space-y-2 p-3.5">
             <p className="text-sm form-feedback-success">提交成功，记录 ID：{result.id}</p>
