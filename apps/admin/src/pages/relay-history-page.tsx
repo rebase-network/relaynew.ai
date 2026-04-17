@@ -104,6 +104,9 @@ export function RelayHistoryPage() {
                 {relay.description ? <p className="mt-3 text-sm leading-6 text-white/66">{relay.description}</p> : null}
               </div>
               <div className="flex flex-wrap gap-2">
+                <Link className="pill pill-ghost" to={`/relays/${relay.id}`}>
+                  查看 / 编辑
+                </Link>
                 <button className="pill pill-active" disabled={mutation.pending} onClick={() => void reactivate(relay)} type="button">
                   重新激活
                 </button>
@@ -116,4 +119,3 @@ export function RelayHistoryPage() {
     </Card>
   );
 }
-
