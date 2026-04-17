@@ -1,0 +1,325 @@
+import * as Shared from "../shared";
+
+const {
+  clsx,
+  useEffect,
+  useMemo,
+  useNavigate,
+  useParams,
+  useSearchParams,
+  useState,
+  BADGE_COPY,
+  DEFAULT_LEADERBOARD_MODEL_KEY,
+  DEFAULT_PROBE_STATE,
+  ErrorPanel,
+  HEALTH_STATUS_COPY,
+  HOME_LEADERBOARD_ROW_LIMIT,
+  HomeIncidentCard,
+  HomePageSkeleton,
+  InlineProbeSummary,
+  LEADERBOARD_DIRECTORY_PATH,
+  LeaderboardDirectorySkeleton,
+  LeaderboardPageSkeleton,
+  LeaderboardPreviewCard,
+  LeaderboardRowCard,
+  CompactBadgeList,
+  Link,
+  LoadingPanel,
+  MetricGrid,
+  MethodologyPageSkeleton,
+  NavLink,
+  Panel,
+  POLICY_PILLARS,
+  ProbeFormFields,
+  PROBE_COMPATIBILITY_OPTIONS,
+  PROBE_OUTPUT_CARDS,
+  RelayIncidentTimeline,
+  RelayLatencyChart,
+  RelayLatencyLegend,
+  RelayModelsTable,
+  RelayPageSkeleton,
+  RelayPricingHistoryPanel,
+  ScorePopover,
+  StatusDot,
+  StatusHistoryPanel,
+  buildDailyHistorySlots,
+  createSubmitModelPriceRow,
+  fetchJson,
+  formatAvailability,
+  formatBadgeLabel,
+  formatDate,
+  formatDateTime,
+  formatHealthStatusLabel,
+  formatIncidentSeverityLabel,
+  formatLatency,
+  formatPricePerMillion,
+  formatPricingSourceLabel,
+  formatProbeCompatibilityMode,
+  formatProbeDetectionMode,
+  formatProbeHttpStatus,
+  formatProbeMeasuredAt,
+  formatScoreMetricLabel,
+  formatSupportStatusLabel,
+  getConnectivityCardTone,
+  getIncidentToneClasses,
+  getLeaderboardPath,
+  getModelVendorKey,
+  getModelVendorLabel,
+  getProbeStateFromSearchParams,
+  getProtocolCardTone,
+  getTraceCardTone,
+  isValidHttpUrl,
+  useLoadable,
+  usePageMetadata,
+  useProbeController,
+  validateSubmitForm,
+} = Shared;
+
+export function SubmitPage() {
+  const [state, setState] = useState<Shared.SubmitFormState>({
+    relayName: "",
+    baseUrl: "",
+    websiteUrl: "",
+    contactInfo: "",
+    description: "",
+    testApiKey: "",
+    compatibilityMode: "auto",
+    modelPrices: [createSubmitModelPriceRow()],
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [result, setResult] = useState<Shared.PublicSubmissionResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Shared.SubmitFormErrors>({});
+  usePageMetadata({
+    title: "提交站点信息｜relaynew.ai",
+    description: "提交站点基础信息、联系方式、支持模型与价格信息进入审核队列，完成初始测试；赞助流程与评测排名逻辑分离。",
+    canonicalPath: "/submit",
+  });
+
+  function updateField<Key extends keyof Shared.SubmitFormState>(key: Key, value: Shared.SubmitFormState[Key]) {
+    setState((current) => ({ ...current, [key]: value }));
+    setFieldErrors((current) => ({ ...current, [key]: undefined }));
+    setError(null);
+  }
+
+  function updateModelPriceRow(rowId: string, key: "modelKey" | "inputPricePer1M" | "outputPricePer1M", value: string) {
+    setState((current) => ({
+      ...current,
+      modelPrices: current.modelPrices.map((row) => (row.id === rowId ? { ...row, [key]: value } : row)),
+    }));
+    setFieldErrors((current) => {
+      const next = { ...current };
+      delete next.modelPrices;
+      return next;
+    });
+    setError(null);
+  }
+
+  function addModelPriceRow() {
+    setState((current) => ({
+      ...current,
+      modelPrices: [...current.modelPrices, createSubmitModelPriceRow(current.modelPrices.length)],
+    }));
+    setFieldErrors((current) => {
+      const next = { ...current };
+      delete next.modelPrices;
+      return next;
+    });
+  }
+
+  function removeModelPriceRow(rowId: string) {
+    setState((current) => ({
+      ...current,
+      modelPrices:
+        current.modelPrices.length > 1
+          ? current.modelPrices.filter((row) => row.id !== rowId)
+          : [createSubmitModelPriceRow()],
+    }));
+    setFieldErrors((current) => {
+      const next = { ...current };
+      delete next.modelPrices;
+      return next;
+    });
+  }
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setResult(null);
+    const { errors, payload } = validateSubmitForm(state);
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      setError("请先修正高亮字段后再提交。");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const response = await fetchJson<Shared.PublicSubmissionResponse>("/public/submissions", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      setResult(response);
+      setState({
+        relayName: "",
+        baseUrl: "",
+        websiteUrl: "",
+        contactInfo: "",
+        description: "",
+        testApiKey: "",
+        compatibilityMode: "auto",
+        modelPrices: [createSubmitModelPriceRow()],
+      });
+      setFieldErrors({});
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "提交失败。");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <section className="grid gap-4 lg:grid-cols-[1fr_0.96fr]">
+      <div className="panel hero-panel min-h-0">
+        <p className="kicker">提交站点</p>
+        <h1 className="text-4xl leading-[0.92] tracking-[-0.06em] md:text-5xl">把你的Relay站点信息提交，收录到站点目录中，有机会进入榜单排行，获得更多用户的认可</h1>
+        <p className="mt-4 max-w-xl text-black/70">请提供中转站点的介绍，支持的模型、价格信息等等，这些信息将由社区运营志愿者整理后作为站点说明和价格表。</p>
+        <div className="mt-6 grid gap-2.5 sm:grid-cols-3">
+          <div className="surface-card p-3.5">
+            <p className="kicker !text-black/52">先审核</p>
+            <p className="text-sm leading-6 text-black/72">每个站点都会先进入运营审核队列，确认后才会出现在公开页面。</p>
+          </div>
+          <div className="surface-card p-3.5">
+            <p className="kicker !text-black/52">整理信息</p>
+            <p className="text-sm leading-6 text-black/72">请尽量把站点介绍、支持模型和价格信息填写完整，方便志愿者整理站点说明和价格表。</p>
+          </div>
+          <div className="surface-card p-3.5">
+            <p className="kicker !text-black/52">初始测试</p>
+            <p className="text-sm leading-6 text-black/72">提交后会立即执行一次自动测试，后续会持续测试，请确保测试Key可用性。</p>
+          </div>
+        </div>
+      </div>
+      <form className="panel form-shell" noValidate onSubmit={handleSubmit}>
+        <label className="form-field">
+          中转站名称
+          <input
+            className="input-shell mt-2"
+            type="text"
+            placeholder="北风中转站"
+            required
+            value={state.relayName}
+            onChange={(event) => updateField("relayName", event.target.value)}
+          />
+          {fieldErrors.relayName ? <span className="field-error">{fieldErrors.relayName}</span> : null}
+        </label>
+        <label className="form-field">
+          Base URL
+          <input
+            className="input-shell mt-2"
+            type="url"
+            placeholder="https://northwind.example.ai/v1"
+            required
+            value={state.baseUrl}
+            onChange={(event) => updateField("baseUrl", event.target.value)}
+          />
+          {fieldErrors.baseUrl ? <span className="field-error">{fieldErrors.baseUrl}</span> : null}
+        </label>
+        <label className="form-field">
+          站点网站
+          <input
+            className="input-shell mt-2"
+            type="url"
+            placeholder="https://northwind.example.ai"
+            value={state.websiteUrl}
+            onChange={(event) => updateField("websiteUrl", event.target.value)}
+          />
+          {fieldErrors.websiteUrl ? <span className="field-error">{fieldErrors.websiteUrl}</span> : null}
+        </label>
+        <label className="form-field">
+          联系方式
+          <input
+            className="input-shell mt-2"
+            type="text"
+            placeholder="Telegram / 邮箱 / 微信"
+            value={state.contactInfo}
+            onChange={(event) => updateField("contactInfo", event.target.value)}
+          />
+          {fieldErrors.contactInfo ? <span className="field-error">{fieldErrors.contactInfo}</span> : null}
+        </label>
+        <label className="form-field">
+          中转站简介
+          <textarea
+            className="input-shell mt-2 min-h-28"
+            placeholder="请提供中转站点的介绍，支持的模型、价格信息等等，这些信息将由社区运营志愿者整理后作为站点说明和价格表"
+            required
+            value={state.description}
+            onChange={(event) => updateField("description", event.target.value)}
+          />
+          {fieldErrors.description ? <span className="field-error">{fieldErrors.description}</span> : null}
+        </label>
+        <div className="surface-card p-3.5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="kicker !text-black/52">支持的模型及价格表</p>
+              <p className="mt-1 text-sm leading-6 text-black/66">每行包含 模型 / Input价格 / Output价格。</p>
+            </div>
+            <button className="button-cream !px-4 !py-2" type="button" onClick={addModelPriceRow}>添加一行</button>
+          </div>
+          <div className="mt-4 space-y-3">
+            {state.modelPrices.map((row, index) => (
+              <div key={row.id} className="grid gap-3 rounded-[1.5rem] border border-black/8 bg-white/80 p-3 md:grid-cols-[1.18fr_0.8fr_0.8fr_auto]">
+                <label className="form-field-inline">
+                  模型
+                  <input className="input-shell mt-2" type="text" placeholder="openai-gpt-5.4" value={row.modelKey} onChange={(event) => updateModelPriceRow(row.id, "modelKey", event.target.value)} />
+                </label>
+                <label className="form-field-inline">
+                  Input价格
+                  <input className="input-shell mt-2" type="number" min="0" step="0.0001" placeholder="4.6" value={row.inputPricePer1M} onChange={(event) => updateModelPriceRow(row.id, "inputPricePer1M", event.target.value)} />
+                </label>
+                <label className="form-field-inline">
+                  Output价格
+                  <input className="input-shell mt-2" type="number" min="0" step="0.0001" placeholder="13.2" value={row.outputPricePer1M} onChange={(event) => updateModelPriceRow(row.id, "outputPricePer1M", event.target.value)} />
+                </label>
+                <div className="flex items-end justify-end">
+                  <button className="button-cream !px-4 !py-2" type="button" onClick={() => removeModelPriceRow(row.id)}>
+                    {state.modelPrices.length === 1 && index === 0 ? "清空" : "删除"}
+                  </button>
+                </div>
+              </div>
+            ))}
+            {fieldErrors.modelPrices ? <span className="field-error">{fieldErrors.modelPrices}</span> : null}
+          </div>
+        </div>
+        <label className="form-field">
+          测试API Key
+          <input
+            className="input-shell mt-2"
+            type="password"
+            placeholder="sk-monitoring-or-relay-key"
+            required
+            value={state.testApiKey}
+            onChange={(event) => updateField("testApiKey", event.target.value)}
+          />
+          {fieldErrors.testApiKey ? <span className="field-error">{fieldErrors.testApiKey}</span> : null}
+        </label>
+        <button className="button-dark" disabled={submitting} type="submit">{submitting ? "提交中..." : "提交"}</button>
+        {result ? (
+          <div className="surface-card space-y-2 p-3.5">
+            <p className="text-sm form-feedback-success">提交成功，记录 ID：{result.id}</p>
+            {result.probe ? (
+              <>
+                <p className="text-sm leading-6 text-black/72">
+                  初始测试：{result.probe.ok ? "已通过" : "需要复核"} · {formatHealthStatusLabel(result.probe.healthStatus)}
+                  {result.probe.httpStatus ? ` · ${result.probe.httpStatus}` : ""}
+                </p>
+                {result.probe.message ? <p className="text-sm leading-6 text-black/58">{result.probe.message}</p> : null}
+              </>
+            ) : null}
+          </div>
+        ) : null}
+        {error ? <p className="text-sm form-feedback-error">{error}</p> : null}
+      </form>
+    </section>
+  );
+}
+
