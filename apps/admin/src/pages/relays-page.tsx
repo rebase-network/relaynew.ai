@@ -4,6 +4,7 @@ import { RelayEditorForm } from "../components/relay-editor-form";
 import { WorkflowDetailGrid, WorkflowMetricCard, WorkflowPriceTable, WorkflowSection } from "../components/relay-workflow";
 
 const {
+  clsx,
   Card,
   ConfirmDialog,
   ErrorCard,
@@ -17,7 +18,9 @@ const {
   formatCredentialStatus,
   formatDateTime,
   formatHealthStatus,
+  matchesSearchQuery,
   useLoadable,
+  useMemo,
   useMutationState,
   useState,
   validateRelayForm,
@@ -32,6 +35,9 @@ export function RelaysPage() {
   const [createMutation, setCreateMutation] = useMutationState();
   const [form, setForm] = useState<Shared.RelayFormState>(() => buildRelayFormState());
   const [fieldErrors, setFieldErrors] = useState<Shared.RelayFormErrors>({});
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "paused">("all");
+  const [highlightedRelayId, setHighlightedRelayId] = useState<string | null>(null);
 
   function resetCreateForm() {
     setForm(buildRelayFormState());
@@ -93,13 +99,16 @@ export function RelaysPage() {
 
     setCreateMutation({ pending: true, error: null, success: null });
     try {
-      await fetchJson("/admin/relays", {
+      const response = await fetchJson<{ ok: true; id: string }>("/admin/relays", {
         method: "POST",
         body: JSON.stringify(payload),
       });
+      setSearchQuery("");
+      setStatusFilter("all");
+      setHighlightedRelayId(response.id);
       await relays.reload();
       closeCreateDrawer();
-      setActionMutation({ pending: false, error: null, success: "Relay 已创建并加入当前列表。" });
+      setActionMutation({ pending: false, error: null, success: "Relay 已创建并加入当前列表，已在下方高亮显示。" });
     } catch (reason) {
       setCreateMutation({ pending: false, error: reason instanceof Error ? reason.message : "无法创建 Relay。", success: null });
     }
@@ -134,6 +143,31 @@ export function RelaysPage() {
     }
   }
 
+  const currentRelays = (relays.data?.rows ?? []).filter((relay) => relay.catalogStatus === "active" || relay.catalogStatus === "paused");
+  const activeCount = currentRelays.filter((relay) => relay.catalogStatus === "active").length;
+  const pausedCount = currentRelays.filter((relay) => relay.catalogStatus === "paused").length;
+  const filteredRelays = useMemo(
+    () =>
+      currentRelays.filter((relay) => {
+        if (statusFilter !== "all" && relay.catalogStatus !== statusFilter) {
+          return false;
+        }
+
+        return matchesSearchQuery(searchQuery, [
+          relay.name,
+          relay.slug,
+          relay.baseUrl,
+          relay.websiteUrl,
+          relay.contactInfo,
+          relay.description,
+          ...relay.modelPrices.map((row) => row.modelName ?? row.modelKey),
+          ...relay.modelPrices.map((row) => row.modelKey),
+        ]);
+      }),
+    [currentRelays, matchesSearchQuery, searchQuery, statusFilter],
+  );
+  const hasFilters = searchQuery.trim().length > 0 || statusFilter !== "all";
+
   if (relays.loading) {
     return <LoadingCard />;
   }
@@ -141,10 +175,6 @@ export function RelaysPage() {
   if (relays.error || !relays.data) {
     return <ErrorCard message={relays.error ?? "无法加载 Relay 列表。"} />;
   }
-
-  const currentRelays = relays.data.rows.filter((relay) => relay.catalogStatus === "active" || relay.catalogStatus === "paused");
-  const activeCount = currentRelays.filter((relay) => relay.catalogStatus === "active").length;
-  const pausedCount = currentRelays.filter((relay) => relay.catalogStatus === "paused").length;
 
   return (
     <>
@@ -171,20 +201,72 @@ export function RelaysPage() {
         </div>
 
         <div className="mt-5 space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <div>
+          <div className="flex flex-col gap-3 border-b border-white/10 pb-4 xl:flex-row xl:items-end xl:justify-between">
+            <div className="min-w-0">
               <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">当前 Relay</p>
               <p className="mt-1 text-lg tracking-[-0.03em]">面向运营的站点清单</p>
+              <p className="mt-2 text-sm text-white/48">
+                {hasFilters ? `筛选后显示 ${filteredRelays.length} / ${currentRelays.length} 条` : `共 ${currentRelays.length} 条`}
+              </p>
             </div>
-            <p className="text-sm text-white/48">共 {currentRelays.length} 条</p>
+            <div className="grid gap-2.5 md:grid-cols-[minmax(0,18rem)_10rem_auto]">
+              <label className="field-label">
+                搜索 Relay
+                <input
+                  className="field-input"
+                  placeholder="名称 / Base URL / 联系方式 / 模型"
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                />
+              </label>
+              <label className="field-label">
+                状态筛选
+                <select
+                  className="field-input"
+                  value={statusFilter}
+                  onChange={(event) => setStatusFilter(event.target.value as "all" | "active" | "paused")}
+                >
+                  <option value="all">全部</option>
+                  <option value="active">active</option>
+                  <option value="paused">paused</option>
+                </select>
+              </label>
+              {hasFilters ? (
+                <div className="flex items-end">
+                  <button
+                    className="pill pill-idle"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setStatusFilter("all");
+                    }}
+                    type="button"
+                  >
+                    清空筛选
+                  </button>
+                </div>
+              ) : null}
+            </div>
           </div>
 
           {currentRelays.length === 0 ? (
             <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-5 text-sm text-white/58">
               当前还没有 Relay。你可以点击右上角“手动添加 Relay”，或去提交记录中批准一个待审核站点。
             </div>
-          ) : currentRelays.map((relay) => (
-            <div key={relay.id} className="admin-list-card border border-white/10 bg-white/5 p-4">
+          ) : filteredRelays.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 px-4 py-5 text-sm text-white/56">
+              当前筛选条件下没有匹配的 Relay。你可以尝试清空搜索词或切换状态筛选。
+            </div>
+          ) : filteredRelays.map((relay) => (
+            <div
+              key={relay.id}
+              className={clsx(
+                "admin-list-card border bg-white/5 p-4",
+                relay.id === highlightedRelayId
+                  ? "border-[#ffd06a]/45 bg-white/[0.07] shadow-[rgba(255,208,106,0.16)_0_0_0_1px]"
+                  : "border-white/10",
+              )}
+            >
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div>
@@ -193,6 +275,7 @@ export function RelaysPage() {
                       <span className={relay.catalogStatus === "active" ? "pill pill-active !cursor-default" : "pill pill-idle !cursor-default"}>
                         {formatCatalogStatus(relay.catalogStatus)}
                       </span>
+                      {relay.id === highlightedRelayId ? <span className="pill pill-ghost !bg-[#ffd06a]/14 !text-[#ffe6a7]">刚创建</span> : null}
                     </div>
                     <p className="mt-1 text-xs uppercase tracking-[0.16em] text-white/40">{relay.slug}</p>
                     <p className="mt-3 text-sm break-all text-white/64">{relay.baseUrl}</p>
