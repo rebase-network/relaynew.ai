@@ -64,7 +64,8 @@ test("public site renders the main discovery flow", async ({ page }) => {
   await page.getByRole("link", { name: "All model lanes" }).click();
   await expect(page).toHaveURL(/\/leaderboard\/directory$/);
   await expect(page.getByText("Leaderboard directory")).toBeVisible();
-  await page.getByLabel("Search lanes").fill("Gemini");
+  await expect(page.getByLabel("Search lanes")).toHaveCount(0);
+  await page.getByRole("button", { name: "Google" }).click();
   await expect(page.getByRole("heading", { name: "Gemini 3.1" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Sonnet 4.6" })).toHaveCount(0);
 
