@@ -373,6 +373,10 @@ textarea {
     linear-gradient(180deg, rgba(255, 240, 194, 0.78), rgba(255, 250, 235, 0.96));
 }
 
+.home-leaderboard-panel {
+  padding-top: 0.9rem;
+}
+
 .hero-panel {
   min-height: 23rem;
   background:
@@ -1362,6 +1366,10 @@ textarea {
   .panel,
   .hero-panel {
     padding: 1.45rem;
+  }
+
+  .home-leaderboard-panel {
+    padding-top: 1.1rem;
   }
 
   .leaderboard-model-switcher {
