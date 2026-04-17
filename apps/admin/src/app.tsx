@@ -265,6 +265,19 @@ function buildCredentialRoute(params: {
   return suffix ? `/credentials?${suffix}` : "/credentials";
 }
 
+function getRelayOptionLabel(relay: AdminRelaysResponse["rows"][number]) {
+  return relay.catalogStatus === "archived" ? `${relay.name} · archived` : relay.name;
+}
+
+function buildRelaySelectOptions(
+  relays: AdminRelaysResponse["rows"],
+  selectedRelayId?: string | null,
+) {
+  return relays.filter(
+    (relay) => relay.catalogStatus !== "archived" || (selectedRelayId ? relay.id === selectedRelayId : false),
+  );
+}
+
 function validateRelayForm(form: AdminRelayUpsert) {
   const payload: AdminRelayUpsert = {
     slug: trimString(form.slug),
@@ -1358,7 +1371,7 @@ function CredentialsPage() {
     }));
   }, [requestedOwnerId, requestedOwnerType]);
 
-  const relayOwnerOptions = relays.data?.rows ?? [];
+  const relayOwnerOptions = buildRelaySelectOptions(relays.data?.rows ?? [], createForm.ownerId);
   const submissionOwnerOptions = submissions.data?.rows ?? [];
 
   async function reloadCredentialViews(nextSelectedId?: string | null) {
@@ -1574,7 +1587,7 @@ function CredentialsPage() {
                 {createForm.ownerType === "relay"
                   ? relayOwnerOptions.map((owner) => (
                       <option key={owner.id} value={owner.id}>
-                        {owner.name}
+                        {getRelayOptionLabel(owner)}
                       </option>
                     ))
                   : submissionOwnerOptions.map((owner) => (
@@ -1749,6 +1762,7 @@ function SponsorsPage() {
   });
   const [fieldErrors, setFieldErrors] = useState<SponsorFormErrors>({});
   const [mutation, setMutation] = useMutationState();
+  const relayOptions = buildRelaySelectOptions(relays.data?.rows ?? [], form.relayId);
 
   async function createSponsor() {
     const { errors, payload } = validateSponsorForm(form);
@@ -1794,7 +1808,7 @@ function SponsorsPage() {
         <div className="grid gap-2.5">
           <label className="field-label">Name<input className="field-input" placeholder="Homepage spotlight" value={form.name} onChange={(event) => { setForm((current) => ({ ...current, name: event.target.value })); setFieldErrors((current) => withoutFieldError(current, "name")); setMutation((current) => ({ ...current, error: null })); }} /><FieldError message={fieldErrors.name} /></label>
           <label className="field-label">Placement<input className="field-input" placeholder="homepage-spotlight" value={form.placement} onChange={(event) => { setForm((current) => ({ ...current, placement: event.target.value })); setFieldErrors((current) => withoutFieldError(current, "placement")); setMutation((current) => ({ ...current, error: null })); }} /><FieldError message={fieldErrors.placement} /></label>
-          <label className="field-label">Relay<select className="field-input" value={form.relayId} onChange={(event) => setForm((current) => ({ ...current, relayId: event.target.value }))}><option value="">Unbound sponsor</option>{relays.data.rows.map((relay) => <option key={relay.id} value={relay.id}>{relay.name}</option>)}</select></label>
+          <label className="field-label">Relay<select className="field-input" value={form.relayId} onChange={(event) => setForm((current) => ({ ...current, relayId: event.target.value }))}><option value="">Unbound sponsor</option>{relayOptions.map((relay) => <option key={relay.id} value={relay.id}>{getRelayOptionLabel(relay)}</option>)}</select></label>
           <label className="field-label">Status<select className="field-input" value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value as SponsorFormState["status"] }))}><option value="active">active</option><option value="draft">draft</option><option value="paused">paused</option><option value="ended">ended</option></select></label>
           <label className="field-label">Start<input className="field-input" placeholder="2026-04-16T00:00:00.000Z" value={form.startAt} onChange={(event) => { setForm((current) => ({ ...current, startAt: event.target.value })); setFieldErrors((current) => withoutFieldError(current, "startAt")); setMutation((current) => ({ ...current, error: null })); }} /><FieldError message={fieldErrors.startAt} /></label>
           <label className="field-label">End<input className="field-input" placeholder="2026-05-16T00:00:00.000Z" value={form.endAt} onChange={(event) => { setForm((current) => ({ ...current, endAt: event.target.value })); setFieldErrors((current) => withoutFieldError(current, "endAt")); setMutation((current) => ({ ...current, error: null })); }} /><FieldError message={fieldErrors.endAt} /></label>
@@ -1821,6 +1835,7 @@ function PricesPage() {
   });
   const [fieldErrors, setFieldErrors] = useState<PriceFormErrors>({});
   const [mutation, setMutation] = useMutationState();
+  const relayOptions = buildRelaySelectOptions(relays.data?.rows ?? [], form.relayId);
 
   async function createPrice() {
     const { errors, payload } = validatePriceForm(form);
@@ -1864,7 +1879,7 @@ function PricesPage() {
       </Card>
       <Card title="Create price record" kicker="Pricing ops">
         <div className="grid gap-2.5">
-          <label className="field-label">Relay<select className="field-input" value={form.relayId} onChange={(event) => { setForm((current) => ({ ...current, relayId: event.target.value })); setFieldErrors((current) => withoutFieldError(current, "relayId")); setMutation((current) => ({ ...current, error: null })); }}><option value="">Select relay</option>{relays.data.rows.map((relay) => <option key={relay.id} value={relay.id}>{relay.name}</option>)}</select><FieldError message={fieldErrors.relayId} /></label>
+          <label className="field-label">Relay<select className="field-input" value={form.relayId} onChange={(event) => { setForm((current) => ({ ...current, relayId: event.target.value })); setFieldErrors((current) => withoutFieldError(current, "relayId")); setMutation((current) => ({ ...current, error: null })); }}><option value="">Select relay</option>{relayOptions.map((relay) => <option key={relay.id} value={relay.id}>{getRelayOptionLabel(relay)}</option>)}</select><FieldError message={fieldErrors.relayId} /></label>
           <label className="field-label">Model<select className="field-input" value={form.modelId} onChange={(event) => { setForm((current) => ({ ...current, modelId: event.target.value })); setFieldErrors((current) => withoutFieldError(current, "modelId")); setMutation((current) => ({ ...current, error: null })); }}><option value="">Select model</option>{models.data.rows.map((model) => <option key={model.id} value={model.id}>{model.name}</option>)}</select><FieldError message={fieldErrors.modelId} /></label>
           <label className="field-label">Input price<input className="field-input" type="number" min="0" step="0.01" value={form.inputPricePer1M} onChange={(event) => { setForm((current) => ({ ...current, inputPricePer1M: event.target.value })); setFieldErrors((current) => withoutFieldError(current, "inputPricePer1M")); setMutation((current) => ({ ...current, error: null })); }} /><FieldError message={fieldErrors.inputPricePer1M} /></label>
           <label className="field-label">Output price<input className="field-input" type="number" min="0" step="0.01" value={form.outputPricePer1M} onChange={(event) => { setForm((current) => ({ ...current, outputPricePer1M: event.target.value })); setFieldErrors((current) => withoutFieldError(current, "outputPricePer1M")); setMutation((current) => ({ ...current, error: null })); }} /><FieldError message={fieldErrors.outputPricePer1M} /></label>

@@ -198,6 +198,34 @@ test("admin can soft delete a relay without removing its row", async ({ page, re
   await expect(page.getByText("Soft-deleted rows kept in the system")).toBeVisible();
   await expect(archivedCard).toContainText(/archived/i);
 
+  await openAdmin(page, "/credentials");
+  const keyCreateCard = page.locator("section.card").filter({
+    has: page.getByRole("heading", { name: "Attach key", exact: true }),
+  }).first();
+  const ownerRecordSelect = keyCreateCard.getByLabel("Owner record");
+  await expect(ownerRecordSelect.locator("option").filter({ hasText: relayName })).toHaveCount(0);
+
+  await openAdmin(page, "/relays");
+  const archivedRelayCard = page
+    .locator(".admin-list-card")
+    .filter({ hasText: relayName })
+    .filter({ has: page.getByText("Archived", { exact: true }) })
+    .first();
+  await archivedRelayCard.getByRole("link", { name: "Manage key" }).click();
+  await expect(page).toHaveURL(/\/credentials\?/);
+  const prefilledOwnerSelect = page
+    .locator("section.card")
+    .filter({ has: page.getByRole("heading", { name: "Attach key", exact: true }) })
+    .first()
+    .getByLabel("Owner record");
+  await expect(prefilledOwnerSelect.locator("option").filter({ hasText: `${relayName} · archived` })).toHaveCount(1);
+
+  await openAdmin(page, "/sponsors");
+  await expect(page.getByLabel("Relay").locator("option").filter({ hasText: relayName })).toHaveCount(0);
+
+  await openAdmin(page, "/prices");
+  await expect(page.getByLabel("Relay").locator("option").filter({ hasText: relayName })).toHaveCount(0);
+
   const after = await readOverviewTotals(page);
   expect(after.relays).toBe(before.relays + 1);
 });
