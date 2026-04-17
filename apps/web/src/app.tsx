@@ -3668,7 +3668,7 @@ function ProbePage() {
           </form>
         </section>
 
-        <Panel title="探测结果" kicker={result ? "诊断输出" : error ? "请求失败" : "等待输入"} className={!result && !error ? "panel-soft" : ""}>
+        <Panel title="测试结果" kicker={result ? "诊断输出" : error ? "请求失败" : "等待输入"} className={!result && !error ? "panel-soft" : ""}>
           {result ? (
             <>
               <div className={clsx("mb-5 border px-4 py-4", resultTone?.className)}>
