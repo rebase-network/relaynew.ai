@@ -2661,16 +2661,16 @@ function RelayModelsTable({ rows }: { rows: RelayModelPricingRow[] }) {
         <thead>
           <tr className="border-b border-black/10">
             <th className="pb-2.5">Model</th>
-            <th className="whitespace-nowrap pb-2.5">Status</th>
-            <th className="whitespace-nowrap pb-2.5 text-right">Input</th>
-            <th className="whitespace-nowrap pb-2.5 text-right">Output</th>
+            <th className="w-[5.5rem] whitespace-nowrap pb-2.5">Status</th>
+            <th className="w-[5.5rem] whitespace-nowrap pb-2.5 text-right">Input</th>
+            <th className="w-[5.7rem] whitespace-nowrap pb-2.5 text-right">Output</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => (
             <tr key={row.modelKey} className="align-top">
               <td className="border-b border-black/8 py-3 pr-3 last:border-b-0">
-                <p className="break-words text-[0.96rem] leading-5 tracking-[-0.03em]">{row.modelName}</p>
+                <p className="break-words text-[0.96rem] leading-5 tracking-[-0.03em] [overflow-wrap:anywhere]">{row.modelName}</p>
                 <p className="mt-1 font-mono text-[0.64rem] uppercase tracking-[0.16em] text-black/44">{row.vendor}</p>
               </td>
               <td className="border-b border-black/8 py-3 pr-3 text-[0.68rem] uppercase tracking-[0.18em] text-black/52 whitespace-nowrap last:border-b-0">
@@ -2875,7 +2875,7 @@ function RelayPage() {
                   </div>
                 ))}
               </div>
-              <div className="hidden lg:grid lg:grid-cols-2 lg:gap-4">
+              <div className="hidden lg:grid lg:grid-cols-2 lg:gap-3 xl:gap-4">
                 {modelTableColumns.map((rows, index) => (
                   <RelayModelsTable key={index} rows={rows} />
                 ))}
