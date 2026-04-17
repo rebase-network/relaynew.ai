@@ -2238,7 +2238,7 @@ function LeaderboardIndexPage() {
           </div>
           <div className="flex flex-wrap gap-2.5 xl:justify-end">
             <Link className="button-dark" to="/leaderboard">打开实时榜单</Link>
-            <Link className="button-cream" to="/probe">开始探测</Link>
+            <Link className="button-cream" to="/probe">开始测试</Link>
           </div>
         </div>
       </section>
