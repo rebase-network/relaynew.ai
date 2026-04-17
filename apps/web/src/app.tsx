@@ -2342,7 +2342,7 @@ function LeaderboardPage() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2.5">
-            <Link className="button-dark" to={LEADERBOARD_DIRECTORY_PATH}>全部模型赛道</Link>
+            <Link className="button-dark" to={LEADERBOARD_DIRECTORY_PATH}>全部模型</Link>
             <Link className="button-cream" to="/probe">开始探测</Link>
           </div>
         </div>
