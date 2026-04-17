@@ -2374,7 +2374,7 @@ function LeaderboardPage() {
         <div className="surface-card p-4">
           <p className="kicker">评测排名</p>
           <p className="mt-3 text-sm leading-6 text-black/72">
-            下方表格只由公开测量结果生成，综合可用性、延迟、稳定性与价格效率，不接受赞助调位。
+            下方排行榜是基于站点提供者提交的API信息进行自动化测试的结果生成，综合可用性、延迟、稳定性、价格和可信度进行评价，不接受赞助调位
           </p>
         </div>
         <div className="surface-card p-4">
