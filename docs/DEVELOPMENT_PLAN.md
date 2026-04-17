@@ -15,7 +15,7 @@ The following decisions are already in place and should be treated as the starti
 
 ## Current Delivery Status
 
-As of `2026-04-17`, the repository is no longer in greenfield setup mode.
+As of `2026-04-18`, the repository is no longer in greenfield setup mode.
 
 Implemented and in daily use:
 - monorepo workspace with `web`, `admin`, `api`, `api-edge`, and `shared`
@@ -30,6 +30,58 @@ Implemented and in daily use:
 
 The remaining work is primarily launch hardening and coverage refinement rather than
 initial scaffolding.
+
+## Current Reprioritization
+
+The next implementation stage is no longer "add more standalone admin pages".
+The priority is to simplify the operator workflow, tighten the relay lifecycle rules,
+and reduce the maintenance cost caused by oversized frontend entry files.
+
+### Product Direction
+
+- converge admin operations around two main centers:
+  - `提交记录`: current queue + history
+  - `Relay`: active/paused list + archived history + full editor
+- treat `提交记录` as the review trail rather than the long-term working surface:
+  - `pending` submissions stay in the current queue
+  - `approved` submissions move to submission history and create or link a relay entry
+  - `rejected` and `archived` submissions also live only in submission history
+- treat the relay catalog as the long-term operational surface:
+  - `active` relays are monitored and may appear in the public directory and leaderboard
+  - `paused` relays stay editable and may be reactivated, but are excluded from testing
+    and public exposure
+  - `archived` relays move out of the main relay list into relay history and may be
+    reactivated when needed
+- make the relay editor the main place for day-to-day relay maintenance, including:
+  - site name
+  - site website
+  - contact info
+  - site description
+  - `Base URL`
+  - test `API Key`
+  - supported models and per-model input/output prices
+- let admins manually create relay records directly in the relay catalog rather than
+  forcing all entries to originate from public submissions
+- keep API key rotation and recovery as admin-only actions attached to the relay
+  record or backend workflow, not as a separate primary navigation center
+
+### Engineering Direction
+
+- keep the data model normalized instead of collapsing everything into a single table;
+  extend the schema and contracts where needed, such as relay/submission contact info
+  and submission-scoped model-price rows
+- update backend lifecycle rules so only `relays.status = 'active'` enters scheduled
+  monitoring, public directory reads, and leaderboard snapshots
+- refactor `apps/admin` and `apps/web` by page and feature boundaries so oversized
+  `app.tsx` files are split into route pages, feature modules, shared hooks, and
+  reusable presentation components
+- preserve Chinese-first UX for operators, normal users, and relay operators while
+  restructuring the code and information architecture
+- expand acceptance coverage around the full approval-to-public path, especially:
+  - submission approval moving records into history
+  - manual relay creation
+  - relay pause/archive/reactivation
+  - active-only public visibility and monitoring
 
 ## Delivery Principles
 
@@ -246,24 +298,46 @@ Exit criteria:
 ## Phase 8: Admin, Submit, And Sponsor Operations
 
 Goal:
-- provide the minimum operational tooling needed to run the site
+- provide the minimum operational tooling needed to run the site, then simplify that
+  tooling into a smaller day-to-day operator surface
 
 Work items:
-- implement admin routes for:
-  - relay management
-  - submission review
+- reshape admin routes around the long-term target workflow:
+  - submission queue
+  - submission history
+  - relay list
+  - relay history
+  - relay editor
   - sponsor placement management
-  - price record management
+  - low-frequency model settings when needed
 - localize admin, submit, and probe experiences for Chinese operators and users
 - allow operators to inspect and, when necessary, override a relay's stored
   compatibility mode without changing natural ranking logic
 - implement submit flow for relay intake
+- extend the submit form and relay editor so both can express:
+  - site name
+  - site website
+  - contact info
+  - site description
+  - `Base URL`
+  - test `API Key`
+  - repeatable model/price rows with `model`, `input price`, and `output price`
+- make approval move a submission out of the current queue and into submission history
+  while creating or linking the relay record in the relay catalog
+- allow admins to create relay records manually without a preceding public submission
+- treat relay API key rotation and recovery as relay-owned operations rather than a
+  separate primary workspace
+- enforce that only active relays participate in monitoring, public directory views,
+  and leaderboard generation
 - ensure sponsor placement is rendered separately from natural ranking
 - treat `sponsors` as the public source of truth for paid placement windows
 - add Playwright acceptance coverage for critical admin operations
 
 Exit criteria:
-- operators can review submissions and maintain catalog data
+- operators can review pending submissions, inspect historical review outcomes, and
+  maintain relay catalog data from a smaller navigation surface
+- approved submissions no longer remain in the active intake list after handoff
+- only active relays are probed and exposed publicly
 - sponsor workflow does not affect natural ranking logic
 - critical admin flows pass browser-based acceptance coverage
 
@@ -317,10 +391,18 @@ Exit criteria:
 ## Immediate Next Steps
 
 The most efficient next implementation sequence is:
-1. keep architecture, route, localization, and API contract docs aligned with the shipped UI and public API surface
-2. close the remaining public probe hardening gaps, especially redirect, DNS/IP blocking, and redaction-focused automated tests
-3. continue public Chinese UX polish and responsive QA for homepage, leaderboard, submit, and test flows
-4. finish launch-hardening work for cache rules, runbooks, and staging verification
+1. land the simplified admin and relay lifecycle plan in the planning docs, then align
+   schema and shared contracts around submission history, relay statuses, contact info,
+   and model-price rows
+2. rebuild the admin information architecture around `提交记录` and `Relay` so approval,
+   rejection, archiving, manual relay creation, and relay editing follow one consistent
+   Chinese-first workflow
+3. tighten backend rules so only active relays are monitored and appear in the public
+   directory and leaderboard
+4. split oversized `apps/admin/src/app.tsx` and `apps/web/src/app.tsx` into page and
+   feature modules before expanding the operator UI further
+5. extend Playwright and API coverage around approval handoff, paused/archived relays,
+   relay reactivation, and public visibility gating
 
 ## Notes
 
