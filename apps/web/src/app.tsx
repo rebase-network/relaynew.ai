@@ -140,17 +140,6 @@ const LEADERBOARD_VENDOR_LABELS: Record<string, string> = {
   google: "Google",
 };
 
-type LeaderboardHealthFilter = "all" | HealthStatus;
-
-const LEADERBOARD_HEALTH_FILTERS: Array<{ value: LeaderboardHealthFilter; label: string }> = [
-  { value: "all", label: "All" },
-  { value: "healthy", label: "Healthy" },
-  { value: "degraded", label: "Degraded" },
-  { value: "down", label: "Down" },
-  { value: "paused", label: "Paused" },
-  { value: "unknown", label: "Unknown" },
-];
-
 function formatProbeCompatibilityMode(mode: ProbeResolvedCompatibilityMode | null | undefined) {
   return mode ? PROBE_COMPATIBILITY_LABELS[mode] : "Not detected";
 }
@@ -1296,46 +1285,24 @@ function HomePageSkeleton() {
         </div>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
-        <section className="panel">
-          <div className="mb-4 space-y-2">
-            <SkeletonBlock className="skeleton-kicker max-w-[7rem]" />
-            <SkeletonBlock className="skeleton-heading-md max-w-[14rem]" />
-          </div>
-          <div className="space-y-3">
-            {Array.from({ length: 3 }).map((_, index) => (
-              <div key={index} className="surface-card p-3.5">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="space-y-2">
-                    <SkeletonBlock className="skeleton-line max-w-[9rem]" />
-                    <SkeletonBlock className="skeleton-pill w-[5.2rem]" />
-                  </div>
-                  <SkeletonBlock className="skeleton-pill w-[5.8rem]" />
+      <section className="panel">
+        <div className="mb-4 space-y-2">
+          <SkeletonBlock className="skeleton-kicker max-w-[7rem]" />
+          <SkeletonBlock className="skeleton-heading-md max-w-[14rem]" />
+        </div>
+        <div className="grid gap-3 lg:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="surface-card p-3.5">
+              <div className="flex items-center justify-between gap-4">
+                <div className="space-y-2">
+                  <SkeletonBlock className="skeleton-line max-w-[9rem]" />
+                  <SkeletonBlock className="skeleton-pill w-[5.2rem]" />
                 </div>
+                <SkeletonBlock className="skeleton-pill w-[5.8rem]" />
               </div>
-            ))}
-          </div>
-        </section>
-        <section className="panel">
-          <div className="mb-4 space-y-2">
-            <SkeletonBlock className="skeleton-kicker max-w-[8rem]" />
-            <SkeletonBlock className="skeleton-heading-md max-w-[12rem]" />
-          </div>
-          <div className="space-y-3">
-            {Array.from({ length: 2 }).map((_, index) => (
-              <div key={index} className="surface-card p-3.5">
-                <div className="flex items-center justify-between gap-4">
-                  <SkeletonBlock className="skeleton-line max-w-[11rem]" />
-                  <SkeletonBlock className="skeleton-pill w-[5.8rem]" />
-                </div>
-                <div className="mt-3 space-y-2">
-                  <SkeletonBlock className="skeleton-line" />
-                  <SkeletonBlock className="skeleton-line max-w-[80%]" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+            </div>
+          ))}
+        </div>
       </section>
     </div>
   );
@@ -1951,38 +1918,37 @@ function HomePage() {
         </div>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
-        <Panel title="Watchlist" kicker="Relays to watch">
-          <div className="space-y-3">
-            {data.highlights.map((relay) => (
-              <Link key={relay.slug} to={`/relay/${relay.slug}`} className="surface-link flex items-center justify-between gap-4 p-3.5">
-                <div>
-                  <p className="text-xl tracking-[-0.03em]">{relay.name}</p>
-                  <p className="mt-2"><span className="signal-chip">{relay.badge}</span></p>
-                </div>
-                <div className="flex items-center gap-2 text-sm uppercase tracking-[0.12em]"><StatusDot status={relay.healthStatus} /> {relay.healthStatus}</div>
-              </Link>
-            ))}
+      <section className="panel">
+        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-2">
+            <p className="kicker">Relays to watch</p>
+            <h2 className="text-3xl leading-[0.95] tracking-[-0.04em] md:text-[2.9rem]">Watchlist</h2>
           </div>
-        </Panel>
-        <Panel title="Incidents" kicker="Recent disruptions">
-          <div className="space-y-3">
-            {data.latestIncidents.length === 0 ? (
-              <p className="text-sm text-black/65">No incidents recorded in the current snapshot.</p>
-            ) : (
-              data.latestIncidents.map((incident) => (
-                <div key={incident.id} className="surface-card p-3.5">
-                  <div className="flex items-center justify-between gap-4">
-                    <p className="text-xl tracking-[-0.03em]">{incident.title}</p>
-                    <div className="flex items-center gap-2 text-sm uppercase tracking-[0.16em]"><StatusDot status={incident.severity} /> {incident.severity}</div>
-                  </div>
-                  <p className="mt-2 text-sm text-black/70">{incident.summary}</p>
-                  <p className="mt-4 text-xs uppercase tracking-[0.14em] text-black/50">{incident.relay.name} · {new Date(incident.startedAt).toLocaleString()}</p>
+          <p className="max-w-2xl text-sm leading-6 text-black/68">
+            Operators building positive evidence and strong price coverage, with direct access into each relay detail page.
+          </p>
+        </div>
+        <div className="grid gap-3 lg:grid-cols-2">
+          {data.highlights.map((relay) => (
+            <Link
+              key={relay.slug}
+              to={`/relay/${relay.slug}`}
+              className="surface-link flex h-full items-center justify-between gap-4 p-3.5"
+            >
+              <div className="min-w-0">
+                <p className="text-[1.22rem] tracking-[-0.03em]">{relay.name}</p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className="signal-chip">{relay.badge}</span>
                 </div>
-              ))
-            )}
-          </div>
-        </Panel>
+              </div>
+              <div className="shrink-0 text-right">
+                <div className="flex items-center justify-end gap-2 text-sm uppercase tracking-[0.12em]">
+                  <StatusDot status={relay.healthStatus} /> {relay.healthStatus}
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
       </section>
     </div>
   );
@@ -2138,109 +2104,24 @@ function LeaderboardIndexPage() {
 
 function LeaderboardPage() {
   const { modelKey = DEFAULT_LEADERBOARD_MODEL_KEY } = useParams();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const limit = searchParams.get("limit") ?? "20";
-  const rowQuery = searchParams.get("q")?.trim() ?? "";
-  const rawHealthFilter = searchParams.get("health");
-  const healthFilter: LeaderboardHealthFilter = LEADERBOARD_HEALTH_FILTERS.some(
-    (option) => option.value === rawHealthFilter,
-  )
-    ? (rawHealthFilter as LeaderboardHealthFilter)
-    : "all";
   const directory = useLoadable<LeaderboardDirectoryResponse>(
     "/public/leaderboard-directory",
     () => fetchJson("/public/leaderboard-directory"),
     [],
   );
-  const leaderboardCacheKey = `/public/leaderboard/${modelKey}?limit=${limit}`;
+  const leaderboardCacheKey = `/public/leaderboard/${modelKey}?limit=50`;
   const { data, loading, error } = useLoadable<LeaderboardResponse>(
     leaderboardCacheKey,
     () => fetchJson(leaderboardCacheKey),
-    [modelKey, limit],
+    [modelKey],
   );
   const rows = data?.rows ?? [];
-
-  const filteredRows = useMemo(() => {
-    const normalizedQuery = rowQuery.toLowerCase();
-
-    return rows.filter((row) => {
-      const matchesHealth = healthFilter === "all" || row.healthStatus === healthFilter;
-      const matchesQuery =
-        normalizedQuery.length === 0 ||
-        row.relay.name.toLowerCase().includes(normalizedQuery) ||
-        row.relay.slug.toLowerCase().includes(normalizedQuery) ||
-        row.badges.some((badge) => badge.toLowerCase().includes(normalizedQuery));
-
-      return matchesHealth && matchesQuery;
-    });
-  }, [healthFilter, rowQuery, rows]);
-
-  const healthFilterOptions = useMemo(
-    () =>
-      LEADERBOARD_HEALTH_FILTERS.filter((option) => {
-        if (option.value === "all" || option.value === healthFilter) {
-          return true;
-        }
-
-        return rows.some((row) => row.healthStatus === option.value);
-      }).map((option) => ({
-        ...option,
-        count:
-          option.value === "all"
-            ? rows.length
-            : rows.filter((row) => row.healthStatus === option.value).length,
-      })),
-    [healthFilter, rows],
-  );
   const trackedRelayCount = rows.length;
   const healthyRelayCount = rows.filter((row) => row.healthStatus === "healthy").length;
   const degradedRelayCount = rows.filter((row) => row.healthStatus === "degraded").length;
-  const hasActiveFilters = rowQuery.length > 0 || healthFilter !== "all" || limit !== "20";
-  const resultsSummary = `Showing ${filteredRows.length} of ${trackedRelayCount} rows${rowQuery ? ` for "${rowQuery}"` : ""}`;
-
-  const leaderboardSearch = searchParams.toString();
 
   if (loading) return <LeaderboardPageSkeleton />;
   if (error || !data) return <ErrorPanel message={error ?? "Unable to load leaderboard."} />;
-
-  function updateLeaderboardFilters(next: {
-    limit?: string;
-    q?: string;
-    health?: LeaderboardHealthFilter;
-  }) {
-    const params = new URLSearchParams(searchParams);
-
-    if (next.limit !== undefined) {
-      if (next.limit === "20") {
-        params.delete("limit");
-      } else {
-        params.set("limit", next.limit);
-      }
-    }
-
-    if (next.q !== undefined) {
-      const value = next.q.trim();
-      if (value) {
-        params.set("q", value);
-      } else {
-        params.delete("q");
-      }
-    }
-
-    if (next.health !== undefined) {
-      if (next.health === "all") {
-        params.delete("health");
-      } else {
-        params.set("health", next.health);
-      }
-    }
-
-    setSearchParams(params);
-  }
-
-  function resetLeaderboardFilters() {
-    setSearchParams(new URLSearchParams());
-  }
 
   return (
     <div className="space-y-6">
@@ -2282,10 +2163,7 @@ function LeaderboardPage() {
                     "leaderboard-model-pill",
                     board.modelKey === data.model.key && "leaderboard-model-pill-active",
                   )}
-                  to={{
-                    pathname: getLeaderboardPath(board.modelKey),
-                    search: leaderboardSearch ? `?${leaderboardSearch}` : "",
-                  }}
+                  to={getLeaderboardPath(board.modelKey)}
                 >
                   {board.modelName}
                 </Link>
@@ -2294,73 +2172,11 @@ function LeaderboardPage() {
           </div>
         </section>
       ) : null}
-      <section className="leaderboard-row-filters">
-        <div className="leaderboard-filter-header">
-          <div>
-            <p className="kicker">Search and filters</p>
-            <p className="directory-filter-meta">{resultsSummary}</p>
-          </div>
-          {hasActiveFilters ? (
-            <button
-              className="leaderboard-filter-reset"
-              onClick={resetLeaderboardFilters}
-              type="button"
-            >
-              Reset filters
-            </button>
-          ) : null}
-        </div>
-        <div className="leaderboard-row-filter-grid">
-          <label className="directory-search">
-            <span className="directory-search-label">Search relays</span>
-            <input
-              aria-label="Search relays"
-              className="input-shell"
-              onChange={(event) => updateLeaderboardFilters({ q: event.target.value })}
-              placeholder="Search relay name, slug, or badge"
-              type="search"
-              value={rowQuery}
-            />
-          </label>
-          <label className="directory-search">
-            <span className="directory-search-label">Rows</span>
-            <select
-              aria-label="Rows"
-              className="input-shell"
-              value={limit}
-              onChange={(event) => updateLeaderboardFilters({ limit: event.target.value })}
-            >
-              <option value="10">10</option>
-              <option value="20">20</option>
-              <option value="50">50</option>
-            </select>
-          </label>
-        </div>
-        <div className="leaderboard-filter-footer">
-          <div className="directory-vendor-row">
-            {healthFilterOptions.map((option) => (
-              <button
-                key={option.value}
-                className={clsx(
-                  "directory-filter-chip",
-                  healthFilter === option.value && "directory-filter-chip-active",
-                )}
-                onClick={() => updateLeaderboardFilters({ health: option.value })}
-                type="button"
-              >
-                {option.label}
-                <span className="leaderboard-chip-count">{option.count}</span>
-              </button>
-            ))}
-          </div>
-          <p className="directory-filter-meta">Health filters stay in sync with the current board and search matches relay name, slug, or badge.</p>
-        </div>
-      </section>
-      <Panel title="Ranked relay rows" kicker={hasActiveFilters ? "Filtered ranking" : "Natural ranking"}>
-        {filteredRows.length ? (
+      <Panel title="Ranked relay rows" kicker="Natural ranking">
+        {rows.length ? (
           <>
             <div className="space-y-3 md:hidden">
-              {filteredRows.map((row) => (
+              {rows.map((row) => (
                 <LeaderboardRowCard key={row.relay.slug} row={row} />
               ))}
             </div>
@@ -2379,7 +2195,7 @@ function LeaderboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredRows.map((row) => (
+                  {rows.map((row) => (
                     <tr key={row.relay.slug} className="align-top">
                       <td className="py-3 text-2xl tracking-[-0.04em]">#{row.rank}</td>
                       <td className="py-3">
@@ -2401,17 +2217,10 @@ function LeaderboardPage() {
         ) : (
           <div className="directory-empty-state">
             <p className="kicker">No rows</p>
-            <h2 className="text-3xl leading-[0.96] tracking-[-0.04em]">No relays match this combination yet.</h2>
+            <h2 className="text-3xl leading-[0.96] tracking-[-0.04em]">No relays are ranked in this lane yet.</h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-black/68">
-              Clear the search term or switch the health filter to bring the full ranked table back.
+              Check back after the next measurement cycle or open another model lane from the board switcher.
             </p>
-            <button
-              className="button-cream mt-5"
-              onClick={resetLeaderboardFilters}
-              type="button"
-            >
-              Reset filters
-            </button>
           </div>
         )}
       </Panel>

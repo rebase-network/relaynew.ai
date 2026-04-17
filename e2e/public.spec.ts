@@ -37,6 +37,8 @@ test("public site renders the main discovery flow", async ({ page }) => {
   await expect(page.getByRole("link", { name: "Run probe" })).toBeVisible();
   await expect(page.getByText("Quick probe")).toBeVisible();
   await expect(page.getByRole("link", { name: "Open the pro probe page" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Watchlist" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Incidents" })).toHaveCount(0);
 
   if (isDeployedRun) {
     await page.getByRole("link", { name: "Leaderboard" }).click();
@@ -82,18 +84,9 @@ test("public site renders the main discovery flow", async ({ page }) => {
   await gptBoardLink.click();
   await expect(page).toHaveURL(new RegExp(`${escapedBoardHref}$`));
   await expect(page.getByText("Ranked relay rows")).toBeVisible();
-  await page.getByLabel("Search relays").fill("Ember");
-  await expect(page.getByRole("link", { name: "Ember Gateway" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Aurora Relay" })).toHaveCount(0);
-  await expect(page.getByText(/Showing 1 of \d+ rows for "Ember"/)).toBeVisible();
-  await page.getByRole("button", { name: /Degraded/i }).click();
-  await expect(page.getByText("No relays match this combination yet.")).toBeVisible();
-  await page.locator(".directory-empty-state").getByRole("button", { name: "Reset filters" }).click();
   await expect(page.getByRole("link", { name: "Aurora Relay" })).toBeVisible();
-  await page.getByRole("button", { name: /Degraded/i }).click();
-  await expect(page.getByRole("link", { name: "Solstice Router" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Ember Gateway" })).toHaveCount(0);
-  await page.getByRole("button", { name: /All/i }).click();
+  await expect(page.getByText("Search and filters")).toHaveCount(0);
+  await expect(page.getByLabel("Search relays")).toHaveCount(0);
 
   await page.getByRole("link", { name: "Aurora Relay" }).first().click();
   await expect(page).toHaveURL(/relay\/aurora-relay/);
