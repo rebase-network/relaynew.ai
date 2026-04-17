@@ -2353,9 +2353,6 @@ function LeaderboardPage() {
             <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
               <div>
                 <p className="kicker">切换模型赛道</p>
-                <p className="text-sm leading-6 text-black/68">
-                  无需离开当前页面，就能快速切换到其他已跟踪榜单。
-                </p>
               </div>
               <p className="directory-filter-meta">共 {directory.data.boards.length} 个已跟踪赛道</p>
             </div>
