@@ -2057,7 +2057,6 @@ function HomePage() {
       <section className="panel hero-panel min-h-0">
         <div className="grid gap-5 xl:grid-cols-[0.98fr_1.02fr] xl:items-start">
           <div className="order-2 md:order-1">
-            <p className="kicker text-black/70">Relay 情报台</p>
             <h1 className="max-w-4xl text-[3rem] leading-[0.92] tracking-[-0.07em] md:text-5xl xl:text-[4rem]">
               快速发现优质 relay，检测自己的端点，并提交进入公开目录。
             </h1>
