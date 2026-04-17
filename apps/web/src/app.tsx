@@ -2350,10 +2350,7 @@ function LeaderboardPage() {
       {directory.data?.boards.length ? (
         <section className="panel-soft border border-black/8 px-4 py-4">
           <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-              <div>
-                <p className="kicker">切换模型赛道</p>
-              </div>
+            <div className="flex justify-end">
               <p className="directory-filter-meta">共 {directory.data.boards.length} 个已跟踪赛道</p>
             </div>
             <div className="leaderboard-model-switcher">
