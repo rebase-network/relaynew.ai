@@ -92,9 +92,10 @@ export function HomePage() {
 
   return (
     <div className="space-y-5">
-      <section className="panel hero-panel min-h-0">
-        <div className="grid gap-5 xl:grid-cols-[0.98fr_1.02fr] xl:items-start">
+      <section className="panel hero-panel home-hero-panel min-h-0">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.14fr)_24rem] xl:items-start">
           <div className="order-2 md:order-1">
+            <p className="kicker !mb-3 !text-black/60">公开目录与实测榜单</p>
             <h1 className="max-w-4xl text-[3rem] leading-[0.92] tracking-[-0.07em] md:text-5xl xl:text-[4rem]">
               发现优质中转站点，快速测试API可用性，建立公开站点目录
             </h1>
@@ -106,8 +107,22 @@ export function HomePage() {
               <Link className="button-cream" to="/probe">开始测试</Link>
               <Link className="button-cream" to="/submit">提交站点</Link>
             </div>
+            <div className="home-hero-metrics">
+              <div className="home-hero-metric">
+                <p className="home-hero-metric-label">已收录站点</p>
+                <p className="home-hero-metric-value">{data.hero.totalRelays}</p>
+              </div>
+              <div className="home-hero-metric">
+                <p className="home-hero-metric-label">健康站点</p>
+                <p className="home-hero-metric-value">{data.hero.healthyRelays}</p>
+              </div>
+              <div className="home-hero-metric">
+                <p className="home-hero-metric-label">最近快照</p>
+                <p className="home-hero-metric-value home-hero-metric-value-sm">{formatDateTime(data.hero.measuredAt)}</p>
+              </div>
+            </div>
           </div>
-          <div className="order-1 space-y-3 md:order-2">
+          <aside className="order-1 md:order-2">
             <form className="quick-probe-card quick-probe-form" onSubmit={quickProbe.handleSubmit}>
               <div className="quick-probe-header">
                 <div>
@@ -139,15 +154,18 @@ export function HomePage() {
                 </button>
               </div>
             </form>
-          </div>
+          </aside>
         </div>
       </section>
 
       <Panel className="home-leaderboard-panel">
-        <div className="mb-3 flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
-          <p className="max-w-2xl text-xs uppercase tracking-[0.16em] text-black/48">
-            展示按照主流模型分类的榜单，每个模型分类取评分前五的站点，每天会根据测试数据重新排行
-          </p>
+        <div className="home-section-header">
+          <div>
+            <p className="kicker !mb-1">模型榜单预览</p>
+            <p className="max-w-2xl text-sm leading-6 text-black/66">
+              按主流模型分类展示最新实测结果，每个分类保留当前评分靠前的站点预览。
+            </p>
+          </div>
           <Link className="button-cream" to={LEADERBOARD_DIRECTORY_PATH}>
             查看全部站点
           </Link>
@@ -178,26 +196,30 @@ export function HomePage() {
       </section>
 
       {data.highlights.length > 0 ? (
-        <section className="panel">
-          <div className="mb-4">
-            <p className="kicker">赞助商</p>
+        <section className="panel sponsor-home-panel">
+          <div className="home-section-header">
+            <div>
+              <p className="kicker !mb-1">赞助商</p>
+              <p className="text-sm leading-6 text-black/66">独立展示，不参与榜单排序。</p>
+            </div>
           </div>
           <div className="grid gap-3 lg:grid-cols-2">
             {data.highlights.map((relay) => (
               <Link
                 key={relay.slug}
                 to={`/relay/${relay.slug}`}
-                className="surface-link flex h-full items-center justify-between gap-4 p-3.5"
+                className="home-sponsor-card"
               >
                 <div className="min-w-0">
-                  <p className="text-[1.22rem] tracking-[-0.03em]">{relay.name}</p>
+                  <div className="home-sponsor-card-top">
+                    <span className="home-sponsor-badge">赞助展示</span>
+                    <span className="home-sponsor-status">
+                      <StatusDot status={relay.healthStatus} /> {formatHealthStatusLabel(relay.healthStatus)}
+                    </span>
+                  </div>
+                  <p className="home-sponsor-title">{relay.name}</p>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <span className="signal-chip">{formatBadgeLabel(relay.badge)}</span>
-                  </div>
-                </div>
-                <div className="shrink-0 text-right">
-                  <div className="flex items-center justify-end gap-2 text-sm uppercase tracking-[0.12em]">
-                    <StatusDot status={relay.healthStatus} /> {formatHealthStatusLabel(relay.healthStatus)}
                   </div>
                 </div>
               </Link>
@@ -208,4 +230,3 @@ export function HomePage() {
     </div>
   );
 }
-

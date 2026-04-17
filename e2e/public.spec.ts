@@ -76,7 +76,10 @@ async function expectRelayDetailModules(page: Page) {
 async function expectLeaderboardRules(page: Page) {
   await expect(page.getByText("当前榜单不含赞助方")).toBeVisible();
   await expect(page.getByText("当前仅展示这个模型分类下的评测结果；赞助方展示不会插入排名。")).toBeVisible();
-  await expect(page.getByText("赞助方只在独立模块展示，不会混入排名，也不会影响实测结果。")).toBeVisible();
+  const noteBand = page.locator(".leaderboard-note-band");
+  await expect(noteBand).toContainText("当前榜单只基于自动化测试结果生成，不接受赞助调位");
+  await expect(noteBand).toContainText("评测方式");
+  await expect(noteBand).toContainText("我们怎么做");
 }
 
 async function expectVisibleText(locator: Locator, pattern: RegExp) {

@@ -107,14 +107,15 @@ export function LeaderboardPage() {
   return (
     <div className="space-y-4">
       <section className="panel leaderboard-hero-panel bg-[#fff0c2]">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div className="leaderboard-hero-shell">
           <div className="space-y-3">
-            <div>
-              <p className="kicker !mb-2">榜单</p>
-              <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
-                <h1 className="text-[2.55rem] leading-[0.92] tracking-[-0.06em] md:text-[3.55rem]">{data.model.name}</h1>
-                <p className="pb-1 text-[0.7rem] uppercase tracking-[0.16em] text-black/58">北京时间 {formatDateTime(data.measuredAt)}</p>
-              </div>
+            <p className="kicker !mb-1">榜单</p>
+            <div className="space-y-2">
+              <h1 className="text-[2.6rem] leading-[0.94] tracking-[-0.05em] md:text-[3.35rem]">{data.model.name}</h1>
+              <p className="text-sm leading-6 text-black/64">
+                以最近一轮自动化测试为基础，综合可用性、延迟、稳定性、价格与可信度生成当前排名。
+              </p>
+              <p className="text-[0.72rem] uppercase tracking-[0.15em] text-black/54">北京时间 {formatDateTime(data.measuredAt)}</p>
             </div>
             <div className="flex flex-wrap gap-1.5">
               <span className="signal-chip">已跟踪 {trackedRelayCount} 个站点</span>
@@ -122,16 +123,16 @@ export function LeaderboardPage() {
               <span className="signal-chip">降级 {degradedRelayCount} 个</span>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="leaderboard-hero-actions">
             <Link className="button-dark" to={LEADERBOARD_DIRECTORY_PATH}>全部模型</Link>
             <Link className="button-cream" to="/probe">开始测试</Link>
           </div>
         </div>
       </section>
       {directory.data?.boards.length ? (
-        <section className="panel-soft border border-black/8 px-3.5 py-3">
+        <section className="panel-soft leaderboard-switch-panel border border-black/8 px-3.5 py-3">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <p className="kicker !mb-0">模型切换</p>
+            <p className="kicker !mb-0">切换模型</p>
             <p className="directory-filter-meta">共 {directory.data.boards.length} 个已跟踪模型</p>
           </div>
           <div className="leaderboard-model-switcher">
@@ -150,30 +151,13 @@ export function LeaderboardPage() {
           </div>
         </section>
       ) : null}
-      <section className="grid gap-3 xl:grid-cols-[1.15fr_0.92fr_0.92fr]">
-        <div className="surface-card p-3.5">
-          <p className="text-sm font-medium tracking-[-0.02em] text-black/82">评测排名</p>
-          <p className="mt-2 text-sm leading-6 text-black/68">
-            基于自动化测试结果，综合可用性、延迟、稳定性、价格和可信度生成，不接受赞助调位。
-          </p>
-        </div>
-        <div className="surface-card p-3.5">
-          <p className="text-sm font-medium tracking-[-0.02em] text-black/82">评测方式</p>
-          <p className="mt-2 text-sm leading-6 text-black/68">
-            想理解总分、健康状态等含义，可以先阅读评测方式。
-          </p>
-          <Link className="mt-3 inline-flex text-sm underline underline-offset-4" to="/methodology">
-            查看评测方式
-          </Link>
-        </div>
-        <div className="surface-card p-3.5">
-          <p className="text-sm font-medium tracking-[-0.02em] text-black/82">赞助分离</p>
-          <p className="mt-2 text-sm leading-6 text-black/68">
-            赞助方只在独立模块展示，不会混入排名，也不会影响实测结果。
-          </p>
-          <Link className="mt-3 inline-flex text-sm underline underline-offset-4" to="/policy">
-            查看我们怎么做
-          </Link>
+      <section className="leaderboard-note-band">
+        <p className="leaderboard-note-copy">
+          当前榜单只基于自动化测试结果生成，不接受赞助调位；评分口径和收录规则可在下方继续查看。
+        </p>
+        <div className="leaderboard-note-links">
+          <Link className="home-bridge-link" to="/methodology">评测方式</Link>
+          <Link className="home-bridge-link" to="/policy">我们怎么做</Link>
         </div>
       </section>
       <Panel title="站点评测排名" headerClassName="mb-3" titleClassName="text-[2.15rem] md:text-[2.45rem]">
@@ -208,7 +192,7 @@ export function LeaderboardPage() {
                 </thead>
                 <tbody>
                   {rows.map((row) => (
-                    <tr key={row.relay.slug} className="align-top">
+                    <tr key={row.relay.slug} className="leaderboard-table-row align-top">
                       <td className="py-2.5 text-[1.6rem] tracking-[-0.04em]">#{row.rank}</td>
                       <td className="py-2.5">
                         <Link to={`/relay/${row.relay.slug}`} className="text-[1.02rem] tracking-[-0.03em] hover:underline">{row.relay.name}</Link>

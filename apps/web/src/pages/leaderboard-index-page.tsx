@@ -128,16 +128,16 @@ export function LeaderboardIndexPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <section className="panel bg-[#fff0c2]">
-        <p className="kicker">榜单目录</p>
-        <div className="grid gap-4 xl:grid-cols-[1fr_0.9fr] xl:items-end">
+    <div className="space-y-5">
+      <section className="panel leaderboard-directory-hero bg-[#fff0c2]">
+        <div className="grid gap-4 xl:grid-cols-[1fr_auto] xl:items-end">
           <div>
-            <h1 className="max-w-3xl text-4xl leading-[0.92] tracking-[-0.06em] md:text-5xl">
-              先浏览所有主流模型分类，再进入你关心的单个榜单。
+            <p className="kicker !mb-2">榜单目录</p>
+            <h1 className="max-w-3xl text-[2.7rem] leading-[0.94] tracking-[-0.05em] md:text-[3.45rem]">
+              浏览全部模型榜单，直接进入你关心的分类。
             </h1>
-            <p className="mt-4 max-w-2xl text-base leading-7 text-black/72">
-              目录会按照模型聚合站点。打开任意模型榜单，即可查看该模型分类下的完整排名、健康状态、延迟与价格信息。
+            <p className="mt-3 max-w-2xl text-base leading-7 text-black/70">
+              每个模型分类都聚合了当前已跟踪站点的实时排名快照，适合先定位模型，再进入单榜单比较站点表现。
             </p>
           </div>
           <div className="flex flex-wrap gap-2.5 xl:justify-end">
@@ -148,6 +148,14 @@ export function LeaderboardIndexPage() {
       </section>
 
       <section className="directory-filters directory-filters-compact">
+        <div className="directory-filter-head">
+          <p className="kicker !mb-0">按服务商筛选</p>
+          <p className="directory-filter-meta">
+            {filteredBoards.length === data.boards.length
+              ? `${data.boards.length} 个模型`
+              : `${filteredBoards.length} / ${data.boards.length} 个模型`}
+          </p>
+        </div>
         <div className="directory-vendor-row">
           <button
             className={clsx("directory-filter-chip", vendorFilter === "all" && "directory-filter-chip-active")}
@@ -170,11 +178,6 @@ export function LeaderboardIndexPage() {
             </button>
           ))}
         </div>
-        <p className="directory-filter-meta">
-          {filteredBoards.length === data.boards.length
-            ? `${data.boards.length} 个模型`
-            : `${filteredBoards.length} / ${data.boards.length} 个模型`}
-        </p>
       </section>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -201,4 +204,3 @@ export function LeaderboardIndexPage() {
     </div>
   );
 }
-

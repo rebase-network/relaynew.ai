@@ -1037,7 +1037,7 @@ export type ProbeFormState = {
 export const DEFAULT_PROBE_STATE: ProbeFormState = {
   baseUrl: "",
   apiKey: "",
-  model: "openai-gpt-4.1",
+  model: "",
   compatibilityMode: "auto",
 };
 
@@ -1313,6 +1313,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setMobileNavOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
   }, [location.pathname]);
 
   return (
@@ -1976,6 +1980,7 @@ export function LeaderboardPreviewCard({
       <div className="leaderboard-preview-header">
         <div>
           <h2 className="leaderboard-preview-title">{board.modelName}</h2>
+          <p className="leaderboard-preview-meta">最新快照 · {formatDateTime(board.measuredAt)}</p>
         </div>
         <Link className="leaderboard-preview-link" to={getLeaderboardPath(board.modelKey)}>
           查看完整榜单
@@ -1996,8 +2001,9 @@ export function LeaderboardPreviewCard({
               <CompactBadgeList badges={row.badges.map(formatBadgeLabel)} className="leaderboard-preview-badges" limit={1} />
             </div>
             <div className="leaderboard-preview-score">
+              <p className="leaderboard-preview-score-value">{row.score.toFixed(1)}</p>
               <div className="leaderboard-preview-scoreline">
-                <StatusDot status={row.healthStatus} /> {formatHealthStatusLabel(row.healthStatus)} · {row.score.toFixed(1)}
+                <StatusDot status={row.healthStatus} /> {formatHealthStatusLabel(row.healthStatus)}
               </div>
               <p className="leaderboard-preview-metrics">
                 {formatAvailability(row.availability24h)} · {formatLatency(row.latencyP50Ms)}
@@ -2613,4 +2619,3 @@ export function RelayIncidentTimeline({
     </div>
   );
 }
-
