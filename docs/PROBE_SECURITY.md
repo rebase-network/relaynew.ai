@@ -181,6 +181,22 @@ Suggested response shape:
   "detectionMode": "auto",
   "usedUrl": "https://relay.example.ai/v1/chat/completions",
   "attemptedModes": ["openai-responses", "openai-chat-completions"],
+  "attemptTrace": [
+    {
+      "mode": "openai-responses",
+      "label": "OpenAI Responses",
+      "url": "https://relay.example.ai/v1/responses",
+      "httpStatus": 404,
+      "matched": false
+    },
+    {
+      "mode": "openai-chat-completions",
+      "label": "OpenAI Chat Completions",
+      "url": "https://relay.example.ai/v1/chat/completions",
+      "httpStatus": 200,
+      "matched": true
+    }
+  ],
   "measuredAt": "2026-04-15T10:00:00Z"
 }
 ```
@@ -191,6 +207,9 @@ Rules:
 - keep upstream error bodies truncated and sanitized
 - keep `compatibilityMode`, `detectionMode`, and `usedUrl` explainable so users can
   understand why a probe passed or failed
+- `attemptTrace` may include only bounded protocol-attempt summaries such as mode,
+  label, URL, HTTP status, and match result; it must not expose authorization headers
+  or raw upstream payloads
 - do not return arbitrary upstream payload fragments just to aid debugging
 
 ## Detection Strategy

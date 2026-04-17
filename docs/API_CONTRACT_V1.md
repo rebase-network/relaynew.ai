@@ -6,9 +6,11 @@ This document defines the initial public API contract for `relaynew.ai`.
 
 This version is intentionally narrow. It only locks the public endpoints needed to build:
 - homepage
+- leaderboard directory page
 - leaderboard pages
 - relay detail pages
 - methodology page
+- public submission page
 
 Internal and admin APIs are intentionally not frozen here. They can evolve during backend
 implementation as long as they stay consistent with `docs/ARCHITECTURE.md`.
@@ -23,8 +25,9 @@ endpoints.
 - all timestamps are ISO 8601 strings in UTC
 - numeric ratios use decimal values between `0` and `1`
 - scores use decimal values between `0` and `100`
-- the content endpoints in this file are read-only `GET` requests
-- the content endpoints in this file should be safe for CDN caching
+- content endpoints in this file are read-only `GET` requests unless a section
+  explicitly documents a public write endpoint
+- cache only the read-only `GET` endpoints in this file
 
 ## Shared Enums
 
@@ -183,6 +186,43 @@ Notes:
 - homepage modules should already be shaped for rendering
 - `latestIncidents` can be an empty array in the first version
 - when non-empty, `latestIncidents[]` uses the `Incident Summary` shape
+
+### GET /public/leaderboard-directory
+
+Returns the directory payload used by `/leaderboard/directory`.
+
+Response:
+```json
+{
+  "boards": [
+    {
+      "modelKey": "openai-gpt-4.1",
+      "modelName": "GPT-4.1",
+      "measuredAt": "2026-04-15T10:00:00Z",
+      "rows": [
+        {
+          "rank": 1,
+          "relay": {
+            "slug": "sample-relay",
+            "name": "Sample Relay"
+          },
+          "score": 96.2,
+          "availability24h": 0.998,
+          "latencyP50Ms": 820,
+          "latencyP95Ms": 1540,
+          "healthStatus": "healthy",
+          "badges": ["low-latency"]
+        }
+      ]
+    }
+  ],
+  "measuredAt": "2026-04-15T10:00:00Z"
+}
+```
+
+Notes:
+- each `boards[]` item reuses the same preview-row shape as homepage leaderboard previews
+- this endpoint is read-only and safe for CDN caching
 
 ### GET /public/leaderboard/:modelKey
 
@@ -486,6 +526,52 @@ Response:
   "measuredAt": "2026-04-15T10:00:00Z"
 }
 ```
+
+### POST /public/submissions
+
+Creates a pending public submission and runs the first bounded verification against
+the submitted test key.
+
+Request:
+```json
+{
+  "relayName": "Sample Relay",
+  "baseUrl": "https://relay.sample-provider.ai/v1",
+  "websiteUrl": "https://sample-provider.ai",
+  "description": "Low-latency OpenAI-compatible relay for general chat traffic.",
+  "submitterName": "Alice",
+  "submitterEmail": "ops@sample-provider.ai",
+  "notes": "Please review GPT-5.4 first.",
+  "testApiKey": "sk-...",
+  "testModel": "gpt-5.4",
+  "compatibilityMode": "auto"
+}
+```
+
+Response:
+```json
+{
+  "ok": true,
+  "id": "submission_01",
+  "status": "pending",
+  "probe": {
+    "ok": true,
+    "healthStatus": "healthy",
+    "httpStatus": 200,
+    "message": null,
+    "verifiedAt": "2026-04-15T10:00:00Z",
+    "compatibilityMode": "openai-responses",
+    "detectionMode": "auto"
+  }
+}
+```
+
+Notes:
+- this is a public write endpoint and must not be CDN-cached
+- `testApiKey` and `testModel` are required because the submission flow immediately
+  performs a bounded verification for the review queue
+- submit-time test keys are part of the operator review workflow and may be stored in
+  rotation-friendly credential records
 
 ## Versioning Guidance
 

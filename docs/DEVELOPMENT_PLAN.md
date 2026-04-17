@@ -13,6 +13,24 @@ The following decisions are already in place and should be treated as the starti
 - public probe safety model: `docs/PROBE_SECURITY.md`
 - initial PostgreSQL migration: `apps/api/db/migrations/0001_initial.sql`
 
+## Current Delivery Status
+
+As of `2026-04-17`, the repository is no longer in greenfield setup mode.
+
+Implemented and in daily use:
+- monorepo workspace with `web`, `admin`, `api`, `api-edge`, and `shared`
+- shared public contracts, shared submission contracts, and runtime validation
+- public website routes for homepage, leaderboard, leaderboard directory, relay detail,
+  the `评测方式`, `我们怎么做`, `提交站点`, and `站点测试` pages
+- admin routes for relay management, submission review, credentials, sponsors, and prices
+- public submission intake with initial bounded verification
+- public-safe probe endpoint with compatibility auto-detection and optional override
+- Playwright-first browser coverage for public flows, admin flows, metadata smoke,
+  and deployed smoke modes
+
+The remaining work is primarily launch hardening and coverage refinement rather than
+initial scaffolding.
+
 ## Delivery Principles
 
 - keep the MVP simple and explicit
@@ -299,12 +317,10 @@ Exit criteria:
 ## Immediate Next Steps
 
 The most efficient next implementation sequence is:
-1. initialize the monorepo foundation
-2. create `packages/shared`
-3. encode `docs/API_CONTRACT_V1.md` into shared TypeScript types and `Zod` schemas
-4. scaffold `apps/api`
-5. implement `GET /public/home-summary`
-6. implement `GET /public/leaderboard/:modelKey`
+1. keep architecture, route, localization, and API contract docs aligned with the shipped UI and public API surface
+2. close the remaining public probe hardening gaps, especially redirect, DNS/IP blocking, and redaction-focused automated tests
+3. continue public Chinese UX polish and responsive QA for homepage, leaderboard, submit, and test flows
+4. finish launch-hardening work for cache rules, runbooks, and staging verification
 
 ## Notes
 

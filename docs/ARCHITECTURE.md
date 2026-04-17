@@ -178,6 +178,9 @@ Assets.
 ### Current Route Model
 - public routes render through the public SPA shell on `relaynew.ai` and fetch data
   from the backend API
+- the public route set now includes `/`, `/leaderboard`, `/leaderboard/directory`,
+  `/leaderboard/:modelKey`, `/relay/:slug`, `/methodology`, `/policy`, `/submit`,
+  and `/probe`
 - admin routes render through a separate admin SPA shell on `admin.relaynew.ai`
 - probe flows and chart modules stay client-rendered
 - the probe page should default to URL + key + model input, with compatibility override
@@ -197,6 +200,7 @@ The MVP uses one main cache layer only: Cloudflare CDN cache.
 Public read-only endpoints under `/public/*` should be cacheable.
 Examples:
 - `/public/home-summary`
+- `/public/leaderboard-directory`
 - `/public/leaderboard/:modelKey`
 - `/public/relay/:slug/overview`
 - `/public/relay/:slug/history`
@@ -274,7 +278,10 @@ MVP assumption:
 - the public probe flow must apply DNS, IP, redirect, timeout, concurrency, rate,
   and payload-size controls before any outbound request is made
 - probe keys used by the platform must never be exposed to the frontend
-- user-supplied probe keys should not be persisted by default
+- user-supplied keys from the public self-check flow (`POST /public/probe/check`)
+  should not be persisted by default
+- submit-time test keys provided through `POST /public/submissions` belong to the
+  review workflow and may be stored in rotation-friendly credential records
 - public ranking and paid placement must remain clearly separated
 - public sponsor rendering must treat `sponsors` as the authoritative source of
   active paid placement windows

@@ -25,17 +25,23 @@ The main browser suite should cover:
 - relay detail page rendering for overview, history, models, pricing history, and
   incidents
 - methodology page rendering and basic navigation integrity
+- public submit flow success and validation states
+- mobile navigation routing and critical responsive layout checks
+- route-level metadata smoke for critical public pages
 
 ### Public Probe Flow
 
-The browser suite should cover:
+Current browser coverage focuses on:
 - valid probe submission against an allowed test target
 - automatic compatibility detection for a known relay target
 - explicit compatibility override for a known relay target
-- blocked or invalid target handling
-- timeout, loading, and degraded response states
-- user-facing redaction behavior so secrets are not echoed back into page content
+- mobile layout and core explanatory copy for the public test page
 - failure rendering that does not get mistaken for a successful probe
+
+Follow-up coverage to add:
+- blocked or invalid target handling
+- timeout and degraded upstream response states
+- user-facing redaction behavior so secrets are not echoed back into page content
 
 ### Admin Pages
 
@@ -101,12 +107,12 @@ These tests are still worth keeping even with a Playwright-first strategy:
 
 Keep a small targeted suite for the controls defined in `docs/PROBE_SECURITY.md`,
 including:
-- URL normalization and validation
-- DNS or IP blocking for disallowed ranges
-- redirect re-validation
-- timeout and bounded-response behavior
-- secret redaction in logs and error handling
-- compatibility adapter matching and protocol-specific failure classification
+- current coverage: compatibility adapter matching and protocol-specific failure classification
+- next coverage to add: URL normalization and validation
+- next coverage to add: DNS or IP blocking for disallowed ranges
+- next coverage to add: redirect re-validation
+- next coverage to add: timeout and bounded-response behavior
+- next coverage to add: secret redaction in logs and error handling
 
 These checks are too security-sensitive to rely only on browser coverage.
 
@@ -132,6 +138,8 @@ These tests help catch contract regressions earlier than full browser failures.
 - Playwright is configured from `playwright.config.ts`
 - public-route smoke coverage should include head metadata checks for critical pages,
   especially `title`, `meta[name=description]`, and `canonical`
+- the public suite currently exercises homepage, leaderboard, relay detail, submit,
+  probe, mobile navigation, and route-level metadata checks
 - `pnpm test` runs the package-level verification layer: API tests plus frontend and
   edge-worker typechecks
 - `pnpm test:e2e` starts an isolated PostgreSQL test container, seeds the API

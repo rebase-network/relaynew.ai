@@ -1,5 +1,9 @@
 # Design System Inspired by Mistral AI
 
+This document records the visual inspiration and tone system for `relaynew.ai`.
+It is not a verbatim description of the current information architecture, product
+copy, or brand naming used in the shipped UI.
+
 ## 1. Visual Theme & Atmosphere
 
 Mistral AI's interface is a sun-drenched landscape rendered in code — a warm, bold, unapologetically European design that trades the typical blue-screen AI aesthetic for golden amber, burnt orange, and the feeling of late-afternoon light in southern France. Every surface glows with warmth: backgrounds fade from pale cream to deep amber, shadows carry golden undertones (`rgba(127, 99, 21, ...)`), and the brand's signature orange (`#fa520f`) burns through the page like a signal fire.

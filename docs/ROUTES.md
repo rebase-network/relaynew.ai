@@ -16,20 +16,20 @@ for each route, and the primary data source that should back it.
 
 | Route | Purpose | Render | Primary Data Source |
 |---|---|---|---|
-| `/` | Homepage with status summary, model leaderboard previews, and recent updates | CSR in public SPA | `GET /public/home-summary` |
-| `/leaderboard` | Default full leaderboard view using the primary model lane | CSR in public SPA | `GET /public/leaderboard/:modelKey` |
-| `/leaderboard/directory` | Model lane directory for browsing all tracked boards | CSR in public SPA | `GET /public/leaderboard-directory` |
-| `/leaderboard/:modelKey` | Main leaderboard for a model | CSR in public SPA | `GET /public/leaderboard/:modelKey` |
+| `/` | Homepage with hero CTA, quick test entry, leaderboard previews, and sponsor highlights | CSR in public SPA | `GET /public/home-summary` |
+| `/leaderboard` | Default full leaderboard view for the primary model category | CSR in public SPA | `GET /public/leaderboard/:modelKey` |
+| `/leaderboard/directory` | Directory for browsing all tracked model categories | CSR in public SPA | `GET /public/leaderboard-directory` |
+| `/leaderboard/:modelKey` | Main leaderboard for one model category | CSR in public SPA | `GET /public/leaderboard/:modelKey` |
 | `/relay/:slug` | Relay detail page with overview and trend charts | CSR in public SPA | `GET /public/relay/:slug/overview`, `GET /public/relay/:slug/history`, `GET /public/relay/:slug/models`, `GET /public/relay/:slug/pricing-history`, `GET /public/relay/:slug/incidents` |
-| `/methodology` | Ranking and scoring explanation | CSR in public SPA | static content or `GET /public/methodology` |
-| `/policy` | Public listing, sponsor separation, and dispute policy | CSR in public SPA | static content |
-| `/submit` | Relay submission entry point with initial bounded verification | CSR in public SPA | `POST /public/submissions` |
+| `/methodology` | Public explanation of the `评测方式` page and scoring logic | CSR in public SPA | static content or `GET /public/methodology` |
+| `/policy` | Public explanation of the `我们怎么做` page, sponsor separation, and dispute handling | CSR in public SPA | static content |
+| `/submit` | Public submission entry with initial automated verification | CSR in public SPA | `POST /public/submissions` |
 
 ## Tooling Routes
 
 | Route | Purpose | Render | Primary Data Source |
 |---|---|---|---|
-| `/probe` | User self-check probe flow with model-first auto detection and optional advanced override | CSR | `POST /public/probe/check` |
+| `/probe` | Public `站点测试` flow with model-first auto detection and optional advanced override | CSR | `POST /public/probe/check` |
 
 ## Admin Routes (`admin.relaynew.ai`)
 
@@ -63,27 +63,26 @@ The expected operator path is:
 ## Homepage Modules
 
 The homepage is expected to include:
-- hero summary with total relay count and current health snapshot
+- hero copy with primary CTA and quick-test entry
 - featured model leaderboard blocks
-- latest incident or degradation events
-- highlighted relays or curated picks
-- methodology and trust signals
+- a bridge into `评测方式` and `我们怎么做`
+- sponsor highlight cards
 
 For MVP, homepage data should be built and served as one atomic page-shaped snapshot
 payload rather than independently refreshed module fragments.
-When `latestIncidents` is non-empty, it should use the incident summary shape defined
-in `docs/API_CONTRACT_V1.md`.
+The snapshot may still carry additional aggregate fields such as `latestIncidents`,
+but the current public homepage does not render a dedicated incidents section.
 
 ## Leaderboard Page Modules
 
 The leaderboard page is expected to include:
 - model header and last measured time
 - direct access from `/leaderboard` without forcing a directory click first
-- a secondary link to the full model lane directory
+- a secondary link to the full model directory
 - ranked table with score, availability, latency, and price
-- filters for region and result limits
-- sponsor placement section separated from natural rankings
-- methodology link and ranking notes
+- model switch pills for tracked categories
+- explicit sponsor separation messaging for `评测排名`
+- links to `评测方式` and `我们怎么做`
 
 ## Relay Detail Page Modules
 
@@ -110,21 +109,21 @@ Hydration or secondary loads:
 - pricing history
 - incident timeline
 
-## Probe Page Modules
+## Test Page Modules (`/probe`)
 
-The probe page is expected to include:
-- a primary form with `Base URL`, `API key`, and `Target model`
+The test page is expected to include:
+- a primary form with `Base URL`, `API Key`, and `模型`
 - an advanced section with an optional `Compatibility Mode` selector
 - a diagnostic result panel that shows host, connectivity, protocol status, and latency
 - explanatory output such as detected compatibility mode, selected endpoint, and next
   steps when automatic detection fails
 
-### Probe Interaction Rules
+### Test Interaction Rules
 
 - the default path should not require users to classify the relay manually
 - the advanced compatibility selector should use a fixed enum, not arbitrary free text
-- if a compatibility override is selected, the server should probe only that mode
-- if the probe runs in auto mode, the response should make the detected mode explainable
+- if a compatibility override is selected, the server should test only that mode
+- if the flow runs in auto mode, the response should make the detected mode explainable
 
 ## Data Contract Notes
 
@@ -135,7 +134,7 @@ The probe page is expected to include:
 - `/public/relay/:slug/models` should return supported model rows only
 - `/public/relay/:slug/pricing-history` should return price change points or chart-ready buckets
 - `/public/relay/:slug/incidents` should return timeline-ready incident records
-- `/probe` must only call the public-safe probe endpoint described in `docs/PROBE_SECURITY.md`
+- `/probe` must only call the public-safe test endpoint described in `docs/PROBE_SECURITY.md`
 - `/public/probe/check` should accept an optional `compatibilityMode` override while
   still defaulting to model-driven automatic detection
 - `/public/submissions` should require `testApiKey` and `testModel`, store them in a
