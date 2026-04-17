@@ -3637,7 +3637,7 @@ function ProbePage() {
             运行测试
           </h1>
           <p className="form-note mt-4 text-sm leading-6">
-            请使用你线上应用实际发送的基础 URL、密钥与模型。除非你已经明确知道所需协议族，否则建议从自动模式开始。
+            请填写Base URL、API Key 和 模型。除非你已经明确知道所需协议族，否则建议从自动模式开始。自助测试的API Key等信息不会留存，如果担心泄漏可以使用单独的Key进行测试
           </p>
           <form className="form-shell mt-4" onSubmit={handleSubmit}>
             <ProbeFormFields setState={setState} state={state} />
