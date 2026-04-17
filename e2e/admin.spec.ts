@@ -30,8 +30,8 @@ function getAdminApiHeaders() {
 async function openAdmin(page: Page, path = "/") {
   await page.goto(`${adminBaseUrl}${path}`);
 
-  const loginHeading = page.getByRole("heading", { name: "Sign in to continue", exact: true });
-  const adminBrand = page.getByText("relaynew.ai admin", { exact: true });
+  const loginHeading = page.getByRole("heading", { name: "登录后继续", exact: true });
+  const adminBrand = page.getByText("relaynew.ai 管理台", { exact: true });
 
   await Promise.race([
     loginHeading.waitFor({ state: "visible" }).catch(() => undefined),
@@ -47,9 +47,9 @@ async function openAdmin(page: Page, path = "/") {
     "Admin auth is enabled. Set ADMIN_AUTH_USERNAME and ADMIN_AUTH_PASSWORD in .env for Playwright.",
   ).toBeTruthy();
 
-  await page.getByLabel("Username").fill(adminUsername);
-  await page.getByLabel("Password").fill(adminPassword);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByLabel("用户名").fill(adminUsername);
+  await page.getByLabel("密码").fill(adminPassword);
+  await page.getByRole("button", { name: "登录" }).click();
   await expect(adminBrand).toBeVisible();
 }
 
@@ -65,7 +65,7 @@ async function readOverviewMetric(page: Page, label: string) {
 async function readOverviewTotals(page: Page) {
   await openAdmin(page, "/");
   const pendingSubmissionsCard = page.locator("section.card").filter({
-    has: page.getByText(/^pending submissions$/i),
+    has: page.getByText(/^待审核提交$/),
   }).first();
 
   try {
@@ -80,52 +80,52 @@ async function readOverviewTotals(page: Page) {
   }
 
   return {
-    relays: await readOverviewMetric(page, "relays"),
-    pendingSubmissions: await readOverviewMetric(page, "pending submissions"),
-    activeSponsors: await readOverviewMetric(page, "active sponsors"),
-    priceRecords: await readOverviewMetric(page, "price records"),
+    relays: await readOverviewMetric(page, "中转站总数"),
+    pendingSubmissions: await readOverviewMetric(page, "待审核提交"),
+    activeSponsors: await readOverviewMetric(page, "投放中赞助位"),
+    priceRecords: await readOverviewMetric(page, "价格记录"),
   };
 }
 
 test("admin overview shows operating totals", async ({ page }) => {
   await openAdmin(page, "/");
-  await expect(page.getByText("Operate the relay catalog, sponsorships, and pricing lanes.")).toBeVisible();
+  await expect(page.getByText("统一管理中转站目录、赞助位与价格记录。", { exact: true })).toBeVisible();
   const overviewTotals = await readOverviewTotals(page);
   expect(overviewTotals.pendingSubmissions).toBeGreaterThanOrEqual(0);
 
-  await page.getByRole("link", { name: "Relays", exact: true }).click();
+  await page.getByRole("link", { name: "中转站", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`${adminBaseUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/relays$`));
-  await expect(page.getByRole("heading", { name: "Relay catalog", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "中转站目录", exact: true })).toBeVisible();
 
-  await page.getByRole("link", { name: "Intake", exact: true }).click();
+  await page.getByRole("link", { name: "审核队列", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`${adminBaseUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/intake$`));
-  await expect(page.getByRole("heading", { name: "Intake queue", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "审核队列", exact: true })).toBeVisible();
 
-  await page.getByRole("link", { name: "Keys", exact: true }).click();
+  await page.getByRole("link", { name: "密钥", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`${adminBaseUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/credentials$`));
-  await expect(page.getByRole("heading", { name: "Relay monitoring keys", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Relay 监测密钥", exact: true })).toBeVisible();
 
-  await page.getByRole("link", { name: "Sponsors", exact: true }).click();
+  await page.getByRole("link", { name: "赞助位", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`${adminBaseUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/sponsors$`));
-  await expect(page.getByRole("heading", { name: "Sponsor placements", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "赞助位列表", exact: true })).toBeVisible();
 
-  await page.getByRole("link", { name: "Prices", exact: true }).click();
+  await page.getByRole("link", { name: "价格", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`${adminBaseUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/prices$`));
-  await expect(page.getByRole("heading", { name: "Price history", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "价格历史", exact: true })).toBeVisible();
 });
 
 test("admin relay form validates malformed URLs before saving", async ({ page }) => {
   await openAdmin(page, "/relays");
-  await page.getByLabel("Slug").fill("broken-relay");
-  await page.getByLabel("Name").fill("Broken Relay");
-  await page.getByLabel("Base URL").fill("relay.example.ai");
-  await page.getByLabel("Website").fill("not-a-url");
-  await page.getByRole("button", { name: "Create" }).click();
+  await page.getByLabel("标识 Slug").fill("broken-relay");
+  await page.getByLabel("名称").fill("Broken Relay");
+  await page.getByLabel("基础 URL").fill("relay.example.ai");
+  await page.getByLabel("官网地址").fill("not-a-url");
+  await page.getByRole("button", { name: "创建" }).click();
 
-  await expect(page.getByText("Please fix the highlighted relay fields before saving.")).toBeVisible();
-  await expect(page.getByText("Enter a full base URL such as https://relay.example.ai/v1.")).toBeVisible();
-  await expect(page.getByText("Enter a valid website URL such as https://relay.example.ai.")).toBeVisible();
-  await expect(page.getByText("Relay created.")).toHaveCount(0);
+  await expect(page.getByText("请先修正高亮字段，再保存中转站。", { exact: true })).toBeVisible();
+  await expect(page.getByText("请输入完整的基础 URL，例如 https://relay.example.ai/v1。", { exact: true })).toBeVisible();
+  await expect(page.getByText("请输入有效的网站 URL，例如 https://relay.example.ai。", { exact: true })).toBeVisible();
+  await expect(page.getByText("中转站已创建。")).toHaveCount(0);
 });
 
 test("admin can create a relay", async ({ page }) => {
@@ -138,13 +138,13 @@ test("admin can create a relay", async ({ page }) => {
   const name = `Northwind ${Date.now()}`;
 
   await openAdmin(page, "/relays");
-  await page.getByLabel("Slug").fill(slug);
-  await page.getByLabel("Name").fill(name);
-  await page.getByLabel("Base URL").fill(`https://${slug}.example.ai/v1`);
-  await page.getByLabel("Provider").fill("Northwind Labs");
-  await page.getByRole("button", { name: "Create" }).click();
+  await page.getByLabel("标识 Slug").fill(slug);
+  await page.getByLabel("名称").fill(name);
+  await page.getByLabel("基础 URL").fill(`https://${slug}.example.ai/v1`);
+  await page.getByLabel("提供方").fill("Northwind Labs");
+  await page.getByRole("button", { name: "创建" }).click();
 
-  await expect(page.getByText("Relay created.")).toBeVisible();
+  await expect(page.getByText("中转站已创建。", { exact: true })).toBeVisible();
   await expect(page.getByText(name)).toBeVisible();
 
   const after = await readOverviewTotals(page);
@@ -182,17 +182,17 @@ test("admin can soft delete a relay without removing its row", async ({ page, re
   await openAdmin(page, "/relays");
   const relayCard = page.locator(".admin-list-card").filter({ hasText: relayName }).first();
   await expect(relayCard).toBeVisible();
-  await relayCard.getByRole("button", { name: "Soft delete" }).click();
+  await relayCard.getByRole("button", { name: "归档" }).click();
   const confirmDialog = page.getByRole("dialog");
   await expect(confirmDialog).toBeVisible();
-  await expect(confirmDialog.getByRole("heading", { name: `Archive ${relayName}?` })).toBeVisible();
+  await expect(confirmDialog.getByRole("heading", { name: `确认归档 ${relayName}？` })).toBeVisible();
   await expect
     .poll(async () =>
       page.evaluate(() => document.querySelector(".confirm-backdrop")?.parentElement === document.body),
     )
     .toBe(true);
-  await confirmDialog.getByRole("button", { name: "Archive relay" }).click();
-  await expect(page.getByText("Relay archived. It is hidden from relay operations but stays in Postgres.")).toBeVisible();
+  await confirmDialog.getByRole("button", { name: "归档中转站" }).click();
+  await expect(page.getByText("中转站已归档。它会从运营视图中隐藏，但仍保留在 Postgres 中。", { exact: true })).toBeVisible();
   await expect(page.locator(".admin-list-card").filter({ hasText: relayName })).toHaveCount(0);
 
   await page.reload();
@@ -203,16 +203,16 @@ test("admin can soft delete a relay without removing its row", async ({ page, re
 
   await openAdmin(page, "/credentials");
   const keyCreateCard = page.locator("section.card").filter({
-    has: page.getByRole("heading", { name: "Attach monitoring key", exact: true }),
+    has: page.getByRole("heading", { name: "绑定监测密钥", exact: true }),
   }).first();
-  const relaySelect = keyCreateCard.getByLabel("Relay");
+  const relaySelect = keyCreateCard.getByLabel("中转站");
   await expect(relaySelect.locator("option").filter({ hasText: relayName })).toHaveCount(0);
 
   await openAdmin(page, "/sponsors");
-  await expect(page.getByLabel("Relay").locator("option").filter({ hasText: relayName })).toHaveCount(0);
+  await expect(page.getByLabel("关联中转站").locator("option").filter({ hasText: relayName })).toHaveCount(0);
 
   await openAdmin(page, "/prices");
-  await expect(page.getByLabel("Relay").locator("option").filter({ hasText: relayName })).toHaveCount(0);
+  await expect(page.getByLabel("中转站").locator("option").filter({ hasText: relayName })).toHaveCount(0);
 
   const after = await readOverviewTotals(page);
   expect(after.relays).toBe(before.relays + 1);
@@ -254,46 +254,46 @@ test("admin can create and manage probe credentials", async ({ page, request }) 
 
   await openAdmin(page, "/credentials");
   const createCard = page.locator("section.card").filter({
-    has: page.getByRole("heading", { name: "Attach monitoring key", exact: true }),
+    has: page.getByRole("heading", { name: "绑定监测密钥", exact: true }),
   }).first();
   await expect(createCard.getByLabel("Owner type")).toHaveCount(0);
-  await createCard.getByLabel("Relay").selectOption({ label: relayName });
-  await createCard.getByLabel("API key").fill("sk-credential-initial");
-  await createCard.getByLabel("Test model").fill("gpt-5.4");
-  await createCard.getByRole("button", { name: "Attach monitoring key" }).click();
-  await expect(page.getByText(/Monitoring key attached\./)).toBeVisible();
+  await createCard.getByLabel("中转站").selectOption({ label: relayName });
+  await createCard.getByLabel("API Key").fill("sk-credential-initial");
+  await createCard.getByLabel("测试模型").fill("gpt-5.4");
+  await createCard.getByRole("button", { name: "绑定监测密钥" }).click();
+  await expect(page.getByText(/监测密钥已绑定。/)).toBeVisible();
 
   const credentialCard = page.locator(".admin-list-card").filter({ hasText: relayName }).first();
   await expect(credentialCard).toBeVisible();
   await credentialCard.click();
   const detailCard = page.locator("section.card").filter({
-    has: page.getByRole("heading", { name: "Monitoring key detail", exact: true }),
+    has: page.getByRole("heading", { name: "监测密钥详情", exact: true }),
   }).first();
-  await page.getByRole("button", { name: "Reveal key" }).click();
+  await page.getByRole("button", { name: "显示密钥" }).click();
   await expect(page.getByText("sk-credential-initial")).toBeVisible();
 
-  await page.getByRole("button", { name: "Copy key" }).click();
-  await expect(page.getByRole("button", { name: "Copied" })).toBeVisible();
+  await page.getByRole("button", { name: "复制密钥" }).click();
+  await expect(page.getByRole("button", { name: "已复制" })).toBeVisible();
 
   const reprobeResponse = page.waitForResponse((response) =>
     response.url().includes("/admin/probe-credentials/") &&
     response.url().includes("/reprobe") &&
     response.request().method() === "POST",
   );
-  await page.getByRole("button", { name: "Re-run probe" }).click();
+  await page.getByRole("button", { name: "重新运行 Probe" }).click();
   expect((await reprobeResponse).ok()).toBeTruthy();
 
-  await page.getByLabel("New API key").fill("sk-credential-rotated");
-  await page.getByRole("button", { name: "Rotate key" }).click();
-  await expect(page.getByText(/Monitoring key rotated\./)).toBeVisible();
-  await page.getByRole("button", { name: "Reveal key" }).click();
+  await page.getByLabel("新的 API Key").fill("sk-credential-rotated");
+  await page.getByRole("button", { name: "轮换密钥" }).click();
+  await expect(page.getByText(/监测密钥已轮换。/)).toBeVisible();
+  await page.getByRole("button", { name: "显示密钥" }).click();
   await expect(page.getByText("sk-credential-rotated")).toBeVisible();
 
-  await detailCard.getByRole("button", { name: "Delete key", exact: true }).click();
+  await detailCard.getByRole("button", { name: "删除密钥", exact: true }).click();
   const deleteKeyDialog = page.getByRole("dialog");
   await expect(deleteKeyDialog).toBeVisible();
-  await deleteKeyDialog.getByRole("button", { name: "Delete key" }).click();
-  await expect(page.getByText("Monitoring key deleted.")).toBeVisible();
+  await deleteKeyDialog.getByRole("button", { name: "删除密钥" }).click();
+  await expect(page.getByText("监测密钥已删除。", { exact: true })).toBeVisible();
 });
 
 test("admin can review submissions, create sponsors, and add prices", async ({ page, request }) => {
@@ -349,43 +349,43 @@ test("admin can review submissions, create sponsors, and add prices", async ({ p
   await openAdmin(page, "/intake");
   const submissionCard = page.locator(".admin-list-card").filter({ hasText: relayName }).first();
   await expect(submissionCard).toBeVisible();
-  await expect(submissionCard).toContainText("Credential");
+  await expect(submissionCard).toContainText("关联密钥");
   await expect(submissionCard).toContainText("Probe");
   await expect(submissionCard).toContainText("gpt-5.4");
   await expect(submissionCard).toContainText(submissionDescription);
-  await submissionCard.getByRole("button", { name: "Approve & activate" }).click();
-  await expect(page.getByText(/Relay activated, credential moved, and monitoring started\./)).toBeVisible();
-  await expect(submissionCard).toContainText(/approved/i);
-  await expect(submissionCard).toContainText("Linked relay");
+  await submissionCard.getByRole("button", { name: "批准并启用" }).click();
+  await expect(page.getByText("提交已通过，Relay 已启用，密钥已迁移，并已启动监测。", { exact: true })).toBeVisible();
+  await expect(submissionCard).toContainText("已通过");
+  await expect(submissionCard).toContainText("已关联中转站");
 
   await page.goto(`${webBaseUrl}/leaderboard/openai-gpt-5.4`);
   await expect(page.getByRole("link", { name: relayName })).toBeVisible();
 
   await openAdmin(page, "/relays");
   const relayCard = page.locator(".admin-list-card").filter({ hasText: relayName }).first();
-  await expect(relayCard).toContainText(/Monitoring key · active/i);
-  await relayCard.getByRole("link", { name: "Manage key" }).click();
+  await expect(relayCard).toContainText(/监测密钥 · 生效中/i);
+  await relayCard.getByRole("link", { name: "管理密钥" }).click();
   await expect(page).toHaveURL(/\/credentials\?/);
-  await expect(page.getByRole("heading", { name: "Monitoring key detail", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "监测密钥详情", exact: true })).toBeVisible();
   await expect(page.getByText(relayName).first()).toBeVisible();
 
   await openAdmin(page, "/sponsors");
-  await page.getByLabel("Name").fill(sponsorName);
-  await page.getByLabel("Placement").fill("leaderboard-spotlight");
-  await page.getByLabel("Relay").selectOption({ label: relayName });
-  await page.getByRole("button", { name: "Create placement" }).click();
-  await expect(page.getByText("Sponsor placement created.")).toBeVisible();
+  await page.getByLabel("名称").fill(sponsorName);
+  await page.getByLabel("投放位标识").fill("leaderboard-spotlight");
+  await page.getByLabel("关联中转站").selectOption({ label: relayName });
+  await page.getByRole("button", { name: "创建赞助位" }).click();
+  await expect(page.getByText("赞助位已创建。", { exact: true })).toBeVisible();
   const sponsorCard = page.locator(".admin-list-card").filter({ hasText: sponsorName }).first();
   await expect(sponsorCard).toBeVisible();
   await expect(sponsorCard).toContainText(relayName);
 
   await openAdmin(page, "/prices");
-  await page.getByLabel("Relay").selectOption({ label: relayName });
-  await page.getByLabel("Model").selectOption({ label: "GPT-4.1" });
-  await page.getByLabel("Input price").fill(inputPrice);
-  await page.getByLabel("Output price").fill(outputPrice);
-  await page.getByRole("button", { name: "Create price" }).click();
-  await expect(page.getByText("Price record created.")).toBeVisible();
+  await page.getByLabel("中转站").selectOption({ label: relayName });
+  await page.getByLabel("模型").selectOption({ label: "GPT-4.1" });
+  await page.getByLabel("输入价").fill(inputPrice);
+  await page.getByLabel("输出价").fill(outputPrice);
+  await page.getByRole("button", { name: "创建价格记录" }).click();
+  await expect(page.getByText("价格记录已创建。", { exact: true })).toBeVisible();
   const priceCard = page.locator(".admin-list-card").filter({ hasText: relayName }).first();
   await expect(priceCard).toBeVisible();
   await expect(priceCard).toContainText("GPT-4.1");
