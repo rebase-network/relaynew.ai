@@ -1,5 +1,4 @@
 import * as Shared from "../shared";
-import { InfoTip } from "../components/info-tip";
 import { StatusBadge } from "../components/status-badge";
 import { SubmissionInspectorDrawer } from "../components/submission-inspector-drawer";
 
@@ -47,17 +46,14 @@ export function SubmissionHistoryPage() {
   return (
     <>
       <Card title="提交历史">
-        <div className="space-y-3 border-b border-white/10 pb-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-sm text-white/72">共 {historyRows.length} 条</p>
-            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/62">通过 {approvedCount}</span>
-            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/62">拒绝 {rejectedCount}</span>
-            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/62">归档 {archivedCount}</span>
-            <InfoTip content="列表只展示概要信息。需要查看提交资料、测试快照或审批备注时，在右侧抽屉中展开。" />
-          </div>
+        <div className="flex flex-wrap items-center gap-1.5 border-b border-white/10 pb-2.5">
+          <p className="text-xs text-white/68">共 {historyRows.length} 条</p>
+          <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/60">通过 {approvedCount}</span>
+          <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/60">拒绝 {rejectedCount}</span>
+          <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/60">归档 {archivedCount}</span>
         </div>
 
-        <div className="mt-3 space-y-2">
+        <div className="mt-2.5 space-y-2">
           {historyRows.length === 0 ? (
             <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-5 text-sm text-white/58">
               当前还没有历史提交记录。

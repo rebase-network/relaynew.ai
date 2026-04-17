@@ -114,14 +114,12 @@ export function ModelsPage() {
     <>
       <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <Card title="模型列表">
-          <div className="space-y-3 border-b border-white/10 pb-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-sm text-white/72">共 {models.data.rows.length} 条</p>
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/62">启用 {activeCount}</span>
-            </div>
+          <div className="flex flex-wrap items-center gap-1.5 border-b border-white/10 pb-2.5">
+            <p className="text-xs text-white/68">共 {models.data.rows.length} 条</p>
+            <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/60">启用 {activeCount}</span>
           </div>
 
-          <div className="mt-3 space-y-2">
+          <div className="mt-2.5 space-y-2">
             {models.data.rows.length === 0 ? (
               <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-5 text-sm text-white/58">
                 当前还没有模型记录。

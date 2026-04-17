@@ -1,5 +1,4 @@
 import * as Shared from "../shared";
-import { InfoTip } from "../components/info-tip";
 import { StatusBadge } from "../components/status-badge";
 import { SubmissionInspectorDrawer } from "../components/submission-inspector-drawer";
 
@@ -46,16 +45,13 @@ export function IntakePage() {
   return (
     <>
       <Card title="提交记录">
-        <div className="space-y-3 border-b border-white/10 pb-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-sm text-white/72">共 {pendingRows.length} 条待处理</p>
-            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/62">已初测 {testedCount}</span>
-            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/62">需关注 {attentionCount}</span>
-            <InfoTip content="这里只保留待处理提交。审批通过后会进入 Relay 列表；拒绝或归档后只保留在提交历史中。" />
-          </div>
+        <div className="flex flex-wrap items-center gap-1.5 border-b border-white/10 pb-2.5">
+          <p className="text-xs text-white/68">共 {pendingRows.length} 条待处理</p>
+          <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/60">已初测 {testedCount}</span>
+          <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/60">需关注 {attentionCount}</span>
         </div>
 
-        <div className="mt-3 space-y-2">
+        <div className="mt-2.5 space-y-2">
           {pendingRows.length === 0 ? (
             <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-5 text-sm text-white/58">
               当前没有待审核提交。

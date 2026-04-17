@@ -179,31 +179,37 @@ export function RelaysPage() {
   return (
     <>
       <Card title="Relay 列表">
-        <div className="space-y-3 border-b border-white/10 pb-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-sm text-white/72">共 {currentRelays.length} 条</p>
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/62">启用中 {activeCount}</span>
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/62">已暂停 {pausedCount}</span>
-            </div>
-            <div className="flex flex-wrap items-end gap-2.5">
-              <label className="field-label w-[8.5rem]">
-                状态
-                <select className="field-input" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "all" | "active" | "paused")}>
-                  <option value="all">全部</option>
-                  <option value="active">启用中</option>
-                  <option value="paused">已暂停</option>
-                </select>
-              </label>
-              <button className="pill pill-active" type="button" onClick={openCreateDrawer}>
-                手动添加 Relay
-              </button>
-            </div>
+        <div className="flex flex-wrap items-center justify-between gap-2.5 border-b border-white/10 pb-2.5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <p className="text-xs text-white/68">共 {currentRelays.length} 条</p>
+            <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/60">启用中 {activeCount}</span>
+            <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/60">已暂停 {pausedCount}</span>
+            {statusFilter !== "all" ? (
+              <span className="rounded-full border border-white/10 bg-black/10 px-2.5 py-1 text-[11px] text-white/55">
+                当前显示 {filteredRelays.length} / {currentRelays.length}
+              </span>
+            ) : null}
           </div>
-          {statusFilter !== "all" ? <p className="text-sm text-white/48">当前显示 {filteredRelays.length} / {currentRelays.length} 条</p> : null}
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-white/52">
+              <span>状态</span>
+              <select
+                className="field-input field-input-compact w-[8rem]"
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value as "all" | "active" | "paused")}
+              >
+                <option value="all">全部</option>
+                <option value="active">启用中</option>
+                <option value="paused">已暂停</option>
+                </select>
+            </label>
+            <button className="pill pill-active" type="button" onClick={openCreateDrawer}>
+              手动添加 Relay
+            </button>
+          </div>
         </div>
 
-        <div className="mt-3 space-y-2">
+        <div className="mt-2.5 space-y-2">
           {currentRelays.length === 0 ? (
             <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-5 text-sm text-white/58">
               当前还没有 Relay。你可以先手动添加 Relay，或去提交记录中批准一个待审核站点。

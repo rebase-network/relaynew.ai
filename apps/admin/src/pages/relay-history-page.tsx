@@ -50,18 +50,16 @@ export function RelayHistoryPage() {
   return (
     <>
       <Card title="Relay 历史">
-        <div className="space-y-3 border-b border-white/10 pb-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex flex-wrap gap-2 sm:ml-2">
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white/66">
-                共 {archivedRelays.length} 条
-              </span>
-            </div>
+        <div className="flex flex-wrap items-center gap-1.5 border-b border-white/10 pb-2.5">
+          <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/60">
+            共 {archivedRelays.length} 条
+          </span>
+          <div className="ml-auto">
             <InfoTip content="归档后的 Relay 不会参与自动测试，也不会出现在公开目录和榜单中" />
           </div>
         </div>
 
-        <div className="mt-4 space-y-2.5">
+        <div className="mt-2.5 space-y-2.5">
 
           {archivedRelays.length === 0 ? (
             <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-5 text-sm text-white/58">
@@ -104,10 +102,6 @@ export function RelayHistoryPage() {
                   <p className="text-[11px] uppercase tracking-[0.18em] text-white/38">归档信息</p>
                   <p className="mt-1.5 text-sm text-white/72">最近更新 {formatDateTime(relay.updatedAt)}</p>
                   <p className="mt-1 text-sm text-white/58">{relay.contactInfo ?? "未填写联系方式"}</p>
-                </div>
-
-                <div className="flex justify-end xl:justify-center">
-                  <span className="text-xs text-white/42">点击查看详情</span>
                 </div>
               </div>
             </div>

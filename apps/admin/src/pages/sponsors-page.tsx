@@ -1,5 +1,4 @@
 import * as Shared from "../shared";
-import { InfoTip } from "../components/info-tip";
 import { StatusBadge } from "../components/status-badge";
 
 const {
@@ -99,14 +98,11 @@ export function SponsorsPage() {
   return (
     <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
       <Card title="赞助商">
-        <div className="space-y-3 border-b border-white/10 pb-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-sm text-white/72">当前共 {sponsorRows.length} 条</p>
-            <InfoTip content="赞助位收敛为简单列表：从 active Relay 中挑选要展示的站点即可，不再单独维护投放状态、时间窗口或批量操作。" />
-          </div>
+        <div className="flex flex-wrap items-center gap-1.5 border-b border-white/10 pb-2.5">
+          <p className="text-xs text-white/68">当前共 {sponsorRows.length} 条</p>
         </div>
 
-        <div className="mt-3 space-y-2">
+        <div className="mt-2.5 space-y-2">
           {sponsorRows.length === 0 ? (
             <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-5 text-sm text-white/58">
               当前还没有赞助商。
