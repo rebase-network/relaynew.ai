@@ -3531,7 +3531,7 @@ function SubmitPage() {
           </div>
           <div className="surface-card p-3.5">
             <p className="kicker !text-black/52">初始测试</p>
-            <p className="text-sm leading-6 text-black/72">每次提交都会立即执行一次受限探测，让审核队列直接拿到首个验证快照。</p>
+            <p className="text-sm leading-6 text-black/72">提交后会立即执行一次自动测试，后续会持续测试，请确保测试Key可用性。</p>
           </div>
         </div>
       </div>
