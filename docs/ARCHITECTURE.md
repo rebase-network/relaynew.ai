@@ -19,6 +19,12 @@ The product should:
 - Public ranking based on availability, latency, protocol consistency, value, and trend stability
 - Public pages should be indexable and shareable
 - Probe and admin flows can favor interaction over SEO
+- Public submission intake should collect relay metadata, contact info, model-price
+  rows, and a test key for review
+- Admin operations should center on two long-term surfaces: the submission trail and
+  the relay catalog/history
+- Only relays with catalog status `active` should participate in scheduled monitoring
+  or appear on public directory, leaderboard, and relay detail pages
 - The public probe should stay model-first by default and use compatibility auto-detection
   with an optional advanced override
 - Relay detail pages use a small first-paint contract and can progressively load
@@ -189,6 +195,8 @@ Assets.
 ### Forward Compatibility
 - keep public route data contracts explicit so edge rendering or pre-render can be
   added later without changing the backend API shape
+- keep admin and public frontend code organized by route and feature boundaries so
+  entry files do not collapse back into monolithic multi-thousand-line modules
 - prefer route modules and page composition that can evolve toward SSR if SEO needs
   become stronger after the MVP
 

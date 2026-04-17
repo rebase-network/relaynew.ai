@@ -538,12 +538,22 @@ Request:
   "relayName": "Sample Relay",
   "baseUrl": "https://relay.sample-provider.ai/v1",
   "websiteUrl": "https://sample-provider.ai",
+  "contactInfo": "Telegram: @sample_ops",
   "description": "Low-latency OpenAI-compatible relay for general chat traffic.",
-  "submitterName": "Alice",
-  "submitterEmail": "ops@sample-provider.ai",
   "notes": "Please review GPT-5.4 first.",
+  "modelPrices": [
+    {
+      "modelKey": "openai-gpt-5.4",
+      "inputPricePer1M": 4.6,
+      "outputPricePer1M": 13.2
+    },
+    {
+      "modelKey": "openai-gpt-4.1",
+      "inputPricePer1M": 2.0,
+      "outputPricePer1M": 8.0
+    }
+  ],
   "testApiKey": "sk-...",
-  "testModel": "gpt-5.4",
   "compatibilityMode": "auto"
 }
 ```
@@ -568,10 +578,15 @@ Response:
 
 Notes:
 - this is a public write endpoint and must not be CDN-cached
-- `testApiKey` and `testModel` are required because the submission flow immediately
-  performs a bounded verification for the review queue
+- `contactInfo`, `modelPrices`, and `testApiKey` are required
+- `testModel` is optional; when omitted, the backend may derive it from the first
+  submitted `modelPrices` row before running the initial bounded verification
+- `modelPrices` must contain at least one row, and each row must include `modelKey`
+  plus at least one non-null price field
 - submit-time test keys are part of the operator review workflow and may be stored in
-  rotation-friendly credential records
+  submission-owned credential records until the review is completed
+- approving the submission later creates or links a relay record and moves the
+  submission into submission history rather than leaving it in the active queue
 
 ## Versioning Guidance
 

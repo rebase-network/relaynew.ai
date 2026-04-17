@@ -39,27 +39,42 @@ These routes live on the dedicated admin hostname. They are not mirrored under
 | Route | Purpose | Render | Primary Data Source |
 |---|---|---|---|
 | `/` | Admin dashboard landing page | CSR in admin SPA | `GET /admin/overview` |
-| `/relays` | Relay review and metadata management | CSR in admin SPA | `GET /admin/relays` |
-| `/intake` | Intake review queue for new relay submissions | CSR in admin SPA | `GET /admin/submissions` |
-| `/credentials` | Relay-key operations for rotation, revoke, and reprobe controls | CSR in admin SPA | `GET /admin/probe-credentials` |
+| `/relays` | Active / paused Relay catalog, manual relay creation, and full relay editor | CSR in admin SPA | `GET /admin/relays` |
+| `/relays/history` | Archived Relay history and reactivation entry | CSR in admin SPA | `GET /admin/relays` |
+| `/intake` | Pending submission queue for new Relay submissions | CSR in admin SPA | `GET /admin/submissions` |
+| `/intake/history` | Approved / rejected / archived submission history | CSR in admin SPA | `GET /admin/submissions` |
 | `/sponsors` | Sponsor placement management | CSR in admin SPA | `GET /admin/sponsors` |
 | `/models` | Model catalog management for activation and price units | CSR in admin SPA | `GET /admin/models` |
-| `/prices` | Price record management | CSR in admin SPA | `GET /admin/prices` |
+
+### Secondary Admin Routes
+
+These routes still exist, but they are no longer the primary daily workflow center.
+
+| Route | Purpose | Render | Primary Data Source |
+|---|---|---|---|
+| `/credentials` | Direct credential debugging, rotation, revoke, and reprobe controls | CSR in admin SPA | `GET /admin/probe-credentials` |
+| `/prices` | Legacy direct price-record maintenance surface | CSR in admin SPA | `GET /admin/prices` |
 
 ### Admin Intake Flow
 
 The expected operator path is:
 
-1. a submitter creates a pending record through `/submit` and provides a test key
-2. the initial bounded verification stays attached to the submission record
+1. a submitter creates a pending record through `/submit` with relay metadata,
+   contact info, model-price rows, and a test key
+2. the initial bounded verification stays attached to the submission record, and
+   the submitted model-price rows are stored as submission-scoped data
 3. an admin reviews the submission on `/intake`
-4. `Approve & activate` creates or links the relay, moves the active credential to that relay,
+4. `Approve & activate` creates or links the relay, copies the approved metadata and
+   model-price rows into the relay catalog, moves the active credential to that relay,
    flips the relay to `active`, runs the first relay-owned monitoring probe, and refreshes
    public snapshots
-5. `/credentials` is used after approval for key rotation, revoke, or recovery work rather
-   than for the normal intake handoff
-6. `/relays` acts as the quickest post-approval checkpoint by surfacing relay status plus
-   the current monitoring-key state and deep-linking into key operations
+5. the reviewed submission then leaves the active queue and is visible under `/intake/history`
+6. rejected or archived submissions also live only in `/intake/history`
+7. only relays with `status = active` enter scheduled monitoring and public exposure;
+   `paused` relays stay editable but remain off the public surface, and `archived`
+   relays move to `/relays/history`
+8. `/credentials` and `/prices` remain secondary operator tools rather than the
+   normal approval handoff path
 
 ## Homepage Modules
 
@@ -138,8 +153,16 @@ The test page is expected to include:
 - `/probe` must only call the public-safe test endpoint described in `docs/PROBE_SECURITY.md`
 - `/public/probe/check` should accept an optional `compatibilityMode` override while
   still defaulting to model-driven automatic detection
-- `/public/submissions` should require `testApiKey` and `testModel`, store them in a
-  rotation-friendly credential record, and return a concise initial probe summary
+- `/public/submissions` should require `contactInfo`, `modelPrices`, and `testApiKey`;
+  `testModel` may be omitted and derived from the first submitted model row
+- `/public/submissions` should persist submission-scoped model-price rows separately
+  from the main submission record and return a concise initial probe summary
+- `/admin/submissions` should expose contact info, model-price rows, approved-relay
+  linkage, and the current preferred credential summary for each submission
+- `/admin/relays` should expose relay metadata, contact info, model-price rows, and
+  the currently preferred credential summary used for relay operations
+- public directory, leaderboard, and relay detail routes should only read relays with
+  `status = active`
 - approving a submission should move the active credential from the submission owner
   into the target relay owner rather than duplicating keys across tables
 - approving a submission should immediately activate the relay and trigger its first

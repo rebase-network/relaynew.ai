@@ -40,6 +40,11 @@ For MVP, the intended catalog lifecycle values are:
 - `retired`
 - `archived`
 
+In the current operator workflow, the main working set is narrower:
+- `active` relays are monitored and may appear in the public directory and leaderboard
+- `paused` relays remain editable but are excluded from monitoring and public pages
+- `archived` relays move out of the primary relay list into history views
+
 ## Current Migration Notes
 
 The current executable schema is built by these migrations, in order:
@@ -47,6 +52,7 @@ The current executable schema is built by these migrations, in order:
 - `apps/api/db/migrations/0001_initial.sql`
 - `apps/api/db/migrations/0002_probe_credentials.sql`
 - `apps/api/db/migrations/0003_submission_description.sql`
+- `apps/api/db/migrations/0004_submission_prices_and_contacts.sql`
 
 Concrete choices in that migration:
 - UUID primary keys use `gen_random_uuid()`, so the database enables `pgcrypto`
@@ -62,6 +68,8 @@ Concrete choices in that migration:
   replace rows for a given key rather than append unlimited history
 - basic `CHECK` constraints were added for common statuses, score ranges, ratios,
   and non-negative numeric fields
+- `0004_submission_prices_and_contacts.sql` adds relay and submission contact info,
+  plus a normalized `submission_model_prices` table for submission-scoped price rows
 
 ## Core Entities
 
@@ -74,6 +82,7 @@ Suggested columns:
 - `name` text not null
 - `base_url` text not null
 - `provider_name` text null
+- `contact_info` text null
 - `description` text null
 - `website_url` text null
 - `docs_url` text null
@@ -94,6 +103,8 @@ Notes:
 - `is_sponsored` is not the authoritative source of paid placement visibility
 - public paid placement rendering should read from `sponsors`
 - `status` should represent listing lifecycle only, not measured runtime health
+- only rows with `status = 'active'` should enter scheduled monitoring, public
+  directory reads, leaderboard snapshots, and public relay detail exposure
 
 Planned follow-up metadata for compatibility-aware probes:
 - `compatibility_mode` text null
@@ -175,11 +186,10 @@ Candidate relay submissions from users or operators.
 
 Suggested columns:
 - `id` uuid primary key
-- `submitter_name` text null
-- `submitter_email` text null
 - `relay_name` text not null
 - `base_url` text not null
 - `website_url` text null
+- `contact_info` text null
 - `description` text null
 - `notes` text null
 - `status` text not null default 'pending'
@@ -194,12 +204,39 @@ Indexes:
 
 Notes:
 - `submissions` stays as the review queue and audit trail, not the long-term source of truth
+- the current public submission UI writes `contact_info`; legacy `submitter_name`
+  and `submitter_email` columns may still exist for backward compatibility but are
+  no longer the primary intake fields
 - once approved, the operational relay record lives in `relays`, and `approved_relay_id` links the review record back to that catalog entry
-- the current public submission contract requires `description` even though the
-  column was added in a follow-up migration for compatibility with earlier rows
+- `pending` rows are the active review queue, while `approved`, `rejected`, and
+  `archived` rows are treated as history
 - `POST /public/submissions` is the review-flow entry point and persists the
   submitter-provided test credential into `probe_credentials` for immediate
   verification and later review follow-up
+- submission-scoped model-price rows live in `submission_model_prices` instead of
+  being flattened into the submission row itself
+
+### submission_model_prices
+Per-submission model and price rows collected during public intake.
+
+Suggested columns:
+- `id` uuid primary key
+- `submission_id` uuid not null references `submissions(id)` on delete cascade
+- `model_key` text not null
+- `input_price_per_1m` numeric(18,6) null
+- `output_price_per_1m` numeric(18,6) null
+- `position` integer not null default 0
+- `created_at` timestamptz not null default now()
+- `updated_at` timestamptz not null default now()
+
+Indexes:
+- index on (`submission_id`, `position`, `created_at`)
+
+Notes:
+- each row must provide `model_key` plus at least one non-null price field
+- `position` preserves the operator-facing order from the original submission form
+- approved submissions should sync these rows into relay-owned price records during
+  relay creation or relay update
 
 ### probe_credentials
 Rotation-friendly monitoring credentials for either a pending submission or an approved relay.
@@ -237,6 +274,9 @@ Notes:
 - when a submission is approved, the active monitoring credential should move from
   the submission owner to the approved relay owner, either by transferring the row
   or by rotating into a new `relay_id`-owned credential record
+- relay-owned credentials are the long-term operational surface; after approval,
+  operators may still rotate or replace them manually, but only `active` relays
+  should use an active credential for scheduled monitoring
 
 ### sponsors
 Paid placement records kept separate from ranking logic.
