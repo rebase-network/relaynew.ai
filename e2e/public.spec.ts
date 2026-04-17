@@ -406,10 +406,8 @@ test("probe page stays compact on mobile", async ({ page }) => {
 
   await expect(page.getByRole("heading", { name: "运行测试" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "测试结果" })).toBeVisible();
-  await expect(page.locator(".input-helper-mobile")).toHaveCount(3);
-  await expect(page.locator(".input-helper-desktop")).toHaveCount(3);
-  await expect(page.locator(".input-helper-mobile").first()).toBeVisible();
-  await expect(page.locator(".input-helper-desktop").first()).toBeHidden();
+  await expect(page.locator(".input-helper-mobile")).toHaveCount(0);
+  await expect(page.locator(".input-helper-desktop")).toHaveCount(0);
   await expect(page.getByText("Before you run")).toHaveCount(0);
   await expect(page.getByText("What the result includes")).toHaveCount(0);
   await expect(page.getByText(/自助测试的API Key等信息不会留存/)).toBeVisible();

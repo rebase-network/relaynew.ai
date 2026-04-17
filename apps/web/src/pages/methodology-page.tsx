@@ -90,34 +90,34 @@ export function MethodologyPage() {
   if (error || !data) return <ErrorPanel message={error ?? "评测方式页面加载失败。"} />;
 
   return (
-    <div className="space-y-6">
-      <section className="panel bg-[#fff0c2]">
+    <div className="space-y-5">
+      <section className="panel methodology-hero bg-[#fff0c2]">
         <p className="kicker">评测方式</p>
-        <div className="grid gap-4 xl:grid-cols-[1.02fr_0.98fr]">
-          <div>
-            <h1 className="max-w-3xl text-4xl leading-[0.92] tracking-[-0.06em] md:text-5xl">
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)] xl:items-start">
+          <div className="methodology-hero-copy">
+            <h1 className="max-w-3xl text-[2.55rem] leading-[0.94] tracking-[-0.05em] md:text-[3.35rem]">
               我们如何测试并评估站点服务质量。
             </h1>
-            <p className="mt-4 max-w-2xl text-base leading-7 text-black/72">
-              评测综合了五项公开信号：可用性、延迟、一致性、性价比与稳定性。
-              赞助方展示不会并入这个评分，因此评测结果始终保持清晰可读。
+            <p className="mt-3 max-w-2xl text-base leading-7 text-black/70">
+              评测综合五项公开信号：可用性、延迟、一致性、性价比与稳定性。
+              赞助方展示不会并入评分，因此榜单排序始终只看测试结果。
             </p>
             <div className="mt-5 flex flex-wrap gap-2.5">
               <Link className="button-dark" to="/policy">我们如何评估</Link>
               <Link className="button-cream" to="/probe">开始测试</Link>
             </div>
-            <p className="mt-4 text-xs uppercase tracking-[0.16em] text-black/50">
+            <p className="methodology-hero-meta">
               快照时间：北京时间 {formatDateTime(data.measuredAt)}
             </p>
           </div>
-          <div className="surface-card p-4">
+          <div className="surface-card methodology-weight-card">
             <p className="kicker">当前评分构成</p>
-            <div className="mt-4 space-y-3">
+            <div className="methodology-weight-list">
               {Object.entries(data.weights).map(([label, value]) => (
-                <div key={label}>
-                  <div className="flex items-center justify-between gap-4">
-                    <p className="text-sm uppercase tracking-[0.16em] text-black/62">{formatScoreMetricLabel(label as keyof Shared.RelayOverviewResponse["scoreSummary"])}</p>
-                    <p className="font-mono text-sm text-black/74">{value}%</p>
+                <div key={label} className="methodology-weight-row">
+                  <div className="methodology-weight-head">
+                    <p className="methodology-weight-label">{formatScoreMetricLabel(label as keyof Shared.RelayOverviewResponse["scoreSummary"])}</p>
+                    <p className="methodology-weight-value">{value}%</p>
                   </div>
                   <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-white/55">
                     <div
@@ -132,36 +132,33 @@ export function MethodologyPage() {
         </div>
       </section>
       <section className="grid gap-4 lg:grid-cols-[0.96fr_1.04fr]">
-        <Panel title="公开状态说明">
-          <div className="space-y-3">
+        <Panel title="公开状态说明" className="methodology-section-panel">
+          <div className="methodology-status-list">
             {data.healthStatuses.map((status) => (
-              <div key={status} className="surface-card p-3.5">
-                <div className="flex items-center gap-3 text-sm uppercase tracking-[0.14em] text-black/72">
+              <div key={status} className="methodology-status-row">
+                <div className="methodology-status-head">
                   <StatusDot status={status} /> {formatHealthStatusLabel(status)}
                 </div>
-                <p className="mt-3 text-sm leading-6 text-black/68">
+                <p className="methodology-status-copy">
                   {HEALTH_STATUS_COPY[status] ?? "公开状态文案基于最近一次的实测证据生成。"}
                 </p>
               </div>
             ))}
           </div>
         </Panel>
-        <div className="space-y-4">
-          <Panel title="徽章含义">
-            <div className="grid gap-3 sm:grid-cols-2">
-              {data.badges.map((badge) => (
-                <div key={badge} className="surface-card p-3.5">
-                  <span className="signal-chip">{formatBadgeLabel(badge)}</span>
-                  <p className="mt-3 text-sm leading-6 text-black/68">
-                    {BADGE_COPY[badge] ?? "这个徽章用于解释当前的置信度、性价比或运行状态。"}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </Panel>
-        </div>
+        <Panel title="徽章含义" className="methodology-section-panel">
+          <div className="methodology-badge-grid">
+            {data.badges.map((badge) => (
+              <div key={badge} className="methodology-badge-row">
+                <span className="signal-chip">{formatBadgeLabel(badge)}</span>
+                <p className="methodology-badge-copy">
+                  {BADGE_COPY[badge] ?? "这个徽章用于解释当前的置信度、性价比或运行状态。"}
+                </p>
+              </div>
+            ))}
+          </div>
+        </Panel>
       </section>
     </div>
   );
 }
-

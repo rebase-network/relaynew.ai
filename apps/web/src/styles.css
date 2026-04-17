@@ -1276,6 +1276,137 @@ textarea {
   background: linear-gradient(90deg, rgba(255, 217, 0, 0.88), rgba(250, 82, 15, 0.88));
 }
 
+.methodology-hero,
+.policy-hero {
+  padding-bottom: 1.2rem;
+}
+
+.methodology-hero-meta {
+  margin: 0.95rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(31, 31, 31, 0.5);
+}
+
+.methodology-weight-card {
+  padding: 1rem;
+}
+
+.methodology-weight-list {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.methodology-weight-row {
+  border-top: 1px solid rgba(31, 31, 31, 0.08);
+  padding-top: 0.8rem;
+}
+
+.methodology-weight-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.methodology-weight-label {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  color: rgba(31, 31, 31, 0.72);
+}
+
+.methodology-weight-value {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(31, 31, 31, 0.68);
+}
+
+.methodology-status-list,
+.methodology-badge-grid,
+.policy-list,
+.policy-step-list,
+.policy-sequence-grid,
+.policy-pillars-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.methodology-status-row,
+.methodology-badge-row,
+.policy-list-row,
+.policy-step-row,
+.policy-sequence-step {
+  border-top: 1px solid rgba(31, 31, 31, 0.08);
+  padding-top: 0.8rem;
+}
+
+.methodology-status-head {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(31, 31, 31, 0.68);
+}
+
+.methodology-status-copy,
+.methodology-badge-copy,
+.policy-pillar-copy,
+.policy-list-row,
+.policy-step-copy {
+  margin: 0.45rem 0 0;
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: rgba(31, 31, 31, 0.66);
+}
+
+.policy-pillar {
+  border: 1px solid rgba(31, 31, 31, 0.08);
+  background: rgba(255, 255, 255, 0.68);
+  padding: 0.9rem;
+}
+
+.policy-pillar-title {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(31, 31, 31, 0.58);
+}
+
+.policy-step-row,
+.policy-sequence-step {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.policy-step-index {
+  display: inline-flex;
+  min-width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(31, 31, 31, 0.09);
+  background: rgba(255, 255, 255, 0.74);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(31, 31, 31, 0.62);
+}
+
 .form-field {
   display: block;
   font-family: var(--font-mono);
@@ -1480,6 +1611,11 @@ textarea {
   .probe-advanced-grid {
     grid-template-columns: minmax(0, 0.96fr) minmax(0, 1.04fr);
     align-items: end;
+  }
+
+  .methodology-badge-grid,
+  .policy-pillars-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -1763,6 +1899,10 @@ textarea {
   .submit-hero-points {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.8rem;
+  }
+
+  .policy-sequence-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .directory-filters-compact {
