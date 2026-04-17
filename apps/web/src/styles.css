@@ -645,6 +645,25 @@ textarea {
   padding: 0.95rem 1rem;
 }
 
+.directory-filters-compact {
+  gap: 0.6rem 0.85rem;
+  padding: 0.72rem 0.86rem;
+}
+
+.directory-filters-compact .directory-vendor-row {
+  gap: 0.38rem;
+}
+
+.directory-filters-compact .directory-filter-chip {
+  padding: 0.54rem 0.72rem;
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+}
+
+.directory-filters-compact .directory-filter-meta {
+  white-space: nowrap;
+}
+
 .directory-search {
   display: grid;
   gap: 0.42rem;
@@ -1138,6 +1157,10 @@ textarea {
 }
 
 @media (max-width: 767px) {
+  .directory-filters-compact .directory-filter-meta {
+    white-space: normal;
+  }
+
   .leaderboard-row-filter-grid {
     grid-template-columns: 1fr;
   }
@@ -1206,6 +1229,15 @@ textarea {
 }
 
 @media (min-width: 1024px) {
+  .directory-filters-compact {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .directory-filters-compact .directory-filter-meta {
+    justify-self: end;
+  }
+
   .site-header {
     padding-top: 1rem;
   }

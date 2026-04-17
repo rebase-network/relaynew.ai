@@ -37,7 +37,8 @@ test("public site renders the main discovery flow", async ({ page }) => {
   await expect(page.getByRole("link", { name: "Run probe" })).toBeVisible();
   await expect(page.getByText("Quick probe")).toBeVisible();
   await expect(page.getByRole("link", { name: "Open the pro probe page" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Watchlist" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sponsors" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Watchlist" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Incidents" })).toHaveCount(0);
 
   if (isDeployedRun) {
@@ -75,6 +76,10 @@ test("public site renders the main discovery flow", async ({ page }) => {
   await expect(featuredSection.getByRole("heading", { name: "Opus 4.6" })).toBeVisible();
   await expect(featuredSection.getByRole("heading", { name: "GPT 5.4" })).toBeVisible();
   await expect(featuredSection.getByRole("heading", { name: "Gemini 3.1" })).toBeVisible();
+  await expect(featuredSection.getByText("anthropic-claude-sonnet-4.6")).toHaveCount(0);
+  await expect(featuredSection.getByText("anthropic-claude-opus-4.6")).toHaveCount(0);
+  await expect(featuredSection.getByText("openai-gpt-5.4")).toHaveCount(0);
+  await expect(featuredSection.getByText("google-gemini-3.1")).toHaveCount(0);
   const gptBoardCard = featuredSection.locator("section").filter({
     has: page.getByRole("heading", { name: "GPT 5.4" }),
   });

@@ -1364,7 +1364,7 @@ function LeaderboardDirectorySkeleton() {
         </div>
       </section>
 
-      <section className="directory-filters">
+      <section className="directory-filters directory-filters-compact">
         <div className="directory-vendor-row">
           {Array.from({ length: 4 }).map((_, index) => (
             <SkeletonBlock key={index} className="skeleton-pill w-[5.5rem]" />
@@ -1735,7 +1735,6 @@ function LeaderboardPreviewCard({
     <section className="panel leaderboard-preview-card h-full">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="kicker">{board.modelKey}</p>
           <h2 className="text-3xl leading-[0.94] tracking-[-0.05em]">{board.modelName}</h2>
         </div>
         <Link className="signal-chip" to={getLeaderboardPath(board.modelKey)}>
@@ -1915,14 +1914,9 @@ function HomePage() {
       </section>
 
       <section className="panel">
-        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-2">
-            <p className="kicker">Relays to watch</p>
-            <h2 className="text-3xl leading-[0.95] tracking-[-0.04em] md:text-[2.9rem]">Watchlist</h2>
-          </div>
-          <p className="max-w-2xl text-sm leading-6 text-black/68">
-            Operators building positive evidence and strong price coverage, with direct access into each relay detail page.
-          </p>
+        <div className="mb-4 space-y-2">
+          <p className="kicker">Sponsored placement</p>
+          <h2 className="text-3xl leading-[0.95] tracking-[-0.04em] md:text-[2.9rem]">Sponsors</h2>
         </div>
         <div className="grid gap-3 lg:grid-cols-2">
           {data.highlights.map((relay) => (
@@ -2017,7 +2011,7 @@ function LeaderboardIndexPage() {
         </div>
       </section>
 
-      <section className="directory-filters">
+      <section className="directory-filters directory-filters-compact">
         <div className="directory-vendor-row">
           <button
             className={clsx("directory-filter-chip", vendorFilter === "all" && "directory-filter-chip-active")}
@@ -2041,7 +2035,9 @@ function LeaderboardIndexPage() {
           ))}
         </div>
         <p className="directory-filter-meta">
-          Showing {filteredBoards.length} of {data.boards.length} boards
+          {filteredBoards.length === data.boards.length
+            ? `${data.boards.length} lanes`
+            : `${filteredBoards.length} / ${data.boards.length} lanes`}
         </p>
       </section>
 
