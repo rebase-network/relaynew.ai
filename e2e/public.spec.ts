@@ -130,7 +130,7 @@ test("public site renders the main discovery flow", async ({ page }) => {
     return;
   }
 
-  await expect(page.getByRole("heading", { name: "站点榜单" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "站点榜单" })).toHaveCount(0);
   await page.getByRole("link", { name: "查看全部站点" }).click();
   await expect(page).toHaveURL(/\/leaderboard\/directory$/);
   await expect(page.getByText("榜单目录")).toBeVisible();
@@ -140,7 +140,7 @@ test("public site renders the main discovery flow", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Sonnet 4.6" })).toHaveCount(0);
 
   await gotoHome(page);
-  const featuredSection = page.locator("section").filter({ has: page.getByRole("heading", { name: "站点榜单" }) }).first();
+  const featuredSection = page.locator("section").filter({ has: page.getByRole("link", { name: "查看全部站点" }) }).first();
   await expect(featuredSection.getByRole("heading", { name: "Sonnet 4.6" })).toBeVisible();
   await expect(featuredSection.getByRole("heading", { name: "Opus 4.6" })).toBeVisible();
   await expect(featuredSection.getByRole("heading", { name: "GPT 5.4" })).toBeVisible();
