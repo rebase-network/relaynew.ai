@@ -2073,7 +2073,7 @@ function HomePage() {
             <form className="quick-probe-card quick-probe-form" onSubmit={quickProbe.handleSubmit}>
               <div className="quick-probe-header">
                 <div>
-                  <p className="quick-probe-heading">快速探测</p>
+                  <p className="quick-probe-heading">快速测试</p>
                 </div>
                 <Link
                   aria-label="打开完整探测页"
