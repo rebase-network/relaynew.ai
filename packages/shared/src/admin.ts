@@ -8,7 +8,7 @@ import {
   supportStatusSchema,
 } from "./common";
 import { probeCompatibilityModeSchema, probeDetectionModeSchema } from "./probe";
-import { submissionProbeSummarySchema } from "./submissions";
+import { submissionModelPriceSchema, submissionProbeSummarySchema } from "./submissions";
 
 const internalIdSchema = z.string().min(1);
 const trimString = (value: unknown) => (typeof value === "string" ? value.trim() : value);
@@ -20,9 +20,37 @@ const requiredUrlSchema = z.preprocess(trimString, z.url());
 const nullableUrlSchema = z.preprocess(emptyStringToNull, z.url().nullable());
 const nullableNonEmptyStringSchema = z.preprocess(emptyStringToNull, z.string().min(1).nullable());
 const requiredNonEmptyStringSchema = z.preprocess(trimString, z.string().min(1));
+const optionalSlugSchema = z.preprocess(
+  (value) => {
+    const trimmed = trimString(value);
+    return trimmed === "" || trimmed === undefined ? undefined : trimmed;
+  },
+  z.string().min(1).optional(),
+);
 
 export const probeCredentialStatusSchema = z.enum(["active", "rotated", "revoked"]);
 export const probeCredentialOwnerTypeSchema = z.enum(["submission", "relay"]);
+export const adminRelayCredentialSummarySchema = z.object({
+  id: internalIdSchema,
+  status: probeCredentialStatusSchema,
+  testModel: z.string().min(1),
+  compatibilityMode: probeCompatibilityModeSchema,
+  apiKeyPreview: z.string().min(1),
+  lastVerifiedAt: isoTimestampSchema.nullable(),
+  lastProbeOk: z.boolean().nullable(),
+  lastHealthStatus: healthStatusSchema.nullable(),
+  lastHttpStatus: z.number().int().min(100).max(599).nullable(),
+  lastMessage: z.string().nullable(),
+});
+export const adminRelayModelPriceSchema = z.object({
+  modelId: internalIdSchema.nullable(),
+  modelKey: z.string().min(1),
+  modelName: z.string().min(1),
+  currency: z.string().min(1),
+  inputPricePer1M: z.number().min(0).nullable(),
+  outputPricePer1M: z.number().min(0).nullable(),
+  effectiveFrom: isoTimestampSchema.nullable(),
+});
 
 export const adminOverviewResponseSchema = z.object({
   totals: z.object({
@@ -44,14 +72,12 @@ export const adminRelaySchema = z.object({
   slug: z.string().min(1),
   name: z.string().min(1),
   baseUrl: requiredUrlSchema,
-  providerName: z.string().nullable(),
   websiteUrl: nullableUrlSchema,
+  contactInfo: z.string().nullable(),
   description: z.string().nullable(),
-  docsUrl: nullableUrlSchema,
-  notes: z.string().nullable(),
   catalogStatus: catalogStatusSchema,
-  isFeatured: z.boolean(),
-  isSponsored: z.boolean(),
+  probeCredential: adminRelayCredentialSummarySchema.nullable(),
+  modelPrices: z.array(adminRelayModelPriceSchema),
   updatedAt: isoTimestampSchema,
 });
 
@@ -60,17 +86,16 @@ export const adminRelaysResponseSchema = z.object({
 });
 
 export const adminRelayUpsertSchema = z.object({
-  slug: z.string().min(1),
+  slug: optionalSlugSchema,
   name: z.string().min(1),
   baseUrl: requiredUrlSchema,
-  providerName: nullableNonEmptyStringSchema.optional(),
   websiteUrl: nullableUrlSchema.optional(),
+  contactInfo: nullableNonEmptyStringSchema.optional(),
   catalogStatus: catalogStatusSchema.default("active"),
-  isFeatured: z.boolean().default(false),
-  isSponsored: z.boolean().default(false),
   description: nullableNonEmptyStringSchema.optional(),
-  docsUrl: nullableUrlSchema.optional(),
-  notes: nullableNonEmptyStringSchema.optional(),
+  testApiKey: nullableNonEmptyStringSchema.optional(),
+  compatibilityMode: z.preprocess(trimString, probeCompatibilityModeSchema).default("auto"),
+  modelPrices: z.array(submissionModelPriceSchema).min(1),
 });
 
 export const adminSubmissionSchema = z.object({
@@ -78,27 +103,14 @@ export const adminSubmissionSchema = z.object({
   relayName: z.string().min(1),
   baseUrl: requiredUrlSchema,
   websiteUrl: nullableUrlSchema,
+  contactInfo: z.string().nullable(),
   description: z.string().nullable(),
-  submitterName: z.string().nullable(),
-  submitterEmail: z.string().email().nullable(),
   notes: z.string().nullable(),
+  modelPrices: z.array(submissionModelPriceSchema),
   status: z.enum(["pending", "approved", "rejected", "archived"]),
   reviewNotes: z.string().nullable(),
   approvedRelay: relaySummarySchema.nullable(),
-  probeCredential: z
-    .object({
-      id: internalIdSchema,
-      status: probeCredentialStatusSchema,
-      testModel: z.string().min(1),
-      compatibilityMode: probeCompatibilityModeSchema,
-      apiKeyPreview: z.string().min(1),
-      lastVerifiedAt: isoTimestampSchema.nullable(),
-      lastProbeOk: z.boolean().nullable(),
-      lastHealthStatus: healthStatusSchema.nullable(),
-      lastHttpStatus: z.number().int().min(100).max(599).nullable(),
-      lastMessage: z.string().nullable(),
-    })
-    .nullable(),
+  probeCredential: adminRelayCredentialSummarySchema.nullable(),
   createdAt: isoTimestampSchema,
 });
 
@@ -256,6 +268,8 @@ export const adminRelayModelSchema = z.object({
 export type AdminOverviewResponse = z.infer<typeof adminOverviewResponseSchema>;
 export type AdminRefreshPublicResponse = z.infer<typeof adminRefreshPublicResponseSchema>;
 export type AdminRelay = z.infer<typeof adminRelaySchema>;
+export type AdminRelayCredentialSummary = z.infer<typeof adminRelayCredentialSummarySchema>;
+export type AdminRelayModelPrice = z.infer<typeof adminRelayModelPriceSchema>;
 export type AdminRelaysResponse = z.infer<typeof adminRelaysResponseSchema>;
 export type AdminRelayUpsert = z.infer<typeof adminRelayUpsertSchema>;
 export type AdminSubmission = z.infer<typeof adminSubmissionSchema>;

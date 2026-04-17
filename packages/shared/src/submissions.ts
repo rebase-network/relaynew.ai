@@ -12,23 +12,57 @@ const emptyStringToUndefined = (value: unknown) => {
   const trimmed = trimString(value);
   return trimmed === "" ? undefined : trimmed;
 };
+const numberInputToNullable = (value: unknown) => {
+  const trimmed = trimString(value);
+  if (trimmed === "" || trimmed === undefined || trimmed === null) {
+    return null;
+  }
+
+  if (typeof trimmed === "number") {
+    return trimmed;
+  }
+
+  if (typeof trimmed === "string") {
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? parsed : trimmed;
+  }
+
+  return trimmed;
+};
 const requiredHttpsUrlSchema = z.preprocess(trimString, z.url({ protocol: /^https$/ }));
 const optionalUrlSchema = z.preprocess(emptyStringToUndefined, z.url().optional());
 const optionalNonEmptyStringSchema = z.preprocess(emptyStringToUndefined, z.string().min(1).optional());
-const optionalEmailSchema = z.preprocess(emptyStringToUndefined, z.email().optional());
 const requiredNonEmptyStringSchema = z.preprocess(trimString, z.string().min(1));
 const internalIdSchema = z.string().min(1);
+const nullablePriceNumberSchema = z.preprocess(
+  numberInputToNullable,
+  z.number().finite().min(0).nullable(),
+);
+
+export const submissionModelPriceSchema = z
+  .object({
+    modelKey: requiredNonEmptyStringSchema,
+    inputPricePer1M: nullablePriceNumberSchema,
+    outputPricePer1M: nullablePriceNumberSchema,
+  })
+  .refine(
+    (value) => value.inputPricePer1M !== null || value.outputPricePer1M !== null,
+    {
+      message: "At least one price field is required",
+      path: ["inputPricePer1M"],
+    },
+  );
 
 export const publicSubmissionRequestSchema = z.object({
   relayName: requiredNonEmptyStringSchema,
   baseUrl: requiredHttpsUrlSchema,
   websiteUrl: optionalUrlSchema,
+  contactInfo: requiredNonEmptyStringSchema,
   description: requiredNonEmptyStringSchema,
-  submitterName: optionalNonEmptyStringSchema,
-  submitterEmail: optionalEmailSchema,
   notes: optionalNonEmptyStringSchema,
+  modelPrices: z.array(submissionModelPriceSchema).min(1),
   testApiKey: requiredNonEmptyStringSchema,
-  testModel: requiredNonEmptyStringSchema,
+  testModel: optionalNonEmptyStringSchema,
   compatibilityMode: z.preprocess(trimString, probeCompatibilityModeSchema).default("auto"),
 });
 
@@ -52,3 +86,4 @@ export const publicSubmissionResponseSchema = z.object({
 export type PublicSubmissionRequest = z.infer<typeof publicSubmissionRequestSchema>;
 export type SubmissionProbeSummary = z.infer<typeof submissionProbeSummarySchema>;
 export type PublicSubmissionResponse = z.infer<typeof publicSubmissionResponseSchema>;
+export type SubmissionModelPrice = z.infer<typeof submissionModelPriceSchema>;

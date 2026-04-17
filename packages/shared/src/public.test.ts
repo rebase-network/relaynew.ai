@@ -185,22 +185,37 @@ test("public submission and admin relay inputs parse", () => {
     relayName: "Northwind Relay",
     baseUrl: "https://northwind.example.ai/v1",
     websiteUrl: "https://northwind.example.ai",
+    contactInfo: "Telegram: @northwind_ops",
     description: "Stable relay focused on low-latency OpenAI-compatible traffic.",
-    submitterEmail: "ops@example.com",
+    modelPrices: [
+      {
+        modelKey: "gpt-5.4",
+        inputPricePer1M: 4.6,
+        outputPricePer1M: 13.2,
+      },
+    ],
     testApiKey: "sk-monitoring",
-    testModel: "gpt-5.4",
   });
 
   const relay = adminRelayUpsertSchema.parse({
-    slug: "northwind-relay",
     name: "Northwind Relay",
     baseUrl: "https://northwind.example.ai/v1",
+    contactInfo: "Telegram: @northwind_ops",
     catalogStatus: "active",
+    testApiKey: "sk-monitoring",
+    modelPrices: [
+      {
+        modelKey: "openai-gpt-5.4",
+        inputPricePer1M: 4.6,
+        outputPricePer1M: 13.2,
+      },
+    ],
   });
 
   assert.equal(submission.relayName, "Northwind Relay");
+  assert.equal(submission.contactInfo, "Telegram: @northwind_ops");
   assert.equal(submission.compatibilityMode, "auto");
-  assert.equal(relay.slug, "northwind-relay");
+  assert.equal(relay.testApiKey, "sk-monitoring");
 });
 
 test("public submission and admin relay inputs normalize blank optional fields", () => {
@@ -208,34 +223,49 @@ test("public submission and admin relay inputs normalize blank optional fields",
     relayName: "Northwind Relay",
     baseUrl: " https://northwind.example.ai/v1 ",
     websiteUrl: "",
+    contactInfo: "  微信：northwind-ops  ",
     description: "  Stable relay focused on low-latency OpenAI-compatible traffic.  ",
-    submitterEmail: "",
     notes: "   ",
+    modelPrices: [
+      {
+        modelKey: " gpt-5.4 ",
+        inputPricePer1M: " 4.6 ",
+        outputPricePer1M: " 13.2 ",
+      },
+    ],
     testApiKey: " sk-monitoring ",
-    testModel: " gpt-5.4 ",
   });
 
   const relay = adminRelayUpsertSchema.parse({
-    slug: "northwind-relay",
     name: "Northwind Relay",
     baseUrl: " https://northwind.example.ai/v1 ",
-    providerName: "",
+    slug: "",
     websiteUrl: "",
-    docsUrl: "",
-    notes: "",
+    contactInfo: " ",
+    testApiKey: "",
+    modelPrices: [
+      {
+        modelKey: " openai-gpt-5.4 ",
+        inputPricePer1M: " 4.6 ",
+        outputPricePer1M: " 13.2 ",
+      },
+    ],
   });
 
   assert.equal(submission.baseUrl, "https://northwind.example.ai/v1");
   assert.equal(submission.websiteUrl, undefined);
+  assert.equal(submission.contactInfo, "微信：northwind-ops");
   assert.equal(submission.description, "Stable relay focused on low-latency OpenAI-compatible traffic.");
-  assert.equal(submission.submitterEmail, undefined);
   assert.equal(submission.testApiKey, "sk-monitoring");
-  assert.equal(submission.testModel, "gpt-5.4");
+  assert.equal(submission.testModel, undefined);
+  assert.equal(submission.modelPrices[0]?.modelKey, "gpt-5.4");
+  assert.equal(submission.modelPrices[0]?.inputPricePer1M, 4.6);
   assert.equal(relay.baseUrl, "https://northwind.example.ai/v1");
-  assert.equal(relay.providerName, null);
+  assert.equal(relay.slug, undefined);
   assert.equal(relay.websiteUrl, null);
-  assert.equal(relay.docsUrl, null);
-  assert.equal(relay.notes, null);
+  assert.equal(relay.contactInfo, null);
+  assert.equal(relay.testApiKey, null);
+  assert.equal(relay.modelPrices[0]?.modelKey, "openai-gpt-5.4");
 });
 
 test("admin probe credential schemas parse", () => {

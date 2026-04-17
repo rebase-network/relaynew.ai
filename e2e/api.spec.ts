@@ -44,10 +44,16 @@ test("public submissions stay on the public boundary without cache headers", asy
       relayName: `API Cache Check ${Date.now()}`,
       baseUrl: `https://example.com/api-cache-${Date.now()}`,
       websiteUrl: "https://example.com",
+      contactInfo: "Telegram: @api_cache_check",
       description: "Verifies public submission cache headers stay disabled.",
-      submitterEmail: "ops@example.com",
+      modelPrices: [
+        {
+          modelKey: "gpt-5.4",
+          inputPricePer1M: 4.6,
+          outputPricePer1M: 13.2,
+        },
+      ],
       testApiKey: "sk-cache-check",
-      testModel: "gpt-5.4",
       compatibilityMode: "auto",
     },
   });

@@ -25,6 +25,10 @@ import type { Kysely, Transaction } from "kysely";
 import type { Database } from "../db/types";
 import { runPublicProbe } from "../lib/probe";
 import {
+  loadSubmissionModelPricesBySubmissionIds,
+  syncRelayCatalogModelPrices,
+} from "../lib/relay-catalog";
+import {
   maskApiKey,
   toProbeCredentialVerification,
   toSubmissionProbeSummary,
@@ -70,6 +74,7 @@ async function resolveApprovedRelay(
     relayName: string;
     baseUrl: string;
     websiteUrl: string | null;
+    contactInfo: string | null;
     description: string | null;
     approvedRelayId: string | null;
   },
@@ -106,6 +111,7 @@ async function resolveApprovedRelay(
       name: submission.relayName,
       base_url: submission.baseUrl,
       provider_name: null,
+      contact_info: submission.contactInfo,
       description: submission.description,
       website_url: submission.websiteUrl,
       docs_url: null,
@@ -380,10 +386,115 @@ async function createProbeCredentialForOwner(
   return row.id;
 }
 
+function toAdminRelayCredentialSummary(
+  row:
+    | {
+      id: string;
+      status: string;
+      testModel: string;
+      compatibilityMode: string;
+      apiKey: string;
+      lastVerifiedAt: string | null;
+      lastProbeOk: boolean | null;
+      lastHealthStatus: string | null;
+      lastHttpStatus: number | null;
+      lastMessage: string | null;
+    }
+    | undefined
+    | null,
+) {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    status: row.status,
+    testModel: row.testModel,
+    compatibilityMode: row.compatibilityMode,
+    apiKeyPreview: maskApiKey(row.apiKey),
+    lastVerifiedAt: row.lastVerifiedAt,
+    lastProbeOk: row.lastProbeOk,
+    lastHealthStatus: row.lastHealthStatus,
+    lastHttpStatus: row.lastHttpStatus,
+    lastMessage: row.lastMessage,
+  };
+}
+
+async function loadLatestRelayModelPriceRows(db: DbExecutor, relayIds: string[]) {
+  if (relayIds.length === 0) {
+    return new Map<string, Array<{
+      modelId: string | null;
+      modelKey: string;
+      modelName: string;
+      currency: string;
+      inputPricePer1M: number | null;
+      outputPricePer1M: number | null;
+      effectiveFrom: string | null;
+    }>>();
+  }
+
+  const rows = await db
+    .selectFrom("relay_prices as rp")
+    .innerJoin("models as m", "m.id", "rp.model_id")
+    .select([
+      "rp.relay_id as relayId",
+      "m.id as modelId",
+      "m.key as modelKey",
+      "m.name as modelName",
+      "rp.currency",
+      "rp.input_price_per_1m as inputPricePer1M",
+      "rp.output_price_per_1m as outputPricePer1M",
+      "rp.effective_from as effectiveFrom",
+    ])
+    .where("rp.relay_id", "in", relayIds)
+    .orderBy("rp.relay_id", "asc")
+    .orderBy("rp.model_id", "asc")
+    .orderBy("rp.effective_from", "desc")
+    .execute();
+
+  const grouped = new Map<string, Array<{
+    modelId: string | null;
+    modelKey: string;
+    modelName: string;
+    currency: string;
+    inputPricePer1M: number | null;
+    outputPricePer1M: number | null;
+    effectiveFrom: string | null;
+  }>>();
+  const seen = new Set<string>();
+
+  for (const row of rows) {
+    const key = `${row.relayId}:${row.modelId}`;
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    const current = grouped.get(row.relayId) ?? [];
+    current.push({
+      modelId: row.modelId,
+      modelKey: row.modelKey,
+      modelName: row.modelName,
+      currency: row.currency,
+      inputPricePer1M: row.inputPricePer1M,
+      outputPricePer1M: row.outputPricePer1M,
+      effectiveFrom: row.effectiveFrom,
+    });
+    grouped.set(row.relayId, current);
+  }
+
+  return grouped;
+}
+
 export async function registerAdminRoutes(app: FastifyInstance) {
   app.get("/admin/overview", async () => {
     const [relays, pendingSubmissions, activeSponsors, priceRecords] = await Promise.all([
-      app.db.selectFrom("relays").select(({ fn }) => fn.count<number>("id").as("count")).executeTakeFirstOrThrow(),
+      app.db
+        .selectFrom("relays")
+        .select(({ fn }) => fn.count<number>("id").as("count"))
+        .where("status", "<>", "archived")
+        .executeTakeFirstOrThrow(),
       app.db
         .selectFrom("submissions")
         .select(({ fn }) => fn.count<number>("id").as("count"))
@@ -419,20 +530,41 @@ export async function registerAdminRoutes(app: FastifyInstance) {
         "slug",
         "name",
         "base_url as baseUrl",
-        "provider_name as providerName",
         "website_url as websiteUrl",
+        "contact_info as contactInfo",
         "description",
-        "docs_url as docsUrl",
-        "notes",
         "status as catalogStatus",
-        "is_featured as isFeatured",
-        "is_sponsored as isSponsored",
         "updated_at as updatedAt",
       ])
       .orderBy("name", "asc")
       .execute();
 
-    return adminRelaysResponseSchema.parse({ rows });
+    const relayIds = rows.map((row) => row.id);
+    const [relayPrices, relayCredentials] = await Promise.all([
+      loadLatestRelayModelPriceRows(app.db, relayIds),
+      relayIds.length === 0
+        ? Promise.resolve([])
+        : probeCredentialBaseQuery(app.db)
+            .where("pc.relay_id", "in", relayIds)
+            .where("pc.status", "=", "active")
+            .orderBy("pc.updated_at", "desc")
+            .execute() as Promise<ProbeCredentialRow[]>,
+    ]);
+
+    const activeRelayCredentialByRelayId = new Map<string, ProbeCredentialRow>();
+    for (const credential of relayCredentials) {
+      if (credential.relayId && !activeRelayCredentialByRelayId.has(credential.relayId)) {
+        activeRelayCredentialByRelayId.set(credential.relayId, credential);
+      }
+    }
+
+    return adminRelaysResponseSchema.parse({
+      rows: rows.map((row) => ({
+        ...row,
+        probeCredential: toAdminRelayCredentialSummary(activeRelayCredentialByRelayId.get(row.id)),
+        modelPrices: relayPrices.get(row.id) ?? [],
+      })),
+    });
   });
 
   app.get("/admin/models", async () => {
@@ -504,54 +636,163 @@ export async function registerAdminRoutes(app: FastifyInstance) {
 
   app.post("/admin/relays", async (request, reply) => {
     const body = adminRelayUpsertSchema.parse(request.body ?? {});
-    const row = await app.db
-      .insertInto("relays")
-      .values({
-        slug: body.slug,
-        name: body.name,
-        base_url: body.baseUrl,
-        provider_name: body.providerName ?? null,
-        description: body.description ?? null,
-        website_url: body.websiteUrl ?? null,
-        docs_url: body.docsUrl ?? null,
-        status: body.catalogStatus,
-        is_featured: body.isFeatured,
-        is_sponsored: body.isSponsored,
-        region_label: "global",
-        notes: body.notes ?? null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .returning(["id"])
-      .executeTakeFirstOrThrow();
+    const testModel = body.modelPrices[0]?.modelKey?.trim();
+    const testApiKey = body.testApiKey;
 
-    await refreshPublicData(app.db);
+    if (!testApiKey || !testModel) {
+      throw app.httpErrors.badRequest("Creating a relay requires a test API key and at least one model price row.");
+    }
+
+    const createdAt = new Date().toISOString();
+    const result = await app.db.transaction().execute(async (trx) => {
+      const slug = body.slug ?? await ensureUniqueRelaySlug(trx, body.name);
+      const relay = await trx
+        .insertInto("relays")
+        .values({
+          slug,
+          name: body.name,
+          base_url: body.baseUrl,
+          provider_name: null,
+          contact_info: body.contactInfo ?? null,
+          description: body.description ?? null,
+          website_url: body.websiteUrl ?? null,
+          docs_url: null,
+          status: body.catalogStatus,
+          is_featured: false,
+          is_sponsored: false,
+          region_label: "global",
+          notes: null,
+          created_at: createdAt,
+          updated_at: createdAt,
+        })
+        .returning(["id"])
+        .executeTakeFirstOrThrow();
+
+      await syncRelayCatalogModelPrices(trx, relay.id, body.modelPrices, createdAt);
+      const credentialId = await createProbeCredentialForOwner(
+        trx,
+        {
+          ownerType: "relay",
+          ownerId: relay.id,
+          ownerName: body.name,
+          ownerSlug: slug,
+          ownerBaseUrl: body.baseUrl,
+          submissionId: null,
+          relayId: relay.id,
+        },
+        {
+          apiKey: testApiKey,
+          testModel,
+          compatibilityMode: body.compatibilityMode,
+        },
+      );
+
+      return {
+        relayId: relay.id,
+        credentialId,
+        catalogStatus: body.catalogStatus,
+      };
+    });
+
+    if (result.catalogStatus === "active") {
+      await runRelayCredentialMonitoringById(app.db, result.credentialId);
+    } else {
+      await refreshPublicData(app.db);
+    }
     reply.code(201);
-    return { ok: true, id: row.id };
+    return { ok: true, id: result.relayId };
   });
 
   app.patch("/admin/relays/:id", async (request) => {
     const params = request.params as { id: string };
     const body = adminRelayUpsertSchema.parse(request.body ?? {});
-    await app.db
-      .updateTable("relays")
-      .set({
-        slug: body.slug,
-        name: body.name,
-        base_url: body.baseUrl,
-        provider_name: body.providerName ?? null,
-        description: body.description ?? null,
-        website_url: body.websiteUrl ?? null,
-        docs_url: body.docsUrl ?? null,
-        status: body.catalogStatus,
-        is_featured: body.isFeatured,
-        is_sponsored: body.isSponsored,
-        notes: body.notes ?? null,
-      })
-      .where("id", "=", params.id)
-      .executeTakeFirst();
+    const updatedAt = new Date().toISOString();
+    const result = await app.db.transaction().execute(async (trx) => {
+      const existingRelay = await trx
+        .selectFrom("relays")
+        .select(["id", "slug", "status"])
+        .where("id", "=", params.id)
+        .executeTakeFirst();
 
-    await refreshPublicData(app.db);
+      if (!existingRelay) {
+        throw app.httpErrors.notFound("Relay not found");
+      }
+
+      const nextSlug = body.slug ?? existingRelay.slug;
+
+      await trx
+        .updateTable("relays")
+        .set({
+          slug: nextSlug,
+          name: body.name,
+          base_url: body.baseUrl,
+          provider_name: null,
+          contact_info: body.contactInfo ?? null,
+          description: body.description ?? null,
+          website_url: body.websiteUrl ?? null,
+          docs_url: null,
+          status: body.catalogStatus,
+          is_featured: false,
+          is_sponsored: false,
+          notes: null,
+          updated_at: updatedAt,
+        })
+        .where("id", "=", params.id)
+        .executeTakeFirst();
+
+      await syncRelayCatalogModelPrices(trx, params.id, body.modelPrices, updatedAt);
+
+      const activeCredential = await trx
+        .selectFrom("probe_credentials")
+        .select(["id"])
+        .where("relay_id", "=", params.id)
+        .where("status", "=", "active")
+        .executeTakeFirst();
+
+      const testModel = body.modelPrices[0]?.modelKey?.trim() ?? null;
+      let credentialId = activeCredential?.id ?? null;
+
+      if (body.testApiKey && testModel) {
+        credentialId = await createProbeCredentialForOwner(
+          trx,
+          {
+            ownerType: "relay",
+            ownerId: params.id,
+            ownerName: body.name,
+            ownerSlug: nextSlug,
+            ownerBaseUrl: body.baseUrl,
+            submissionId: null,
+            relayId: params.id,
+          },
+          {
+            apiKey: body.testApiKey,
+            testModel,
+            compatibilityMode: body.compatibilityMode,
+          },
+        );
+      } else if (activeCredential && testModel) {
+        await trx
+          .updateTable("probe_credentials")
+          .set({
+            test_model: testModel,
+            compatibility_mode: body.compatibilityMode,
+            updated_at: updatedAt,
+          })
+          .where("id", "=", activeCredential.id)
+          .executeTakeFirst();
+      }
+
+      return {
+        credentialId,
+        catalogStatus: body.catalogStatus,
+      };
+    });
+
+    if (result.credentialId && result.catalogStatus === "active" && body.testApiKey) {
+      await runRelayCredentialMonitoringById(app.db, result.credentialId);
+    } else {
+      await refreshPublicData(app.db);
+    }
     return { ok: true };
   });
 
@@ -573,6 +814,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
         status: "archived",
         is_featured: false,
         is_sponsored: false,
+        updated_at: new Date().toISOString(),
       })
       .where("id", "=", params.id)
       .executeTakeFirst();
@@ -589,9 +831,8 @@ export async function registerAdminRoutes(app: FastifyInstance) {
         "relay_name as relayName",
         "base_url as baseUrl",
         "website_url as websiteUrl",
+        "contact_info as contactInfo",
         "description",
-        "submitter_name as submitterName",
-        "submitter_email as submitterEmail",
         "notes",
         "status",
         "review_notes as reviewNotes",
@@ -604,7 +845,8 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     const submissionIds = rows.map((row) => row.id);
     const approvedRelayIds = rows.flatMap((row) => (row.approvedRelayId ? [row.approvedRelayId] : []));
 
-    const [submissionCredentials, relayCredentials, approvedRelays] = await Promise.all([
+    const [submissionModelPrices, submissionCredentials, relayCredentials, approvedRelays] = await Promise.all([
+      loadSubmissionModelPricesBySubmissionIds(app.db, submissionIds),
       submissionIds.length === 0
         ? Promise.resolve([])
         : app.db
@@ -689,10 +931,10 @@ export async function registerAdminRoutes(app: FastifyInstance) {
           relayName: row.relayName,
           baseUrl: row.baseUrl,
           websiteUrl: row.websiteUrl,
+          contactInfo: row.contactInfo,
           description: row.description,
-          submitterName: row.submitterName,
-          submitterEmail: row.submitterEmail,
           notes: row.notes,
+          modelPrices: submissionModelPrices.get(row.id) ?? [],
           status: row.status,
           reviewNotes: row.reviewNotes,
           approvedRelay: approvedRelay
@@ -701,20 +943,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
                 name: approvedRelay.name,
               }
             : null,
-          probeCredential: probeCredential
-            ? {
-                id: probeCredential.id,
-                status: probeCredential.status,
-                testModel: probeCredential.testModel,
-                compatibilityMode: probeCredential.compatibilityMode,
-                apiKeyPreview: maskApiKey(probeCredential.apiKey),
-                lastVerifiedAt: probeCredential.lastVerifiedAt,
-                lastProbeOk: probeCredential.lastProbeOk,
-                lastHealthStatus: probeCredential.lastHealthStatus,
-                lastHttpStatus: probeCredential.lastHttpStatus,
-                lastMessage: probeCredential.lastMessage,
-              }
-            : null,
+          probeCredential: toAdminRelayCredentialSummary(probeCredential),
           createdAt: row.createdAt,
         };
       }),
@@ -876,6 +1105,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     const params = request.params as { id: string };
     const body = adminSubmissionReviewSchema.parse(request.body ?? {});
     let approvedCredentialId: string | null = null;
+    const reviewedAt = new Date().toISOString();
 
     await app.db.transaction().execute(async (trx) => {
       const submission = await trx
@@ -885,6 +1115,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
           "relay_name as relayName",
           "base_url as baseUrl",
           "website_url as websiteUrl",
+          "contact_info as contactInfo",
           "description",
           "approved_relay_id as approvedRelayId",
         ])
@@ -896,17 +1127,27 @@ export async function registerAdminRoutes(app: FastifyInstance) {
       }
 
       if (body.status === "approved") {
+        const submissionModelPrices = await loadSubmissionModelPricesBySubmissionIds(trx, [params.id]);
+        const modelPrices = submissionModelPrices.get(params.id) ?? [];
+        const defaultTestModel = modelPrices[0]?.modelKey ?? null;
         const relay = await resolveApprovedRelay(trx, submission);
         const relayUpdate: {
           status: "active";
           website_url?: string | null;
+          contact_info?: string | null;
           description?: string | null;
+          updated_at: string;
         } = {
           status: "active",
+          updated_at: reviewedAt,
         };
 
         if (submission.websiteUrl) {
           relayUpdate.website_url = submission.websiteUrl;
+        }
+
+        if (submission.contactInfo) {
+          relayUpdate.contact_info = submission.contactInfo;
         }
 
         if (submission.description) {
@@ -925,9 +1166,14 @@ export async function registerAdminRoutes(app: FastifyInstance) {
             status: body.status,
             review_notes: body.reviewNotes ?? null,
             approved_relay_id: relay.id,
+            updated_at: reviewedAt,
           })
           .where("id", "=", params.id)
           .executeTakeFirst();
+
+        if (modelPrices.length > 0) {
+          await syncRelayCatalogModelPrices(trx, relay.id, modelPrices, reviewedAt);
+        }
 
         const activeRelayCredential = await trx
           .selectFrom("probe_credentials")
@@ -952,12 +1198,24 @@ export async function registerAdminRoutes(app: FastifyInstance) {
           .executeTakeFirst();
 
         if (activeSubmissionCredential) {
+          const credentialUpdate: {
+            submission_id: null;
+            relay_id: string;
+            updated_at: string;
+            test_model?: string;
+          } = {
+            submission_id: null,
+            relay_id: relay.id,
+            updated_at: reviewedAt,
+          };
+
+          if (defaultTestModel) {
+            credentialUpdate.test_model = defaultTestModel;
+          }
+
           await trx
             .updateTable("probe_credentials")
-            .set({
-              submission_id: null,
-              relay_id: relay.id,
-            })
+            .set(credentialUpdate)
             .where("id", "=", activeSubmissionCredential.id)
             .executeTakeFirst();
 
@@ -972,6 +1230,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
         .set({
           status: body.status,
           review_notes: body.reviewNotes ?? null,
+          updated_at: reviewedAt,
         })
         .where("id", "=", params.id)
         .executeTakeFirst();

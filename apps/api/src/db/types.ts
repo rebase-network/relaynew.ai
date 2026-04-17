@@ -17,6 +17,7 @@ export interface RelaysTable {
   name: string;
   base_url: string;
   provider_name: string | null;
+  contact_info: string | null;
   description: string | null;
   website_url: string | null;
   docs_url: string | null;
@@ -78,11 +79,23 @@ export interface SubmissionsTable {
   relay_name: string;
   base_url: string;
   website_url: string | null;
+  contact_info: string | null;
   description: string | null;
   notes: string | null;
   status: string;
   review_notes: string | null;
   approved_relay_id: string | null;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+export interface SubmissionModelPricesTable {
+  id: Generated<string>;
+  submission_id: string;
+  model_key: string;
+  input_price_per_1m: number | null;
+  output_price_per_1m: number | null;
+  position: number;
   created_at: Timestamp;
   updated_at: Timestamp;
 }
@@ -252,6 +265,7 @@ export interface Database {
   relay_models: RelayModelsTable;
   relay_prices: RelayPricesTable;
   submissions: SubmissionsTable;
+  submission_model_prices: SubmissionModelPricesTable;
   probe_credentials: ProbeCredentialsTable;
   sponsors: SponsorsTable;
   probe_results_raw: ProbeResultsRawTable;

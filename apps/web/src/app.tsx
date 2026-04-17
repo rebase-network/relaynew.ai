@@ -904,24 +904,42 @@ type SubmitFormState = {
   relayName: string;
   baseUrl: string;
   websiteUrl: string;
+  contactInfo: string;
   description: string;
-  submitterEmail: string;
   testApiKey: string;
-  testModel: string;
   compatibilityMode: ProbeCompatibilityMode;
+  modelPrices: Array<{
+    id: string;
+    modelKey: string;
+    inputPricePer1M: string;
+    outputPricePer1M: string;
+  }>;
 };
 
-type SubmitFormErrors = Partial<Record<keyof SubmitFormState, string>>;
+type SubmitFormErrors = Partial<Record<"relayName" | "baseUrl" | "websiteUrl" | "contactInfo" | "description" | "testApiKey" | "modelPrices", string>>;
+
+function createSubmitModelPriceRow(index = 0) {
+  return {
+    id: `submit-model-price-${Date.now()}-${index}`,
+    modelKey: "",
+    inputPricePer1M: "",
+    outputPricePer1M: "",
+  };
+}
 
 function validateSubmitForm(state: SubmitFormState) {
   const errors: SubmitFormErrors = {};
   const relayName = state.relayName.trim();
   const baseUrl = state.baseUrl.trim();
   const websiteUrl = state.websiteUrl.trim();
+  const contactInfo = state.contactInfo.trim();
   const description = state.description.trim();
-  const submitterEmail = state.submitterEmail.trim();
   const testApiKey = state.testApiKey.trim();
-  const testModel = state.testModel.trim();
+  const modelPrices = state.modelPrices.map((row) => ({
+    modelKey: row.modelKey.trim(),
+    inputPricePer1M: row.inputPricePer1M.trim() ? Number(row.inputPricePer1M.trim()) : null,
+    outputPricePer1M: row.outputPricePer1M.trim() ? Number(row.outputPricePer1M.trim()) : null,
+  }));
 
   if (!relayName) {
     errors.relayName = "请填写中转站名称。";
@@ -937,20 +955,42 @@ function validateSubmitForm(state: SubmitFormState) {
     errors.websiteUrl = "请输入有效的网站地址，例如 https://relay.example.ai。";
   }
 
-  if (!description) {
-    errors.description = "请补充简要说明，帮助审核队列快速理解这个站点。";
+  if (!contactInfo) {
+    errors.contactInfo = "请填写联系方式。";
   }
 
-  if (submitterEmail && !isValidEmail(submitterEmail)) {
-    errors.submitterEmail = "请输入有效的联系邮箱。";
+  if (!description) {
+    errors.description = "请补充简要说明，帮助审核队列快速理解这个站点。";
   }
 
   if (!testApiKey) {
     errors.testApiKey = "初始测试需要测试API Key。";
   }
 
-  if (!testModel) {
-    errors.testModel = "请填写测试模型。";
+  if (modelPrices.length === 0) {
+    errors.modelPrices = "请至少填写一条模型价格信息。";
+  } else {
+    for (const row of modelPrices) {
+      if (!row.modelKey) {
+        errors.modelPrices = "请为每一行填写模型。";
+        break;
+      }
+
+      if (row.inputPricePer1M !== null && (Number.isNaN(row.inputPricePer1M) || row.inputPricePer1M < 0)) {
+        errors.modelPrices = "Input价格必须是大于或等于 0 的数字。";
+        break;
+      }
+
+      if (row.outputPricePer1M !== null && (Number.isNaN(row.outputPricePer1M) || row.outputPricePer1M < 0)) {
+        errors.modelPrices = "Output价格必须是大于或等于 0 的数字。";
+        break;
+      }
+
+      if (row.inputPricePer1M === null && row.outputPricePer1M === null) {
+        errors.modelPrices = "每一行至少填写一个价格字段。";
+        break;
+      }
+    }
   }
 
   return {
@@ -959,10 +999,10 @@ function validateSubmitForm(state: SubmitFormState) {
       relayName,
       baseUrl,
       websiteUrl: websiteUrl || undefined,
+      contactInfo,
       description,
-      submitterEmail: submitterEmail || undefined,
+      modelPrices,
       testApiKey,
-      testModel,
       compatibilityMode: state.compatibilityMode,
     },
   };
@@ -3411,11 +3451,11 @@ function SubmitPage() {
     relayName: "",
     baseUrl: "",
     websiteUrl: "",
+    contactInfo: "",
     description: "",
-    submitterEmail: "",
     testApiKey: "",
-    testModel: "gpt-5.4",
     compatibilityMode: "auto",
+    modelPrices: [createSubmitModelPriceRow()],
   });
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<PublicSubmissionResponse | null>(null);
@@ -3423,7 +3463,7 @@ function SubmitPage() {
   const [fieldErrors, setFieldErrors] = useState<SubmitFormErrors>({});
   usePageMetadata({
     title: "提交站点信息｜relaynew.ai",
-    description: "提交站点基础信息与测试参数进入审核队列，完成初始测试；赞助流程与评测排名逻辑分离。",
+    description: "提交站点基础信息、联系方式、支持模型与价格信息进入审核队列，完成初始测试；赞助流程与评测排名逻辑分离。",
     canonicalPath: "/submit",
   });
 
@@ -3431,6 +3471,46 @@ function SubmitPage() {
     setState((current) => ({ ...current, [key]: value }));
     setFieldErrors((current) => ({ ...current, [key]: undefined }));
     setError(null);
+  }
+
+  function updateModelPriceRow(rowId: string, key: "modelKey" | "inputPricePer1M" | "outputPricePer1M", value: string) {
+    setState((current) => ({
+      ...current,
+      modelPrices: current.modelPrices.map((row) => (row.id === rowId ? { ...row, [key]: value } : row)),
+    }));
+    setFieldErrors((current) => {
+      const next = { ...current };
+      delete next.modelPrices;
+      return next;
+    });
+    setError(null);
+  }
+
+  function addModelPriceRow() {
+    setState((current) => ({
+      ...current,
+      modelPrices: [...current.modelPrices, createSubmitModelPriceRow(current.modelPrices.length)],
+    }));
+    setFieldErrors((current) => {
+      const next = { ...current };
+      delete next.modelPrices;
+      return next;
+    });
+  }
+
+  function removeModelPriceRow(rowId: string) {
+    setState((current) => ({
+      ...current,
+      modelPrices:
+        current.modelPrices.length > 1
+          ? current.modelPrices.filter((row) => row.id !== rowId)
+          : [createSubmitModelPriceRow()],
+    }));
+    setFieldErrors((current) => {
+      const next = { ...current };
+      delete next.modelPrices;
+      return next;
+    });
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -3455,11 +3535,11 @@ function SubmitPage() {
         relayName: "",
         baseUrl: "",
         websiteUrl: "",
+        contactInfo: "",
         description: "",
-        submitterEmail: "",
         testApiKey: "",
-        testModel: "gpt-5.4",
         compatibilityMode: "auto",
+        modelPrices: [createSubmitModelPriceRow()],
       });
       setFieldErrors({});
     } catch (reason) {
@@ -3470,19 +3550,19 @@ function SubmitPage() {
   }
 
   return (
-    <section className="grid gap-4 lg:grid-cols-[1fr_0.9fr]">
+    <section className="grid gap-4 lg:grid-cols-[1fr_0.96fr]">
       <div className="panel hero-panel min-h-0">
         <p className="kicker">提交站点</p>
         <h1 className="text-4xl leading-[0.92] tracking-[-0.06em] md:text-5xl">把你的Relay站点信息提交，收录到站点目录中，有机会进入榜单排行，获得更多用户的认可</h1>
-        <p className="mt-4 max-w-xl text-black/70">通过表单把站点信息送入审核队列。运营审批与赞助方展示会独立处理，不会影响评测排名逻辑。</p>
+        <p className="mt-4 max-w-xl text-black/70">请提供中转站点的介绍，支持的模型、价格信息等等，这些信息将由社区运营志愿者整理后作为站点说明和价格表。</p>
         <div className="mt-6 grid gap-2.5 sm:grid-cols-3">
           <div className="surface-card p-3.5">
             <p className="kicker !text-black/52">先审核</p>
             <p className="text-sm leading-6 text-black/72">每个站点都会先进入运营审核队列，确认后才会出现在公开页面。</p>
           </div>
           <div className="surface-card p-3.5">
-            <p className="kicker !text-black/52">验证信息</p>
-            <p className="text-sm leading-6 text-black/72">请提供可用密钥、测试模型和简要说明，方便审核队列完成验证与归类。</p>
+            <p className="kicker !text-black/52">整理信息</p>
+            <p className="text-sm leading-6 text-black/72">请尽量把站点介绍、支持模型和价格信息填写完整，方便志愿者整理站点说明和价格表。</p>
           </div>
           <div className="surface-card p-3.5">
             <p className="kicker !text-black/52">初始测试</p>
@@ -3516,7 +3596,7 @@ function SubmitPage() {
           {fieldErrors.baseUrl ? <span className="field-error">{fieldErrors.baseUrl}</span> : null}
         </label>
         <label className="form-field">
-          网站地址
+          站点网站
           <input
             className="input-shell mt-2"
             type="url"
@@ -3525,6 +3605,17 @@ function SubmitPage() {
             onChange={(event) => updateField("websiteUrl", event.target.value)}
           />
           {fieldErrors.websiteUrl ? <span className="field-error">{fieldErrors.websiteUrl}</span> : null}
+        </label>
+        <label className="form-field">
+          联系方式
+          <input
+            className="input-shell mt-2"
+            type="text"
+            placeholder="Telegram / 邮箱 / 微信"
+            value={state.contactInfo}
+            onChange={(event) => updateField("contactInfo", event.target.value)}
+          />
+          {fieldErrors.contactInfo ? <span className="field-error">{fieldErrors.contactInfo}</span> : null}
         </label>
         <label className="form-field">
           中转站简介
@@ -3537,17 +3628,39 @@ function SubmitPage() {
           />
           {fieldErrors.description ? <span className="field-error">{fieldErrors.description}</span> : null}
         </label>
-        <label className="form-field">
-          联系邮箱
-          <input
-            className="input-shell mt-2"
-            type="email"
-            placeholder="ops@example.com"
-            value={state.submitterEmail}
-            onChange={(event) => updateField("submitterEmail", event.target.value)}
-          />
-          {fieldErrors.submitterEmail ? <span className="field-error">{fieldErrors.submitterEmail}</span> : null}
-        </label>
+        <div className="surface-card p-3.5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="kicker !text-black/52">支持的模型及价格表</p>
+              <p className="mt-1 text-sm leading-6 text-black/66">每行包含 模型 / Input价格 / Output价格。</p>
+            </div>
+            <button className="button-cream !px-4 !py-2" type="button" onClick={addModelPriceRow}>添加一行</button>
+          </div>
+          <div className="mt-4 space-y-3">
+            {state.modelPrices.map((row, index) => (
+              <div key={row.id} className="grid gap-3 rounded-[1.5rem] border border-black/8 bg-white/80 p-3 md:grid-cols-[1.18fr_0.8fr_0.8fr_auto]">
+                <label className="form-field-inline">
+                  模型
+                  <input className="input-shell mt-2" type="text" placeholder="openai-gpt-5.4" value={row.modelKey} onChange={(event) => updateModelPriceRow(row.id, "modelKey", event.target.value)} />
+                </label>
+                <label className="form-field-inline">
+                  Input价格
+                  <input className="input-shell mt-2" type="number" min="0" step="0.0001" placeholder="4.6" value={row.inputPricePer1M} onChange={(event) => updateModelPriceRow(row.id, "inputPricePer1M", event.target.value)} />
+                </label>
+                <label className="form-field-inline">
+                  Output价格
+                  <input className="input-shell mt-2" type="number" min="0" step="0.0001" placeholder="13.2" value={row.outputPricePer1M} onChange={(event) => updateModelPriceRow(row.id, "outputPricePer1M", event.target.value)} />
+                </label>
+                <div className="flex items-end justify-end">
+                  <button className="button-cream !px-4 !py-2" type="button" onClick={() => removeModelPriceRow(row.id)}>
+                    {state.modelPrices.length === 1 && index === 0 ? "清空" : "删除"}
+                  </button>
+                </div>
+              </div>
+            ))}
+            {fieldErrors.modelPrices ? <span className="field-error">{fieldErrors.modelPrices}</span> : null}
+          </div>
+        </div>
         <label className="form-field">
           测试API Key
           <input
@@ -3560,32 +3673,6 @@ function SubmitPage() {
           />
           {fieldErrors.testApiKey ? <span className="field-error">{fieldErrors.testApiKey}</span> : null}
         </label>
-        <div className="grid gap-4 md:grid-cols-[1fr_0.82fr]">
-          <label className="form-field">
-            测试模型
-            <input
-              className="input-shell mt-2"
-              type="text"
-              placeholder="gpt-5.4"
-              required
-              value={state.testModel}
-              onChange={(event) => updateField("testModel", event.target.value)}
-            />
-            {fieldErrors.testModel ? <span className="field-error">{fieldErrors.testModel}</span> : null}
-          </label>
-          <label className="form-field">
-            接口兼容类型
-            <select
-              className="input-shell mt-2"
-              value={state.compatibilityMode}
-              onChange={(event) => updateField("compatibilityMode", event.target.value as ProbeCompatibilityMode)}
-            >
-              {PROBE_COMPATIBILITY_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </label>
-        </div>
         <button className="button-dark" disabled={submitting} type="submit">{submitting ? "提交中..." : "提交"}</button>
         {result ? (
           <div className="surface-card space-y-2 p-3.5">

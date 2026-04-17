@@ -29,6 +29,12 @@ const PUBLIC_SITE_URL =
   import.meta.env.VITE_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "http://127.0.0.1:4173";
 const ADMIN_AUTH_STORAGE_KEY = "relaynews.admin.basic-auth";
 const ADMIN_AUTH_REQUIRED_EVENT = "relaynews.admin.auth-required";
+const PROBE_COMPATIBILITY_OPTIONS: Array<{ value: ProbeCompatibilityMode; label: string }> = [
+  { value: "auto", label: "自动识别" },
+  { value: "openai-responses", label: "OpenAI Responses" },
+  { value: "openai-chat-completions", label: "OpenAI Chat Completions" },
+  { value: "anthropic-messages", label: "Anthropic Messages" },
+];
 
 type MutationState = {
   pending: boolean;
@@ -36,7 +42,24 @@ type MutationState = {
   success: string | null;
 };
 
-type RelayFormErrors = Partial<Record<"slug" | "name" | "baseUrl" | "providerName" | "websiteUrl" | "docsUrl", string>>;
+type RelayFormErrors = Partial<Record<"name" | "baseUrl" | "websiteUrl" | "contactInfo" | "description" | "testApiKey" | "modelPrices", string>>;
+type RelayPriceRowFormState = {
+  id: string;
+  modelKey: string;
+  inputPricePer1M: string;
+  outputPricePer1M: string;
+};
+type RelayFormState = {
+  name: string;
+  baseUrl: string;
+  websiteUrl: string;
+  contactInfo: string;
+  description: string;
+  catalogStatus: "active" | "paused" | "archived";
+  testApiKey: string;
+  compatibilityMode: ProbeCompatibilityMode;
+  modelPrices: RelayPriceRowFormState[];
+};
 type SponsorFormState = {
   relayId: string;
   name: string;
@@ -414,42 +437,112 @@ function buildRelaySelectOptions(
   );
 }
 
-function validateRelayForm(form: AdminRelayUpsert) {
+function createRelayPriceRowFormState(index = 0): RelayPriceRowFormState {
+  return {
+    id: `relay-price-${Date.now()}-${index}`,
+    modelKey: "",
+    inputPricePer1M: "",
+    outputPricePer1M: "",
+  };
+}
+
+function buildRelayFormState(relay?: AdminRelaysResponse["rows"][number]): RelayFormState {
+  return {
+    name: relay?.name ?? "",
+    baseUrl: relay?.baseUrl ?? "",
+    websiteUrl: relay?.websiteUrl ?? "",
+    contactInfo: relay?.contactInfo ?? "",
+    description: relay?.description ?? "",
+    catalogStatus:
+      relay?.catalogStatus === "active" || relay?.catalogStatus === "paused" || relay?.catalogStatus === "archived"
+        ? relay.catalogStatus
+        : "paused",
+    testApiKey: "",
+    compatibilityMode: relay?.probeCredential?.compatibilityMode ?? "auto",
+    modelPrices:
+      relay?.modelPrices.map((row, index) => ({
+        id: `${relay.id}-${row.modelKey}-${index}`,
+        modelKey: row.modelKey,
+        inputPricePer1M: row.inputPricePer1M === null ? "" : String(row.inputPricePer1M),
+        outputPricePer1M: row.outputPricePer1M === null ? "" : String(row.outputPricePer1M),
+      })) ?? [createRelayPriceRowFormState()],
+  };
+}
+
+function validateRelayForm(form: RelayFormState, options?: { editing: boolean }) {
   const payload: AdminRelayUpsert = {
-    slug: trimString(form.slug),
     name: trimString(form.name),
     baseUrl: trimString(form.baseUrl),
-    providerName: emptyToNull(form.providerName),
     websiteUrl: emptyToNull(form.websiteUrl),
+    contactInfo: emptyToNull(form.contactInfo),
     catalogStatus: form.catalogStatus,
-    isFeatured: form.isFeatured,
-    isSponsored: form.isSponsored,
     description: emptyToNull(form.description),
-    docsUrl: emptyToNull(form.docsUrl),
-    notes: emptyToNull(form.notes),
+    testApiKey: emptyToNull(form.testApiKey),
+    compatibilityMode: form.compatibilityMode,
+    modelPrices: form.modelPrices.map((row) => ({
+      modelKey: trimString(row.modelKey),
+      inputPricePer1M: parseOptionalNumber(row.inputPricePer1M),
+      outputPricePer1M: parseOptionalNumber(row.outputPricePer1M),
+    })),
   };
   const errors: RelayFormErrors = {};
 
-  if (!payload.slug) {
-    errors.slug = "请输入 Slug。";
-  }
-
   if (!payload.name) {
-    errors.name = "请输入名称。";
+    errors.name = "请输入站点名字。";
   }
 
   if (!payload.baseUrl) {
-    errors.baseUrl = "请输入基础 URL。";
+    errors.baseUrl = "请输入 Base URL。";
   } else if (!isValidHttpUrl(payload.baseUrl)) {
-    errors.baseUrl = "请输入完整的基础 URL，例如 https://relay.example.ai/v1。";
+    errors.baseUrl = "请输入完整的 Base URL，例如 https://relay.example.ai/v1。";
   }
 
   if (payload.websiteUrl && !isValidHttpUrl(payload.websiteUrl)) {
-    errors.websiteUrl = "请输入有效的网站 URL，例如 https://relay.example.ai。";
+    errors.websiteUrl = "请输入有效的网站地址，例如 https://relay.example.ai。";
   }
 
-  if (payload.docsUrl && !isValidHttpUrl(payload.docsUrl)) {
-    errors.docsUrl = "请输入有效的文档 URL，例如 https://relay.example.ai/docs。";
+  if (!payload.contactInfo) {
+    errors.contactInfo = "请填写联系方式。";
+  }
+
+  if (!payload.description) {
+    errors.description = "请填写站点简介。";
+  }
+
+  if (!options?.editing && !payload.testApiKey) {
+    errors.testApiKey = "手动新增 Relay 时需要提供测试API Key。";
+  }
+
+  if (payload.modelPrices.length === 0) {
+    errors.modelPrices = "请至少添加一条模型价格信息。";
+  } else {
+    for (const row of payload.modelPrices) {
+      if (!row.modelKey) {
+        errors.modelPrices = "每条模型价格信息都需要填写模型。";
+        break;
+      }
+
+      if (
+        row.inputPricePer1M !== null
+        && (Number.isNaN(row.inputPricePer1M) || row.inputPricePer1M < 0)
+      ) {
+        errors.modelPrices = "Input 价格必须是大于或等于 0 的数字。";
+        break;
+      }
+
+      if (
+        row.outputPricePer1M !== null
+        && (Number.isNaN(row.outputPricePer1M) || row.outputPricePer1M < 0)
+      ) {
+        errors.modelPrices = "Output 价格必须是大于或等于 0 的数字。";
+        break;
+      }
+
+      if (row.inputPricePer1M === null && row.outputPricePer1M === null) {
+        errors.modelPrices = "每条模型价格信息至少填写一个价格字段。";
+        break;
+      }
+    }
   }
 
   return { errors, payload };
@@ -676,12 +769,12 @@ function AdminShell({
 }) {
   const items = [
     ["/", "概览"],
-    ["/relays", "中转站"],
-    ["/intake", "审核队列"],
-    ["/credentials", "密钥"],
+    ["/relays", "Relay"],
+    ["/relays/history", "Relay历史"],
+    ["/intake", "提交记录"],
+    ["/intake/history", "提交历史"],
     ["/sponsors", "赞助位"],
     ["/models", "模型"],
-    ["/prices", "价格"],
   ] as const;
 
   return (
@@ -700,9 +793,9 @@ function AdminShell({
                 relaynew.ai 管理台
               </div>
               <div>
-                <h1 className="text-3xl tracking-[-0.05em] md:text-4xl">统一管理中转站目录、模型、赞助位与价格记录。</h1>
+                <h1 className="text-3xl tracking-[-0.05em] md:text-4xl">围绕提交记录和 Relay 列表，收敛运营后台的日常工作流。</h1>
                 <p className="mt-2.5 max-w-2xl text-sm leading-6 text-white/60">
-                  在一个中文化控制台里处理提交审核、目录维护、模型维护、赞助投放和价格更新。
+                  审批通过后的记录直接进入 Relay 列表；只有 active Relay 会参与自动测试、目录展示和榜单排行。
                 </p>
               </div>
             </div>
@@ -868,7 +961,7 @@ function AdminLogin({ onAuthenticated }: { onAuthenticated: (authorization: stri
           <p className="eyebrow">管理员认证</p>
           <h1 className="text-3xl tracking-[-0.04em] md:text-[2rem]">登录后继续</h1>
           <p className="mt-3 text-sm leading-6 text-white/62">
-            管理后台需要先完成身份验证，才能访问审核队列、中转站、模型、赞助位和价格管理。
+            管理后台需要先完成身份验证，才能访问提交记录、Relay 列表、模型和赞助位管理。
           </p>
           <form className="mt-5 grid gap-3" onSubmit={handleSubmit}>
             <label className="field-label">
@@ -949,21 +1042,21 @@ function OverviewPage() {
             {[
               {
                 step: "1",
-                title: "先看审核队列",
-                text: "先处理审核队列。待审核记录已经带有初始 Probe 快照和提交密钥预览。",
-                action: { href: "/intake", label: "打开审核队列" },
+                title: "先看提交记录",
+                text: "当前待审核提交会先停留在提交记录中，附带初始测试快照和站点填写信息。",
+                action: { href: "/intake", label: "打开提交记录" },
               },
               {
                 step: "2",
                 title: "批准并启用",
-                text: "批准后会关联或创建中转站、迁移启用中的密钥，并启动首次 Relay 自有监测。",
+                text: "批准后提交会进入提交历史，同时 Relay 会直接进入当前列表并开始参与后续测试。",
                 action: { href: "/intake", label: "处理待审核项" },
               },
               {
                 step: "3",
                 title: "后续运营维护",
-                text: "目录信息、模型与价格在对应页面维护；密钥页只处理轮换、删除或修复等后续操作。",
-                action: { href: "/relays", label: "打开中转站页面" },
+                text: "日常维护集中在 Relay 列表和 Relay 历史；只有 active Relay 会出现在目录和榜单中。",
+                action: { href: "/relays", label: "打开 Relay 列表" },
               },
             ].map((item) => (
               <div key={item.step} className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -981,20 +1074,24 @@ function OverviewPage() {
         <Card title="快捷入口" kicker="常用页面">
           <div className="grid gap-3">
             <Link className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition hover:bg-white/8" to="/intake">
-              <p className="text-sm uppercase tracking-[0.16em] text-white/42">审核队列</p>
+              <p className="text-sm uppercase tracking-[0.16em] text-white/42">提交记录</p>
               <p className="mt-1 text-lg tracking-[-0.03em]">优先处理待审核提交</p>
             </Link>
             <Link className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition hover:bg-white/8" to="/relays">
-              <p className="text-sm uppercase tracking-[0.16em] text-white/42">目录管理</p>
+              <p className="text-sm uppercase tracking-[0.16em] text-white/42">Relay 列表</p>
               <p className="mt-1 text-lg tracking-[-0.03em]">查看 Relay 状态与元数据</p>
+            </Link>
+            <Link className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition hover:bg-white/8" to="/intake/history">
+              <p className="text-sm uppercase tracking-[0.16em] text-white/42">提交历史</p>
+              <p className="mt-1 text-lg tracking-[-0.03em]">追溯已处理记录</p>
             </Link>
             <Link className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition hover:bg-white/8" to="/models">
               <p className="text-sm uppercase tracking-[0.16em] text-white/42">模型目录</p>
               <p className="mt-1 text-lg tracking-[-0.03em]">新增模型并维护启停状态</p>
             </Link>
-            <Link className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition hover:bg-white/8" to="/credentials">
-              <p className="text-sm uppercase tracking-[0.16em] text-white/42">Relay 密钥</p>
-              <p className="mt-1 text-lg tracking-[-0.03em]">轮换或恢复监测密钥</p>
+            <Link className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition hover:bg-white/8" to="/relays/history">
+              <p className="text-sm uppercase tracking-[0.16em] text-white/42">Relay 历史</p>
+              <p className="mt-1 text-lg tracking-[-0.03em]">查看已归档站点</p>
             </Link>
             <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
               <p className="text-sm uppercase tracking-[0.16em] text-white/42">公开快照</p>
@@ -1024,85 +1121,103 @@ function OverviewPage() {
 }
 
 function RelaysPage() {
-  const emptyForm: AdminRelayUpsert = {
-    slug: "",
-    name: "",
-    baseUrl: "",
-    providerName: null,
-    websiteUrl: null,
-    catalogStatus: "active",
-    isFeatured: false,
-    isSponsored: false,
-    description: null,
-    docsUrl: null,
-    notes: null,
-  };
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [relayDeleteTarget, setRelayDeleteTarget] = useState<AdminRelaysResponse["rows"][number] | null>(null);
-  const [form, setForm] = useState<AdminRelayUpsert>(emptyForm);
+  const [archiveTarget, setArchiveTarget] = useState<AdminRelaysResponse["rows"][number] | null>(null);
+  const [form, setForm] = useState<RelayFormState>(() => buildRelayFormState());
   const [fieldErrors, setFieldErrors] = useState<RelayFormErrors>({});
   const [mutation, setMutation] = useMutationState();
   const relays = useLoadable<AdminRelaysResponse>(() => fetchJson("/admin/relays"), []);
-  const credentials = useLoadable<AdminProbeCredentialsResponse>(() => fetchJson("/admin/probe-credentials"), []);
 
   function beginEditingRelay(relay: AdminRelaysResponse["rows"][number]) {
     setEditingId(relay.id);
-    setForm({
-      slug: relay.slug,
-      name: relay.name,
-      baseUrl: relay.baseUrl,
-      providerName: relay.providerName,
-      websiteUrl: relay.websiteUrl,
-      catalogStatus: relay.catalogStatus,
-      isFeatured: relay.isFeatured,
-      isSponsored: relay.isSponsored,
-      description: relay.description,
-      docsUrl: relay.docsUrl,
-      notes: relay.notes,
-    });
+    setForm(buildRelayFormState(relay));
     setFieldErrors({});
     setMutation({ pending: false, error: null, success: null });
-    setRelayDeleteTarget(null);
+    setArchiveTarget(null);
   }
 
   function resetForm() {
     setEditingId(null);
-    setForm(emptyForm);
+    setForm(buildRelayFormState());
     setFieldErrors({});
-    setRelayDeleteTarget(null);
+    setArchiveTarget(null);
   }
 
-  async function softDeleteRelay(relay: AdminRelaysResponse["rows"][number]) {
+  function updateForm<Key extends keyof RelayFormState>(key: Key, value: RelayFormState[Key]) {
+    setForm((current) => ({ ...current, [key]: value }));
+    setFieldErrors((current) => ({ ...current, [key]: undefined }));
+    setMutation((current) => ({ ...current, error: null }));
+  }
+
+  function updatePriceRow(rowId: string, key: keyof RelayPriceRowFormState, value: string) {
+    setForm((current) => ({
+      ...current,
+      modelPrices: current.modelPrices.map((row) => (row.id === rowId ? { ...row, [key]: value } : row)),
+    }));
+    setFieldErrors((current) => withoutFieldError(current, "modelPrices"));
+    setMutation((current) => ({ ...current, error: null }));
+  }
+
+  function addPriceRow() {
+    setForm((current) => ({
+      ...current,
+      modelPrices: [...current.modelPrices, createRelayPriceRowFormState(current.modelPrices.length)],
+    }));
+    setFieldErrors((current) => withoutFieldError(current, "modelPrices"));
+  }
+
+  function removePriceRow(rowId: string) {
+    setForm((current) => ({
+      ...current,
+      modelPrices:
+        current.modelPrices.length > 1
+          ? current.modelPrices.filter((row) => row.id !== rowId)
+          : [createRelayPriceRowFormState()],
+    }));
+    setFieldErrors((current) => withoutFieldError(current, "modelPrices"));
+  }
+
+  async function updateRelayStatus(relay: AdminRelaysResponse["rows"][number], status: RelayFormState["catalogStatus"]) {
+    const nextForm = buildRelayFormState(relay);
+    nextForm.catalogStatus = status;
+    const { payload } = validateRelayForm(nextForm, { editing: true });
+
     setMutation({ pending: true, error: null, success: null });
     try {
-      await fetchJson<{ ok: true }>(`/admin/relays/${relay.id}`, {
-        method: "DELETE",
+      await fetchJson(`/admin/relays/${relay.id}`, {
+        method: "PATCH",
+        body: JSON.stringify(payload),
       });
-      if (editingId === relay.id) {
-        resetForm();
-      }
-      setRelayDeleteTarget(null);
+      setArchiveTarget(null);
       setMutation({
         pending: false,
         error: null,
-        success: "中转站已归档。它会从运营视图中隐藏，但仍保留在 Postgres 中。",
+        success:
+          status === "archived"
+            ? `${relay.name} 已归档到 Relay 历史。`
+            : status === "paused"
+              ? `${relay.name} 已暂停，后续不会参与自动测试和公开展示。`
+              : `${relay.name} 已重新激活。`,
       });
       await relays.reload();
+      if (editingId === relay.id && status === "archived") {
+        resetForm();
+      }
     } catch (reason) {
-      setRelayDeleteTarget(null);
+      setArchiveTarget(null);
       setMutation({
         pending: false,
-        error: reason instanceof Error ? reason.message : "无法归档中转站。",
+        error: reason instanceof Error ? reason.message : "无法更新 Relay 状态。",
         success: null,
       });
     }
   }
 
-  async function submit() {
-    const { errors, payload } = validateRelayForm(form);
+  async function submitRelay() {
+    const { errors, payload } = validateRelayForm(form, { editing: Boolean(editingId) });
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) {
-      setMutation({ pending: false, error: "请先修正高亮字段，再保存中转站。", success: null });
+      setMutation({ pending: false, error: "请先修正高亮字段，再保存 Relay。", success: null });
       return;
     }
 
@@ -1113,244 +1228,219 @@ function RelaysPage() {
         method: editingId ? "PATCH" : "POST",
         body: JSON.stringify(payload),
       });
-      setMutation({ pending: false, error: null, success: editingId ? "中转站已更新。" : "中转站已创建。" });
+      setMutation({
+        pending: false,
+        error: null,
+        success: editingId ? "Relay 已更新。" : "Relay 已创建并加入当前列表。",
+      });
       resetForm();
       await relays.reload();
     } catch (reason) {
-      setMutation({ pending: false, error: reason instanceof Error ? reason.message : "无法保存中转站。", success: null });
+      setMutation({ pending: false, error: reason instanceof Error ? reason.message : "无法保存 Relay。", success: null });
     }
   }
 
-  const relayCredentialLookup = useMemo(() => {
-    const lookup = new Map<string, AdminProbeCredential>();
-
-    for (const row of credentials.data?.rows ?? []) {
-      if (row.ownerType !== "relay") {
-        continue;
-      }
-
-      lookup.set(row.ownerId, pickPreferredCredential(lookup.get(row.ownerId), row));
-    }
-
-    return lookup;
-  }, [credentials.data]);
-
-  if (relays.loading || credentials.loading) return <LoadingCard />;
-  if (relays.error || credentials.error || !relays.data || !credentials.data) {
-    return <ErrorCard message={relays.error ?? credentials.error ?? "无法加载中转站列表。"} />;
+  if (relays.loading) return <LoadingCard />;
+  if (relays.error || !relays.data) {
+    return <ErrorCard message={relays.error ?? "无法加载 Relay 列表。"} />;
   }
 
-  const visibleRelays = relays.data.rows.filter((relay) => relay.catalogStatus !== "archived");
+  const currentRelays = relays.data.rows.filter((relay) => relay.catalogStatus === "active" || relay.catalogStatus === "paused");
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-      <Card title="中转站目录" kicker="当前记录">
+    <div className="grid gap-4 xl:grid-cols-[1.08fr_0.92fr]">
+      <Card title="Relay 列表" kicker="当前运营中的站点">
         <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/62">
-          这里是审核通过后的最快检查点。你可以确认目录状态、查看是否已绑定监测密钥，直接进入密钥轮换，
-          也可以在不删除数据库记录的前提下归档一个中转站。
+          审核通过后的 Relay 会直接进入这里。只有 <span className="text-white/82">active</span> 状态的 Relay 才参与自动测试、目录展示和榜单排行；
+          <span className="text-white/82">paused</span> 可继续编辑并随时重新激活。
         </div>
-        <div className="space-y-2.5">
+        <div className="space-y-3">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">中转站列表</p>
-              <p className="mt-1 text-lg tracking-[-0.03em]">当前可编辑的启用记录</p>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">当前 Relay</p>
+              <p className="mt-1 text-lg tracking-[-0.03em]">active / paused</p>
             </div>
-            <p className="text-sm text-white/48">共 {visibleRelays.length} 条</p>
+            <p className="text-sm text-white/48">共 {currentRelays.length} 条</p>
           </div>
-          {visibleRelays.length === 0 ? (
+          {currentRelays.length === 0 ? (
             <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-5 text-sm text-white/58">
-              当前还没有可展示的中转站记录。
+              当前还没有 Relay。你可以先通过右侧表单手动新增，或去提交记录中批准一个待审核站点。
             </div>
-          ) : visibleRelays.map((relay) => (
-            <div
-              key={relay.id}
-              className="admin-list-card w-full border border-white/10 bg-white/5 p-3.5 text-left transition hover:bg-white/8"
-            >
-              <div className="flex items-start justify-between gap-3">
+          ) : currentRelays.map((relay) => (
+            <div key={relay.id} className="admin-list-card border border-white/10 bg-white/5 p-3.5">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <p className="text-xl tracking-[-0.03em]">{relay.name}</p>
-                  <p className="mt-1 text-xs uppercase tracking-[0.16em] text-white/45">{relay.slug} · {formatCatalogStatus(relay.catalogStatus)}</p>
+                  <p className="mt-1 text-xs uppercase tracking-[0.16em] text-white/40">{relay.slug} · {formatCatalogStatus(relay.catalogStatus)}</p>
+                  <p className="mt-2 text-sm text-white/60 break-all">{relay.baseUrl}</p>
+                  {relay.description ? <p className="mt-3 text-sm leading-6 text-white/68">{relay.description}</p> : null}
+                  {relay.contactInfo ? (
+                    <p className="mt-2 text-sm text-white/58">联系方式：{relay.contactInfo}</p>
+                  ) : null}
+                  {relay.websiteUrl ? (
+                    <a className="mt-3 inline-flex text-sm underline underline-offset-4 text-white/78" href={relay.websiteUrl} rel="noreferrer" target="_blank">
+                      打开站点首页
+                    </a>
+                  ) : null}
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {relay.modelPrices.slice(0, 4).map((row) => (
+                      <span key={`${relay.id}-${row.modelKey}`} className="pill pill-ghost">
+                        {row.modelName} · {row.inputPricePer1M ?? "-"} / {row.outputPricePer1M ?? "-"}
+                      </span>
+                    ))}
+                    {relay.modelPrices.length > 4 ? <span className="pill pill-ghost">+{relay.modelPrices.length - 4}</span> : null}
+                  </div>
+                  <div className="mt-3 rounded-2xl border border-white/10 bg-black/10 px-3 py-2.5 text-sm text-white/62">
+                    {relay.probeCredential ? (
+                      <>
+                        <p>测试 Key · {relay.probeCredential.apiKeyPreview} · {formatCredentialStatus(relay.probeCredential.status)}</p>
+                        <p className="mt-1">
+                          测试模型 · {relay.probeCredential.testModel} · {formatHealthStatus(relay.probeCredential.lastHealthStatus)}
+                          {relay.probeCredential.lastHttpStatus ? ` · ${relay.probeCredential.lastHttpStatus}` : ""}
+                          {relay.probeCredential.lastVerifiedAt ? ` · ${formatDateTime(relay.probeCredential.lastVerifiedAt)}` : ""}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-[#ffd06a]">当前没有可用的测试 Key，Relay 无法参与自动测试。</p>
+                    )}
+                  </div>
                 </div>
-                <div className="text-right text-xs uppercase tracking-[0.14em] text-white/50">
-                  <p>{relay.isFeatured ? "精选展示" : "标准展示"}</p>
-                  <p>{relay.isSponsored ? "带赞助提示" : "自然位"}</p>
+                <div className="flex flex-wrap gap-2">
+                  <button className="pill pill-active" onClick={() => beginEditingRelay(relay)} type="button">
+                    编辑 Relay
+                  </button>
+                  {relay.catalogStatus === "active" ? (
+                    <button className="pill pill-idle" disabled={mutation.pending} onClick={() => void updateRelayStatus(relay, "paused")} type="button">
+                      暂停
+                    </button>
+                  ) : (
+                    <button className="pill pill-idle" disabled={mutation.pending} onClick={() => void updateRelayStatus(relay, "active")} type="button">
+                      重新激活
+                    </button>
+                  )}
+                  <a className="pill pill-ghost" href={`${PUBLIC_SITE_URL}/relay/${relay.slug}`} rel="noreferrer" target="_blank">
+                    前台详情页
+                  </a>
+                  <button className="pill pill-ghost" disabled={mutation.pending} onClick={() => setArchiveTarget(relay)} type="button">
+                    归档
+                  </button>
                 </div>
               </div>
-              {(() => {
-                const credential = relayCredentialLookup.get(relay.id);
-
-                return (
-                  <>
-                    <p className="mt-3 text-sm text-white/62">{relay.baseUrl}</p>
-                    {relay.description ? (
-                      <p className="mt-3 text-sm leading-6 text-white/58">{relay.description}</p>
-                    ) : null}
-                    {relay.docsUrl || relay.websiteUrl ? (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {relay.websiteUrl ? (
-                          <a
-                            className="pill pill-ghost"
-                            href={relay.websiteUrl}
-                            rel="noreferrer"
-                            target="_blank"
-                          >
-                            官网
-                          </a>
-                        ) : null}
-                        {relay.docsUrl ? (
-                          <a
-                            className="pill pill-ghost"
-                            href={relay.docsUrl}
-                            rel="noreferrer"
-                            target="_blank"
-                          >
-                            文档
-                          </a>
-                        ) : null}
-                      </div>
-                    ) : null}
-                    {relay.notes ? (
-                      <div className="mt-3 rounded-2xl border border-white/10 bg-black/10 px-3 py-2.5">
-                        <p className="text-[11px] uppercase tracking-[0.18em] text-white/35">内部备注</p>
-                        <p className="mt-2 text-sm leading-6 text-white/54">{relay.notes}</p>
-                      </div>
-                    ) : null}
-                    <p className={clsx("mt-3 text-sm", credential ? "text-white/72" : "text-[#ffd06a]")}>
-                      {credential ? `监测密钥 · ${formatCredentialStatus(credential.status)}` : "缺少监测密钥"}
-                    </p>
-                    <p className="mt-1 text-sm text-white/55">
-                      {credential
-                        ? `${credential.testModel} · ${formatHealthStatus(credential.lastHealthStatus)}${credential.lastHttpStatus ? ` · ${credential.lastHttpStatus}` : ""}`
-                        : "请先绑定中转站自有监测密钥，定时 Probe 才能开始运行。"}
-                      {credential?.lastVerifiedAt
-                        ? ` · ${formatDateTime(credential.lastVerifiedAt)}`
-                        : ""}
-                    </p>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <button className="pill pill-active" onClick={() => beginEditingRelay(relay)} type="button">
-                        编辑中转站
-                      </button>
-                      <Link
-                        className="pill pill-idle"
-                        to={buildCredentialRoute({
-                          credentialId: credential?.id ?? null,
-                          ownerType: "relay",
-                          ownerId: relay.id,
-                        })}
-                      >
-                        {credential ? "管理密钥" : "添加密钥"}
-                      </Link>
-                      <a
-                        className="pill pill-ghost"
-                        href={`${PUBLIC_SITE_URL}/relay/${relay.slug}`}
-                        rel="noreferrer"
-                        target="_blank"
-                      >
-                        前台详情页
-                      </a>
-                      <button
-                        className="pill pill-ghost"
-                        disabled={mutation.pending}
-                        onClick={() => setRelayDeleteTarget(relay)}
-                        type="button"
-                      >
-                        归档
-                      </button>
-                    </div>
-                  </>
-                );
-              })()}
             </div>
           ))}
         </div>
         <ConfirmDialog
-          confirmLabel="归档中转站"
+          confirmLabel="归档 Relay"
           confirmPendingLabel="归档中..."
           message={
-            relayDeleteTarget
-              ? `${relayDeleteTarget.name} 将被归档并从运营列表中隐藏，但记录仍会保留在 Postgres 中。`
+            archiveTarget
+              ? `${archiveTarget.name} 将移出当前 Relay 列表，只保留在 Relay 历史中。`
               : ""
           }
-          onCancel={() => setRelayDeleteTarget(null)}
+          onCancel={() => setArchiveTarget(null)}
           onConfirm={() => {
-            if (relayDeleteTarget) {
-              void softDeleteRelay(relayDeleteTarget);
+            if (archiveTarget) {
+              void updateRelayStatus(archiveTarget, "archived");
             }
           }}
-          open={Boolean(relayDeleteTarget)}
+          open={Boolean(archiveTarget)}
           pending={mutation.pending}
-          title={relayDeleteTarget ? `确认归档 ${relayDeleteTarget.name}？` : ""}
+          title={archiveTarget ? `确认归档 ${archiveTarget.name}？` : ""}
         />
       </Card>
-      <Card title={editingId ? "编辑中转站" : "创建中转站"} kicker="写入操作">
+      <Card title={editingId ? "编辑 Relay" : "手动新增 Relay"} kicker="Relay 编辑器">
+        {editingId ? (
+          <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/62">
+            如不填写新的测试API Key，则保留当前已绑定的 Key；如果填写新的 Key，会直接替换为新的测试凭据。
+          </div>
+        ) : null}
         <div className="grid gap-2.5">
-          {([
-            { label: "标识 Slug", key: "slug", placeholder: "northwind-relay", type: "text" },
-            { label: "名称", key: "name", placeholder: "北风中转站", type: "text" },
-            { label: "基础 URL", key: "baseUrl", placeholder: "https://northwind.example.ai/v1", type: "url" },
-            { label: "提供方", key: "providerName", placeholder: "Northwind Labs", type: "text" },
-            { label: "官网地址", key: "websiteUrl", placeholder: "https://northwind.example.ai", type: "url" },
-            { label: "文档地址", key: "docsUrl", placeholder: "https://northwind.example.ai/docs", type: "url" },
-          ] as const).map(({ label, key, placeholder, type }) => (
-            <label key={key} className="field-label">
-              {label}
-              <input
-                className="field-input"
-                type={type}
-                placeholder={placeholder}
-                value={form[key] ?? ""}
-                onChange={(event) => {
-                  const nextValue = event.target.value;
-                  setForm((current) => ({
-                    ...current,
-                    [key]: key === "slug" || key === "name" || key === "baseUrl" ? nextValue : nextValue || null,
-                  }));
-                  setFieldErrors((current) => withoutFieldError(current, key));
-                  setMutation((current) => ({ ...current, error: null }));
-                }}
-              />
-              <FieldError message={fieldErrors[key]} />
-            </label>
-          ))}
           <label className="field-label">
-            中转站介绍
-            <textarea
-              className="field-input min-h-28"
-              placeholder="用于前台目录说明的站点介绍、支持模型范围、价格说明摘要等。"
-              value={form.description ?? ""}
-              onChange={(event) => {
-                setForm((current) => ({ ...current, description: event.target.value || null }));
-                setMutation((current) => ({ ...current, error: null }));
-              }}
-            />
+            站点名字
+            <input className="field-input" placeholder="北风中转站" value={form.name} onChange={(event) => updateForm("name", event.target.value)} />
+            <FieldError message={fieldErrors.name} />
           </label>
           <label className="field-label">
-            内部备注
-            <textarea
-              className="field-input min-h-24"
-              placeholder="仅供运营内部记录，例如跟进事项、沟通状态、风险备注。"
-              value={form.notes ?? ""}
-              onChange={(event) => {
-                setForm((current) => ({ ...current, notes: event.target.value || null }));
-                setMutation((current) => ({ ...current, error: null }));
-              }}
-            />
+            Base URL
+            <input className="field-input" placeholder="https://northwind.example.ai/v1" value={form.baseUrl} onChange={(event) => updateForm("baseUrl", event.target.value)} />
+            <FieldError message={fieldErrors.baseUrl} />
           </label>
           <label className="field-label">
-            目录状态
-            <select className="field-input" value={form.catalogStatus} onChange={(event) => setForm((current) => ({ ...current, catalogStatus: event.target.value as AdminRelayUpsert["catalogStatus"] }))}>
-              <option value="active">启用中</option>
-              <option value="paused">已暂停</option>
-              <option value="pending">待处理</option>
-              <option value="retired">已退役</option>
-              <option value="archived">已归档</option>
+            站点网站
+            <input className="field-input" placeholder="https://northwind.example.ai" value={form.websiteUrl} onChange={(event) => updateForm("websiteUrl", event.target.value)} />
+            <FieldError message={fieldErrors.websiteUrl} />
+          </label>
+          <label className="field-label">
+            联系方式
+            <input className="field-input" placeholder="Telegram / 邮箱 / 微信" value={form.contactInfo} onChange={(event) => updateForm("contactInfo", event.target.value)} />
+            <FieldError message={fieldErrors.contactInfo} />
+          </label>
+          <label className="field-label">
+            站点简介
+            <textarea className="field-input min-h-28" placeholder="请介绍站点适合的场景、主要模型、价格策略和服务特点。" value={form.description} onChange={(event) => updateForm("description", event.target.value)} />
+            <FieldError message={fieldErrors.description} />
+          </label>
+          <label className="field-label">
+            Relay 状态
+            <select className="field-input" value={form.catalogStatus} onChange={(event) => updateForm("catalogStatus", event.target.value as RelayFormState["catalogStatus"])}>
+              <option value="active">active</option>
+              <option value="paused">paused</option>
+              <option value="archived">archived</option>
             </select>
           </label>
-          <label className="inline-flex items-center gap-3 text-sm text-white/70"><input type="checkbox" checked={form.isFeatured} onChange={(event) => setForm((current) => ({ ...current, isFeatured: event.target.checked }))} /> 设为精选</label>
-          <label className="inline-flex items-center gap-3 text-sm text-white/70"><input type="checkbox" checked={form.isSponsored} onChange={(event) => setForm((current) => ({ ...current, isSponsored: event.target.checked }))} /> 显示赞助提示</label>
-          <div className="flex gap-2.5">
-            <button className="pill pill-active" disabled={mutation.pending} onClick={submit} type="button">{mutation.pending ? "保存中..." : editingId ? "更新" : "创建"}</button>
-            {editingId ? <button className="pill pill-idle" type="button" onClick={resetForm}>清空</button> : null}
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-3.5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">支持模型及价格表</p>
+                <p className="mt-1 text-sm text-white/62">每行包含 模型 / Input价格 / Output价格。</p>
+              </div>
+              <button className="pill pill-idle" type="button" onClick={addPriceRow}>添加一行</button>
+            </div>
+            <div className="mt-3 space-y-2.5">
+              {form.modelPrices.map((row, index) => (
+                <div key={row.id} className="grid gap-2.5 rounded-2xl border border-white/10 bg-black/10 p-3 md:grid-cols-[1.2fr_0.8fr_0.8fr_auto]">
+                  <label className="field-label">
+                    模型
+                    <input className="field-input" placeholder="openai-gpt-5.4" value={row.modelKey} onChange={(event) => updatePriceRow(row.id, "modelKey", event.target.value)} />
+                  </label>
+                  <label className="field-label">
+                    Input价格
+                    <input className="field-input" type="number" min="0" step="0.0001" placeholder="4.6" value={row.inputPricePer1M} onChange={(event) => updatePriceRow(row.id, "inputPricePer1M", event.target.value)} />
+                  </label>
+                  <label className="field-label">
+                    Output价格
+                    <input className="field-input" type="number" min="0" step="0.0001" placeholder="13.2" value={row.outputPricePer1M} onChange={(event) => updatePriceRow(row.id, "outputPricePer1M", event.target.value)} />
+                  </label>
+                  <div className="flex items-end justify-end">
+                    <button className="pill pill-ghost" type="button" onClick={() => removePriceRow(row.id)}>
+                      {form.modelPrices.length === 1 && index === 0 ? "清空" : "删除"}
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <FieldError message={fieldErrors.modelPrices} />
+            </div>
+          </div>
+          <label className="field-label">
+            测试API Key
+            <input className="field-input" type="password" placeholder={editingId ? "留空则保持当前 Key 不变" : "sk-monitoring-or-relay-key"} value={form.testApiKey} onChange={(event) => updateForm("testApiKey", event.target.value)} />
+            <FieldError message={fieldErrors.testApiKey} />
+          </label>
+          <label className="field-label">
+            兼容模式
+            <select className="field-input" value={form.compatibilityMode} onChange={(event) => updateForm("compatibilityMode", event.target.value as ProbeCompatibilityMode)}>
+              {PROBE_COMPATIBILITY_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+          <div className="flex flex-wrap gap-2.5">
+            <button className="pill pill-active" disabled={mutation.pending} onClick={submitRelay} type="button">
+              {mutation.pending ? "保存中..." : editingId ? "保存修改" : "创建 Relay"}
+            </button>
+            {(editingId || form.name || form.baseUrl || form.contactInfo || form.description) ? (
+              <button className="pill pill-idle" type="button" onClick={resetForm}>清空表单</button>
+            ) : null}
           </div>
           <Notice state={mutation} />
         </div>
@@ -1359,9 +1449,75 @@ function RelaysPage() {
   );
 }
 
+function RelayHistoryPage() {
+  const relays = useLoadable<AdminRelaysResponse>(() => fetchJson("/admin/relays"), []);
+  const [mutation, setMutation] = useMutationState();
+
+  async function reactivate(relay: AdminRelaysResponse["rows"][number]) {
+    const nextForm = buildRelayFormState(relay);
+    nextForm.catalogStatus = "active";
+    const { payload } = validateRelayForm(nextForm, { editing: true });
+
+    setMutation({ pending: true, error: null, success: null });
+    try {
+      await fetchJson(`/admin/relays/${relay.id}`, {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      });
+      setMutation({ pending: false, error: null, success: `${relay.name} 已重新激活并回到当前 Relay 列表。` });
+      await relays.reload();
+    } catch (reason) {
+      setMutation({ pending: false, error: reason instanceof Error ? reason.message : "无法重新激活 Relay。", success: null });
+    }
+  }
+
+  if (relays.loading) return <LoadingCard />;
+  if (relays.error || !relays.data) return <ErrorCard message={relays.error ?? "无法加载 Relay 历史。"} />;
+
+  const archivedRelays = relays.data.rows.filter((relay) => relay.catalogStatus === "archived");
+
+  return (
+    <Card title="Relay 历史" kicker="已归档站点">
+      <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/62">
+        归档后的 Relay 不会参与自动测试，也不会出现在公开目录和榜单中。必要时可以在这里重新激活。
+      </div>
+      <div className="mt-4 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">已归档 Relay</p>
+            <p className="mt-1 text-lg tracking-[-0.03em]">历史记录</p>
+          </div>
+          <p className="text-sm text-white/48">共 {archivedRelays.length} 条</p>
+        </div>
+        {archivedRelays.length === 0 ? (
+          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-5 text-sm text-white/58">
+            当前没有已归档的 Relay。
+          </div>
+        ) : archivedRelays.map((relay) => (
+          <div key={relay.id} className="admin-list-card border border-white/10 bg-white/5 p-3.5">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <p className="text-xl tracking-[-0.03em]">{relay.name}</p>
+                <p className="mt-1 text-xs uppercase tracking-[0.16em] text-white/40">{relay.slug} · 已归档</p>
+                <p className="mt-2 text-sm text-white/60 break-all">{relay.baseUrl}</p>
+                {relay.description ? <p className="mt-3 text-sm leading-6 text-white/66">{relay.description}</p> : null}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button className="pill pill-active" disabled={mutation.pending} onClick={() => void reactivate(relay)} type="button">
+                  重新激活
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-4"><Notice state={mutation} /></div>
+    </Card>
+  );
+}
+
 function IntakePage() {
   const submissions = useLoadable<AdminSubmissionsResponse>(() => fetchJson("/admin/submissions"), []);
-  const relays = useLoadable<AdminRelaysResponse>(() => fetchJson("/admin/relays"), []);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [mutation, setMutation] = useMutationState();
 
@@ -1377,8 +1533,8 @@ function IntakePage() {
         error: null,
         success:
           status === "approved"
-            ? "提交已通过，Relay 已启用，密钥已迁移，并已启动监测。"
-            : `提交已标记为${formatSubmissionStatus(status)}。`,
+            ? "提交已通过，记录已进入提交历史，同时 Relay 已进入当前列表。"
+            : `提交已标记为${formatSubmissionStatus(status)}，并移入提交历史。`,
       });
       await submissions.reload();
     } catch (reason) {
@@ -1386,46 +1542,24 @@ function IntakePage() {
     }
   }
 
-  const relayIdBySlug = useMemo(() => {
-    const lookup = new Map<string, string>();
-
-    for (const relay of relays.data?.rows ?? []) {
-      lookup.set(relay.slug, relay.id);
-    }
-
-    return lookup;
-  }, [relays.data]);
-
-  if (submissions.loading || relays.loading) return <LoadingCard />;
-  if (submissions.error || relays.error || !submissions.data || !relays.data) {
-    return <ErrorCard message={submissions.error ?? relays.error ?? "无法加载提交记录。"} />;
+  if (submissions.loading) return <LoadingCard />;
+  if (submissions.error || !submissions.data) {
+    return <ErrorCard message={submissions.error ?? "无法加载提交记录。"} />;
   }
 
   const pendingRows = submissions.data.rows.filter((row) => row.status === "pending");
-  const approvedRows = submissions.data.rows.filter((row) => row.status === "approved");
-  const closedRows = submissions.data.rows.filter((row) => row.status === "rejected" || row.status === "archived");
   const needsAttention = pendingRows.filter((row) => row.probeCredential?.lastProbeOk === false).length;
 
   return (
-    <Card title="审核队列" kicker="审核操作">
+    <Card title="提交记录" kicker="当前待审核">
       <div className="space-y-3">
         <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3.5 text-sm text-white/68">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-white/42">批准流程</p>
-          <p className="mt-2 text-white/78">
-            现在点击批准即可一次完成完整交接：创建或关联中转站、迁移测试密钥、启用 Relay、执行首次监测，并刷新公开快照。
-          </p>
-          <p className="mt-2 text-white/54">
-            后续轮换、删除或恢复操作请到密钥页面处理。
-          </p>
+          这里只保留当前待处理的提交。审批通过后会直接进入 Relay 列表；未通过的提交会进入提交历史，不再停留在当前队列。
         </div>
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-2">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
             <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">待审核</p>
             <p className="mt-2 text-3xl tracking-[-0.04em]">{pendingRows.length}</p>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">已通过</p>
-            <p className="mt-2 text-3xl tracking-[-0.04em]">{approvedRows.length}</p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
             <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">需关注</p>
@@ -1436,10 +1570,10 @@ function IntakePage() {
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">待审核提交</p>
-              <p className="mt-1 text-lg tracking-[-0.03em]">优先处理这些记录</p>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">当前队列</p>
+              <p className="mt-1 text-lg tracking-[-0.03em]">等待审批的提交</p>
             </div>
-            <p className="text-sm text-white/48">共 {pendingRows.length} 条待审核</p>
+            <p className="text-sm text-white/48">共 {pendingRows.length} 条</p>
           </div>
 
           {pendingRows.length === 0 ? (
@@ -1451,35 +1585,46 @@ function IntakePage() {
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <p className="text-xl tracking-[-0.03em]">{row.relayName}</p>
-                  <p className="mt-1 text-sm text-white/60">{row.baseUrl}</p>
-                  <p className="mt-2 text-xs uppercase tracking-[0.16em] text-white/40">{formatSubmissionStatus(row.status)} · {formatDateTime(row.createdAt)}</p>
+                  <p className="mt-1 text-sm text-white/60 break-all">{row.baseUrl}</p>
+                  <p className="mt-2 text-xs uppercase tracking-[0.16em] text-white/40">{formatDateTime(row.createdAt)}</p>
+                  {row.websiteUrl ? (
+                    <a className="mt-2 inline-flex text-sm underline underline-offset-4 text-white/78" href={row.websiteUrl} rel="noreferrer" target="_blank">
+                      打开站点首页
+                    </a>
+                  ) : null}
+                  {row.contactInfo ? <p className="mt-2 text-sm text-white/58">联系方式：{row.contactInfo}</p> : null}
                   {row.description ? (
-                    <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5">
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-white/38">Relay 说明</p>
+                    <div className="mt-3 rounded-2xl border border-white/10 bg-black/10 px-3 py-2.5">
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-white/38">站点简介</p>
                       <p className="mt-2 text-sm leading-6 text-white/72">{row.description}</p>
                     </div>
                   ) : null}
-                  {row.probeCredential ? (
-                    <div className="mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white/65">
-                      <p>
-                        关联密钥 · {formatCredentialStatus(row.probeCredential.status)} · {row.probeCredential.apiKeyPreview}
-                      </p>
-                      <p>
-                        Probe · {row.probeCredential.testModel} · {formatHealthStatus(row.probeCredential.lastHealthStatus)}
-                        {row.probeCredential.lastHttpStatus ? ` · ${row.probeCredential.lastHttpStatus}` : ""}
-                        {row.probeCredential.lastVerifiedAt
-                          ? ` · ${formatDateTime(row.probeCredential.lastVerifiedAt)}`
-                          : ""}
-                      </p>
-                      {row.probeCredential.lastMessage ? <p className="text-white/48">{row.probeCredential.lastMessage}</p> : null}
+                  {row.modelPrices.length > 0 ? (
+                    <div className="mt-3 rounded-2xl border border-white/10 bg-black/10 px-3 py-2.5">
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-white/38">支持模型及价格表</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {row.modelPrices.map((priceRow) => (
+                          <span key={`${row.id}-${priceRow.modelKey}`} className="pill pill-ghost">
+                            {priceRow.modelKey} · {priceRow.inputPricePer1M ?? "-"} / {priceRow.outputPricePer1M ?? "-"}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   ) : null}
-                  <p className="mt-3 text-sm text-white/48">
-                    批准后会立即启用该 Relay，并开始公开监测。
-                  </p>
+                  {row.probeCredential ? (
+                    <div className="mt-3 rounded-2xl border border-white/10 bg-black/10 px-3 py-2.5 text-sm text-white/65">
+                      <p>测试 Key · {row.probeCredential.apiKeyPreview} · {formatCredentialStatus(row.probeCredential.status)}</p>
+                      <p className="mt-1">
+                        初始测试 · {row.probeCredential.testModel} · {formatHealthStatus(row.probeCredential.lastHealthStatus)}
+                        {row.probeCredential.lastHttpStatus ? ` · ${row.probeCredential.lastHttpStatus}` : ""}
+                        {row.probeCredential.lastVerifiedAt ? ` · ${formatDateTime(row.probeCredential.lastVerifiedAt)}` : ""}
+                      </p>
+                      {row.probeCredential.lastMessage ? <p className="mt-1 text-white/48">{row.probeCredential.lastMessage}</p> : null}
+                    </div>
+                  ) : null}
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <button className="pill pill-active" type="button" onClick={() => review(row.id, "approved")}>批准并启用</button>
+                  <button className="pill pill-active" type="button" onClick={() => review(row.id, "approved")}>批准</button>
                   <button className="pill pill-idle" type="button" onClick={() => review(row.id, "rejected")}>拒绝</button>
                   <button className="pill pill-ghost" type="button" onClick={() => review(row.id, "archived")}>归档</button>
                 </div>
@@ -1488,94 +1633,78 @@ function IntakePage() {
             </div>
           ))}
         </div>
-
-        {approvedRows.length > 0 ? (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">已启用 Relay</p>
-                <p className="mt-1 text-lg tracking-[-0.03em]">最近完成的交接</p>
-              </div>
-              <p className="text-sm text-white/48">共 {approvedRows.length} 条已通过</p>
-            </div>
-
-            {approvedRows.slice(0, 8).map((row) => (
-              <div key={row.id} className="admin-list-card border border-white/10 bg-white/5 p-3.5">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                  <div>
-                    <p className="text-xl tracking-[-0.03em]">{row.relayName}</p>
-                    <p className="mt-1 text-sm text-white/60">{row.baseUrl}</p>
-                    <p className="mt-2 text-xs uppercase tracking-[0.16em] text-white/40">{formatSubmissionStatus(row.status)} · {formatDateTime(row.createdAt)}</p>
-                    {row.description ? <p className="mt-3 text-sm leading-6 text-white/64">{row.description}</p> : null}
-                    {row.approvedRelay ? <p className="mt-2 text-sm text-emerald-300/80">已关联中转站 · {row.approvedRelay.name}</p> : null}
-                    {row.probeCredential ? (
-                      <p className="mt-3 text-sm text-white/55">
-                        审核快照 · {row.probeCredential.testModel} · {formatHealthStatus(row.probeCredential.lastHealthStatus)}
-                        {row.probeCredential.lastVerifiedAt
-                          ? ` · ${formatDateTime(row.probeCredential.lastVerifiedAt)}`
-                          : ""}
-                      </p>
-                    ) : null}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {row.approvedRelay ? (
-                      <>
-                        {relayIdBySlug.get(row.approvedRelay.slug) ? (
-                          <Link
-                            className="pill pill-idle"
-                            to={buildCredentialRoute(
-                              (() => {
-                                const ownerId = relayIdBySlug.get(row.approvedRelay.slug);
-                                return ownerId
-                                  ? {
-                                    ownerType: "relay" as const,
-                                    ownerId,
-                                  }
-                                  : {};
-                              })(),
-                            )}
-                          >
-                            管理密钥
-                          </Link>
-                        ) : null}
-                        <Link className="pill pill-idle" to="/relays">
-                          打开 Relay 运营页
-                        </Link>
-                        <a
-                          className="pill pill-ghost"
-                          href={`${PUBLIC_SITE_URL}/relay/${row.approvedRelay.slug}`}
-                          rel="noreferrer"
-                          target="_blank"
-                        >
-                          打开前台页面
-                        </a>
-                      </>
-                    ) : null}
-                  </div>
-                </div>
-                <textarea className="field-input mt-3 min-h-24" placeholder="审核备注" value={notes[row.id] ?? row.reviewNotes ?? ""} onChange={(event) => setNotes((current) => ({ ...current, [row.id]: event.target.value }))} />
-              </div>
-            ))}
-          </div>
-        ) : null}
-
-        {closedRows.length > 0 ? (
-          <details className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-            <summary className="cursor-pointer list-none text-sm uppercase tracking-[0.16em] text-white/45">
-              已关闭记录 · {closedRows.length}
-            </summary>
-            <div className="mt-3 space-y-2.5">
-              {closedRows.slice(0, 8).map((row) => (
-                <div key={row.id} className="rounded-2xl border border-white/10 bg-black/10 px-3 py-3 text-sm text-white/60">
-                  <p className="text-white/78">{row.relayName}</p>
-                  <p className="mt-1">{formatSubmissionStatus(row.status)} · {formatDateTime(row.createdAt)}</p>
-                </div>
-              ))}
-            </div>
-          </details>
-        ) : null}
       </div>
       <div className="mt-4"><Notice state={mutation} /></div>
+    </Card>
+  );
+}
+
+function SubmissionHistoryPage() {
+  const submissions = useLoadable<AdminSubmissionsResponse>(() => fetchJson("/admin/submissions"), []);
+
+  if (submissions.loading) return <LoadingCard />;
+  if (submissions.error || !submissions.data) {
+    return <ErrorCard message={submissions.error ?? "无法加载提交历史。"} />;
+  }
+
+  const historyRows = submissions.data.rows.filter((row) => row.status !== "pending");
+
+  return (
+    <Card title="提交记录历史" kicker="已处理记录">
+      <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/62">
+        这里保留所有已经处理完成的提交，包括 approved、rejected 和 archived，便于运营追溯历史决策和测试快照。
+      </div>
+      <div className="mt-4 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">提交历史</p>
+            <p className="mt-1 text-lg tracking-[-0.03em]">已处理完成</p>
+          </div>
+          <p className="text-sm text-white/48">共 {historyRows.length} 条</p>
+        </div>
+        {historyRows.length === 0 ? (
+          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-5 text-sm text-white/58">
+            当前还没有历史提交记录。
+          </div>
+        ) : historyRows.map((row) => (
+          <div key={row.id} className="admin-list-card border border-white/10 bg-white/5 p-3.5">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <p className="text-xl tracking-[-0.03em]">{row.relayName}</p>
+                <p className="mt-1 text-sm text-white/60 break-all">{row.baseUrl}</p>
+                <p className="mt-2 text-xs uppercase tracking-[0.16em] text-white/40">{formatSubmissionStatus(row.status)} · {formatDateTime(row.createdAt)}</p>
+                {row.contactInfo ? <p className="mt-2 text-sm text-white/58">联系方式：{row.contactInfo}</p> : null}
+                {row.description ? <p className="mt-3 text-sm leading-6 text-white/66">{row.description}</p> : null}
+                {row.modelPrices.length > 0 ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {row.modelPrices.map((priceRow) => (
+                      <span key={`${row.id}-${priceRow.modelKey}`} className="pill pill-ghost">
+                        {priceRow.modelKey} · {priceRow.inputPricePer1M ?? "-"} / {priceRow.outputPricePer1M ?? "-"}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                {row.approvedRelay ? <p className="mt-3 text-sm text-emerald-300/80">已关联 Relay · {row.approvedRelay.name}</p> : null}
+                {row.reviewNotes ? <p className="mt-2 text-sm text-white/55">审核备注：{row.reviewNotes}</p> : null}
+                {row.probeCredential ? (
+                  <p className="mt-2 text-sm text-white/55">
+                    测试快照 · {row.probeCredential.testModel} · {formatHealthStatus(row.probeCredential.lastHealthStatus)}
+                    {row.probeCredential.lastVerifiedAt ? ` · ${formatDateTime(row.probeCredential.lastVerifiedAt)}` : ""}
+                  </p>
+                ) : null}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {row.status === "approved" ? <Link className="pill pill-idle" to="/relays">打开 Relay 列表</Link> : null}
+                {row.approvedRelay ? (
+                  <a className="pill pill-ghost" href={`${PUBLIC_SITE_URL}/relay/${row.approvedRelay.slug}`} rel="noreferrer" target="_blank">
+                    打开前台页面
+                  </a>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </Card>
   );
 }
@@ -3081,7 +3210,9 @@ function AdminRoutes() {
     <Routes>
       <Route path="/" element={<OverviewPage />} />
       <Route path="/relays" element={<RelaysPage />} />
+      <Route path="/relays/history" element={<RelayHistoryPage />} />
       <Route path="/intake" element={<IntakePage />} />
+      <Route path="/intake/history" element={<SubmissionHistoryPage />} />
       <Route path="/submissions" element={<Navigate replace to="/intake" />} />
       <Route path="/credentials" element={<CredentialsPage />} />
       <Route path="/sponsors" element={<SponsorsPage />} />

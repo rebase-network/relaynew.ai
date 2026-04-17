@@ -179,15 +179,17 @@ test("submit flow works from the public site", async ({ page }) => {
 
   await page.goto("/submit");
   await expect(page.getByRole("heading", { name: /把你的Relay站点信息提交，收录到站点目录中/i })).toBeVisible();
-  await expect(page.getByText("运营审批与赞助方展示会独立处理，不会影响评测排名逻辑。")).toBeVisible();
+  await expect(page.getByText(/这些信息将由社区运营志愿者整理后作为站点说明和价格表/)).toBeVisible();
   await expect(page.getByText(/提交后会立即执行一次自动测试，后续会持续测试/)).toBeVisible();
   await page.getByLabel("中转站名称").fill(relayName);
   await page.getByLabel("Base URL").fill(relayBaseUrl);
-  await page.getByLabel("网站地址").fill("https://example.com");
+  await page.getByLabel("站点网站").fill("https://example.com");
+  await page.getByLabel("联系方式").fill("Telegram: @beacon_ops");
   await page.getByLabel("中转站简介").fill("Playwright 中文提交流程覆盖，用于验证公开站点审核入口。");
-  await page.getByLabel("联系邮箱").fill("ops@example.com");
+  await page.getByLabel("模型").fill("openai-gpt-5.4");
+  await page.getByLabel("Input价格").fill("4.6");
+  await page.getByLabel("Output价格").fill("13.2");
   await page.getByLabel("测试API Key").fill("sk-submit-check");
-  await page.getByLabel("测试模型").fill("gpt-5.4");
   await page.getByRole("button", { name: "提交" }).click();
 
   await expect(page.getByText("提交成功，记录 ID：")).toBeVisible();
@@ -198,19 +200,19 @@ test("submit flow validates malformed relay URLs before sending", async ({ page 
   await page.goto("/submit");
   await page.getByLabel("中转站名称").fill("Broken Relay");
   await page.getByLabel("Base URL").fill("relay.example.ai");
-  await page.getByLabel("网站地址").fill("not-a-url");
+  await page.getByLabel("站点网站").fill("not-a-url");
+  await page.getByLabel("联系方式").fill("");
   await page.getByLabel("中转站简介").fill("");
-  await page.getByLabel("联系邮箱").fill("ops@");
-  await page.getByLabel("测试模型").fill("");
+  await page.getByLabel("模型").fill("");
   await page.getByRole("button", { name: "提交" }).click();
 
   await expect(page.getByText("请先修正高亮字段后再提交。")).toBeVisible();
   await expect(page.getByText("请输入完整的 HTTPS 基础 URL，例如 https://relay.example.ai/v1。")).toBeVisible();
   await expect(page.getByText("请输入有效的网站地址，例如 https://relay.example.ai。")).toBeVisible();
+  await expect(page.getByText("请填写联系方式。")).toBeVisible();
   await expect(page.getByText("请补充简要说明，帮助审核队列快速理解这个站点。")).toBeVisible();
-  await expect(page.getByText("请输入有效的联系邮箱。")).toBeVisible();
+  await expect(page.getByText("请为每一行填写模型。")).toBeVisible();
   await expect(page.getByText("初始测试需要测试API Key。")).toBeVisible();
-  await expect(page.getByText("请填写测试模型。")).toBeVisible();
   await expect(page.getByText("提交成功，记录 ID：")).toHaveCount(0);
 });
 

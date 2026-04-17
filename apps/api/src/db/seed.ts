@@ -23,6 +23,11 @@ const MODEL_IDS = {
   claudeOpus46: "abababab-abab-abab-abab-abababababab",
 } as const;
 
+const SUBMISSION_IDS = {
+  northwind: "44444444-4444-4444-4444-444444444444",
+  tidal: "55555555-5555-5555-5555-555555555555",
+} as const;
+
 function isoFrom(base: Date, hoursAgo: number) {
   return new Date(base.getTime() - hoursAgo * 60 * 60 * 1000).toISOString();
 }
@@ -103,6 +108,7 @@ async function seedCoreCatalog(db: Kysely<Database>, now: Date) {
       probe_results_raw,
       sponsors,
       probe_credentials,
+      submission_model_prices,
       submissions,
       relay_prices,
       relay_models,
@@ -120,6 +126,7 @@ async function seedCoreCatalog(db: Kysely<Database>, now: Date) {
         name: "Aurora Relay",
         base_url: "https://aurora.relaynew.ai/v1",
         provider_name: "Aurora Labs",
+        contact_info: "Telegram：@aurora_ops",
         description: "Balanced relay focused on low latency and stable uptime.",
         website_url: "https://aurora.relaynew.ai",
         docs_url: "https://aurora.relaynew.ai/docs",
@@ -137,6 +144,7 @@ async function seedCoreCatalog(db: Kysely<Database>, now: Date) {
         name: "Ember Gateway",
         base_url: "https://ember.relaynew.ai/v1",
         provider_name: "Ember Cloud",
+        contact_info: "邮箱：support@ember.relaynew.ai",
         description: "Value-oriented relay with broad model coverage.",
         website_url: "https://ember.relaynew.ai",
         docs_url: "https://ember.relaynew.ai/docs",
@@ -154,6 +162,7 @@ async function seedCoreCatalog(db: Kysely<Database>, now: Date) {
         name: "Solstice Router",
         base_url: "https://solstice.relaynew.ai/v1",
         provider_name: "Solstice Networks",
+        contact_info: "微信群：Solstice Relay Ops",
         description: "Throughput-first relay currently under observation.",
         website_url: "https://solstice.relaynew.ai",
         docs_url: "https://solstice.relaynew.ai/docs",
@@ -737,11 +746,14 @@ async function seedCoreCatalog(db: Kysely<Database>, now: Date) {
     .insertInto("submissions")
     .values([
       {
+        id: SUBMISSION_IDS.northwind,
         submitter_name: "Lena",
         submitter_email: "lena@example.com",
         relay_name: "Northwind Relay",
         base_url: "https://northwind.example.ai/v1",
         website_url: "https://northwind.example.ai",
+        contact_info: "Telegram：@northwind_ops",
+        description: "Northwind 自营站点，主打 OpenAI 兼容模型与稳定供应。",
         notes: "Supports GPT-4.1 and Claude Sonnet 4.",
         status: "pending",
         review_notes: null,
@@ -750,16 +762,52 @@ async function seedCoreCatalog(db: Kysely<Database>, now: Date) {
         updated_at: now.toISOString(),
       },
       {
+        id: SUBMISSION_IDS.tidal,
         submitter_name: "Marco",
         submitter_email: "marco@example.com",
         relay_name: "Tidal Proxy",
         base_url: "https://tidal.example.ai/v1",
         website_url: "https://tidal.example.ai",
+        contact_info: "邮箱：marco@example.com",
+        description: "Tidal Proxy 覆盖多模型线路，近期希望加入榜单观察。",
         notes: "Interested in sponsor placement as well.",
         status: "approved",
         review_notes: "Waiting for verification pass.",
         approved_relay_id: RELAY_IDS.ember,
         created_at: new Date(now.getTime() - 3 * 86400000).toISOString(),
+        updated_at: now.toISOString(),
+      },
+    ])
+    .execute();
+
+  await db
+    .insertInto("submission_model_prices")
+    .values([
+      {
+        submission_id: SUBMISSION_IDS.northwind,
+        model_key: "openai-gpt-4.1",
+        input_price_per_1m: 3.2,
+        output_price_per_1m: 11.5,
+        position: 0,
+        created_at: now.toISOString(),
+        updated_at: now.toISOString(),
+      },
+      {
+        submission_id: SUBMISSION_IDS.northwind,
+        model_key: "anthropic-claude-sonnet-4",
+        input_price_per_1m: 3.8,
+        output_price_per_1m: 13.2,
+        position: 1,
+        created_at: now.toISOString(),
+        updated_at: now.toISOString(),
+      },
+      {
+        submission_id: SUBMISSION_IDS.tidal,
+        model_key: "openai-gpt-5.4",
+        input_price_per_1m: 4.6,
+        output_price_per_1m: 15.8,
+        position: 0,
+        created_at: now.toISOString(),
         updated_at: now.toISOString(),
       },
     ])

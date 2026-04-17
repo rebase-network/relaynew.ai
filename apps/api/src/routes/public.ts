@@ -22,6 +22,7 @@ import type { FastifyInstance } from "fastify";
 import { orderLeaderboardModels } from "../lib/leaderboard-order";
 import { getMethodologyPayload } from "../lib/methodology";
 import { runPublicProbe } from "../lib/probe";
+import { replaceSubmissionModelPrices } from "../lib/relay-catalog";
 import {
   toProbeCredentialVerification,
   toSubmissionProbeSummary,
@@ -200,7 +201,7 @@ export async function registerPublicRoutes(app: FastifyInstance) {
         "ros.measured_at as measuredAt",
       ])
       .where("r.slug", "=", params.slug)
-      .where("r.status", "<>", "archived")
+      .where("r.status", "=", "active")
       .executeTakeFirst();
 
     if (!row) {
@@ -236,7 +237,7 @@ export async function registerPublicRoutes(app: FastifyInstance) {
         .selectFrom("relays")
         .select(["id", "slug", "name"])
         .where("slug", "=", params.slug)
-        .where("status", "<>", "archived")
+        .where("status", "=", "active")
         .executeTakeFirst(),
     );
 
@@ -308,7 +309,7 @@ export async function registerPublicRoutes(app: FastifyInstance) {
         .selectFrom("relays")
         .select(["id", "slug", "name"])
         .where("slug", "=", params.slug)
-        .where("status", "<>", "archived")
+        .where("status", "=", "active")
         .executeTakeFirst(),
     );
 
@@ -348,7 +349,7 @@ export async function registerPublicRoutes(app: FastifyInstance) {
         .selectFrom("relays")
         .select(["id", "slug", "name"])
         .where("slug", "=", params.slug)
-        .where("status", "<>", "archived")
+        .where("status", "=", "active")
         .executeTakeFirst(),
     );
 
@@ -397,7 +398,7 @@ export async function registerPublicRoutes(app: FastifyInstance) {
         .selectFrom("relays")
         .select(["id", "slug", "name"])
         .where("slug", "=", params.slug)
-        .where("status", "<>", "archived")
+        .where("status", "=", "active")
         .executeTakeFirst(),
     );
 
@@ -450,6 +451,12 @@ export async function registerPublicRoutes(app: FastifyInstance) {
   app.post("/public/submissions", async (request, reply) => {
     const body = publicSubmissionRequestSchema.parse(request.body ?? {});
     const createdAt = new Date().toISOString();
+    const derivedTestModel = body.testModel ?? body.modelPrices[0]?.modelKey;
+
+    if (!derivedTestModel) {
+      throw app.httpErrors.badRequest("At least one supported model is required for the initial test.");
+    }
+
     const row = await app.db.transaction().execute(async (trx) => {
       const submission = await trx
         .insertInto("submissions")
@@ -457,9 +464,10 @@ export async function registerPublicRoutes(app: FastifyInstance) {
           relay_name: body.relayName,
           base_url: body.baseUrl,
           website_url: body.websiteUrl ?? null,
+          contact_info: body.contactInfo,
           description: body.description,
-          submitter_name: body.submitterName ?? null,
-          submitter_email: body.submitterEmail ?? null,
+          submitter_name: null,
+          submitter_email: null,
           notes: body.notes ?? null,
           status: "pending",
           review_notes: null,
@@ -470,13 +478,15 @@ export async function registerPublicRoutes(app: FastifyInstance) {
         .returning(["id", "status"])
         .executeTakeFirstOrThrow();
 
+      await replaceSubmissionModelPrices(trx, submission.id, body.modelPrices, createdAt);
+
       const credential = await trx
         .insertInto("probe_credentials")
         .values({
           submission_id: submission.id,
           relay_id: null,
           api_key: body.testApiKey,
-          test_model: body.testModel,
+          test_model: derivedTestModel,
           compatibility_mode: body.compatibilityMode,
           status: "active",
           last_verified_at: null,
@@ -502,7 +512,7 @@ export async function registerPublicRoutes(app: FastifyInstance) {
     const probeResult = await runPublicProbe({
       baseUrl: body.baseUrl,
       apiKey: body.testApiKey,
-      model: body.testModel,
+      model: derivedTestModel,
       compatibilityMode: body.compatibilityMode,
     });
 
