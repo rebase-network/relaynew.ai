@@ -1,77 +1,12 @@
+import type { ReactNode } from "react";
 import * as Shared from "../shared";
 
 const {
-  clsx,
-  useEffect,
-  useMemo,
-  useNavigate,
-  useParams,
-  useSearchParams,
-  useState,
-  BADGE_COPY,
-  DEFAULT_LEADERBOARD_MODEL_KEY,
-  DEFAULT_PROBE_STATE,
-  ErrorPanel,
-  HEALTH_STATUS_COPY,
-  HOME_LEADERBOARD_ROW_LIMIT,
-  HomeIncidentCard,
-  HomePageSkeleton,
-  InlineProbeSummary,
-  LEADERBOARD_DIRECTORY_PATH,
-  LeaderboardDirectorySkeleton,
-  LeaderboardPageSkeleton,
-  LeaderboardPreviewCard,
-  LeaderboardRowCard,
-  CompactBadgeList,
-  Link,
-  LoadingPanel,
-  MetricGrid,
-  MethodologyPageSkeleton,
-  NavLink,
-  Panel,
-  POLICY_PILLARS,
-  ProbeFormFields,
-  PROBE_COMPATIBILITY_OPTIONS,
-  PROBE_OUTPUT_CARDS,
-  RelayIncidentTimeline,
-  RelayLatencyChart,
-  RelayLatencyLegend,
-  RelayModelsTable,
-  RelayPageSkeleton,
-  RelayPricingHistoryPanel,
-  ScorePopover,
-  StatusDot,
-  StatusHistoryPanel,
-  buildDailyHistorySlots,
   createSubmitModelPriceRow,
   fetchJson,
-  formatAvailability,
-  formatBadgeLabel,
-  formatDate,
-  formatDateTime,
   formatHealthStatusLabel,
-  formatIncidentSeverityLabel,
-  formatLatency,
-  formatPricePerMillion,
-  formatPricingSourceLabel,
-  formatProbeCompatibilityMode,
-  formatProbeDetectionMode,
-  formatProbeHttpStatus,
-  formatProbeMeasuredAt,
-  formatScoreMetricLabel,
-  formatSupportStatusLabel,
-  getConnectivityCardTone,
-  getIncidentToneClasses,
-  getLeaderboardPath,
-  getModelVendorKey,
-  getModelVendorLabel,
-  getProbeStateFromSearchParams,
-  getProtocolCardTone,
-  getTraceCardTone,
-  isValidHttpUrl,
-  useLoadable,
   usePageMetadata,
-  useProbeController,
+  useState,
   validateSubmitForm,
 } = Shared;
 
@@ -90,6 +25,7 @@ export function SubmitPage() {
   const [result, setResult] = useState<Shared.PublicSubmissionResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Shared.SubmitFormErrors>({});
+
   usePageMetadata({
     title: "提交站点信息｜relaynew.ai",
     description: "提交站点基础信息、联系方式、支持模型与价格信息进入审核队列，完成初始测试；赞助流程与评测排名逻辑分离。",
@@ -179,10 +115,10 @@ export function SubmitPage() {
   }
 
   return (
-    <section className="grid gap-4 lg:grid-cols-[1fr_0.96fr]">
+    <section className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
       <div className="panel hero-panel min-h-0">
         <p className="kicker">提交站点</p>
-        <h1 className="text-4xl leading-[0.92] tracking-[-0.06em] md:text-5xl">把你的Relay站点信息提交，收录到站点目录中，有机会进入榜单排行，获得更多用户的认可</h1>
+        <h1 className="text-[2.4rem] leading-[0.92] tracking-[-0.06em] md:text-[3.3rem]">把你的Relay站点信息提交，收录到站点目录中，有机会进入榜单排行，获得更多用户的认可</h1>
         <p className="mt-4 max-w-xl text-black/70">请提供中转站点的介绍，支持的模型、价格信息等等，这些信息将由社区运营志愿者整理后作为站点说明和价格表。</p>
         <div className="mt-6 grid gap-2.5 sm:grid-cols-3">
           <div className="surface-card p-3.5">
@@ -199,84 +135,90 @@ export function SubmitPage() {
           </div>
         </div>
       </div>
+
       <form className="panel form-shell" noValidate onSubmit={handleSubmit}>
-        <label className="form-field">
-          中转站名称
-          <input
-            className="input-shell mt-2"
-            type="text"
-            placeholder="北风中转站"
-            required
-            value={state.relayName}
-            onChange={(event) => updateField("relayName", event.target.value)}
-          />
-          {fieldErrors.relayName ? <span className="field-error">{fieldErrors.relayName}</span> : null}
-        </label>
-        <label className="form-field">
-          Base URL
-          <input
-            className="input-shell mt-2"
-            type="url"
-            placeholder="https://northwind.example.ai/v1"
-            required
-            value={state.baseUrl}
-            onChange={(event) => updateField("baseUrl", event.target.value)}
-          />
-          {fieldErrors.baseUrl ? <span className="field-error">{fieldErrors.baseUrl}</span> : null}
-        </label>
-        <label className="form-field">
-          站点网站
-          <input
-            className="input-shell mt-2"
-            type="url"
-            placeholder="https://northwind.example.ai"
-            value={state.websiteUrl}
-            onChange={(event) => updateField("websiteUrl", event.target.value)}
-          />
-          {fieldErrors.websiteUrl ? <span className="field-error">{fieldErrors.websiteUrl}</span> : null}
-        </label>
-        <label className="form-field">
-          联系方式
-          <input
-            className="input-shell mt-2"
-            type="text"
-            placeholder="Telegram / 邮箱 / 微信"
-            value={state.contactInfo}
-            onChange={(event) => updateField("contactInfo", event.target.value)}
-          />
-          {fieldErrors.contactInfo ? <span className="field-error">{fieldErrors.contactInfo}</span> : null}
-        </label>
-        <label className="form-field">
-          中转站简介
-          <textarea
-            className="input-shell mt-2 min-h-28"
-            placeholder="请提供中转站点的介绍，支持的模型、价格信息等等，这些信息将由社区运营志愿者整理后作为站点说明和价格表"
-            required
-            value={state.description}
-            onChange={(event) => updateField("description", event.target.value)}
-          />
-          {fieldErrors.description ? <span className="field-error">{fieldErrors.description}</span> : null}
-        </label>
-        <div className="surface-card p-3.5">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="kicker !text-black/52">支持的模型及价格表</p>
-              <p className="mt-1 text-sm leading-6 text-black/66">每行包含 模型 / Input价格 / Output价格。</p>
-            </div>
-            <button className="button-cream !px-4 !py-2" type="button" onClick={addModelPriceRow}>添加一行</button>
+        <SubmitSection title="基础信息" description="这些资料会作为站点目录与运营审核的基础信息。">
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="form-field">
+              中转站名称
+              <input
+                className="input-shell mt-2"
+                type="text"
+                placeholder="北风中转站"
+                required
+                value={state.relayName}
+                onChange={(event) => updateField("relayName", event.target.value)}
+              />
+              {fieldErrors.relayName ? <span className="field-error">{fieldErrors.relayName}</span> : null}
+            </label>
+            <label className="form-field">
+              Base URL
+              <input
+                className="input-shell mt-2"
+                type="url"
+                placeholder="https://northwind.example.ai/v1"
+                required
+                value={state.baseUrl}
+                onChange={(event) => updateField("baseUrl", event.target.value)}
+              />
+              {fieldErrors.baseUrl ? <span className="field-error">{fieldErrors.baseUrl}</span> : null}
+            </label>
+            <label className="form-field">
+              站点网站
+              <input
+                className="input-shell mt-2"
+                type="url"
+                placeholder="https://northwind.example.ai"
+                value={state.websiteUrl}
+                onChange={(event) => updateField("websiteUrl", event.target.value)}
+              />
+              {fieldErrors.websiteUrl ? <span className="field-error">{fieldErrors.websiteUrl}</span> : null}
+            </label>
+            <label className="form-field">
+              联系方式
+              <input
+                className="input-shell mt-2"
+                type="text"
+                placeholder="Telegram / 邮箱 / 微信"
+                value={state.contactInfo}
+                onChange={(event) => updateField("contactInfo", event.target.value)}
+              />
+              {fieldErrors.contactInfo ? <span className="field-error">{fieldErrors.contactInfo}</span> : null}
+            </label>
           </div>
-          <div className="mt-4 space-y-3">
+        </SubmitSection>
+
+        <SubmitSection title="站点介绍" description="尽量写清楚站点定位、适合场景、支持模型与价格策略，方便社区整理资料。">
+          <label className="form-field">
+            中转站简介
+            <textarea
+              className="input-shell mt-2 min-h-32"
+              placeholder="请提供中转站点的介绍，支持的模型、价格信息等等，这些信息将由社区运营志愿者整理后作为站点说明和价格表"
+              required
+              value={state.description}
+              onChange={(event) => updateField("description", event.target.value)}
+            />
+            {fieldErrors.description ? <span className="field-error">{fieldErrors.description}</span> : null}
+          </label>
+        </SubmitSection>
+
+        <SubmitSection
+          title="支持模型及价格表"
+          description="每行填写一个模型及对应的 Input / Output 价格，建议按你对外公开的价格填写。"
+          actions={<button className="button-cream !px-4 !py-2" type="button" onClick={addModelPriceRow}>添加一行</button>}
+        >
+          <div className="space-y-3">
             {state.modelPrices.map((row, index) => (
-              <div key={row.id} className="grid gap-3 rounded-[1.5rem] border border-black/8 bg-white/80 p-3 md:grid-cols-[1.18fr_0.8fr_0.8fr_auto]">
-                <label className="form-field-inline">
+              <div key={row.id} className="grid gap-3 rounded-[1.5rem] border border-black/8 bg-white/80 p-3 md:grid-cols-[minmax(0,1.18fr)_repeat(2,minmax(0,0.78fr))_auto]">
+                <label className="form-field">
                   模型
                   <input className="input-shell mt-2" type="text" placeholder="openai-gpt-5.4" value={row.modelKey} onChange={(event) => updateModelPriceRow(row.id, "modelKey", event.target.value)} />
                 </label>
-                <label className="form-field-inline">
+                <label className="form-field">
                   Input价格
                   <input className="input-shell mt-2" type="number" min="0" step="0.0001" placeholder="4.6" value={row.inputPricePer1M} onChange={(event) => updateModelPriceRow(row.id, "inputPricePer1M", event.target.value)} />
                 </label>
-                <label className="form-field-inline">
+                <label className="form-field">
                   Output价格
                   <input className="input-shell mt-2" type="number" min="0" step="0.0001" placeholder="13.2" value={row.outputPricePer1M} onChange={(event) => updateModelPriceRow(row.id, "outputPricePer1M", event.target.value)} />
                 </label>
@@ -289,22 +231,28 @@ export function SubmitPage() {
             ))}
             {fieldErrors.modelPrices ? <span className="field-error">{fieldErrors.modelPrices}</span> : null}
           </div>
-        </div>
-        <label className="form-field">
-          测试API Key
-          <input
-            className="input-shell mt-2"
-            type="password"
-            placeholder="sk-monitoring-or-relay-key"
-            required
-            value={state.testApiKey}
-            onChange={(event) => updateField("testApiKey", event.target.value)}
-          />
-          {fieldErrors.testApiKey ? <span className="field-error">{fieldErrors.testApiKey}</span> : null}
-        </label>
-        <button className="button-dark" disabled={submitting} type="submit">{submitting ? "提交中..." : "提交"}</button>
+        </SubmitSection>
+
+        <SubmitSection title="测试信息" description="提交后系统会立刻做一次自动测试，请确保测试 Key 有效。">
+          <label className="form-field">
+            测试API Key
+            <input
+              className="input-shell mt-2"
+              type="password"
+              placeholder="sk-monitoring-or-relay-key"
+              required
+              value={state.testApiKey}
+              onChange={(event) => updateField("testApiKey", event.target.value)}
+            />
+            {fieldErrors.testApiKey ? <span className="field-error">{fieldErrors.testApiKey}</span> : null}
+          </label>
+          <p className="mt-3 rounded-[1.35rem] border border-black/8 bg-white/70 px-4 py-3 text-sm leading-6 text-black/62">
+            审核通过后，社区运营志愿者会根据你填写的信息整理站点说明与价格表；后续持续测试会基于这里提供的测试 Key。
+          </p>
+        </SubmitSection>
+
         {result ? (
-          <div className="surface-card space-y-2 p-3.5">
+          <div className="surface-card space-y-2 p-4">
             <p className="text-sm form-feedback-success">提交成功，记录 ID：{result.id}</p>
             {result.probe ? (
               <>
@@ -317,9 +265,41 @@ export function SubmitPage() {
             ) : null}
           </div>
         ) : null}
+
         {error ? <p className="text-sm form-feedback-error">{error}</p> : null}
+
+        <div className="rounded-[1.6rem] border border-black/8 bg-white/72 px-4 py-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm leading-6 text-black/58">提交后会先进入人工审核，确认无误后再正式进入 Relay 目录与后续评测流程。</p>
+            <button className="button-dark w-full sm:w-auto sm:min-w-[9rem]" disabled={submitting} type="submit">{submitting ? "提交中..." : "提交"}</button>
+          </div>
+        </div>
       </form>
     </section>
   );
 }
 
+function SubmitSection({
+  title,
+  description,
+  actions,
+  children,
+}: {
+  title: string;
+  description: string;
+  actions?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div className="surface-card p-4">
+      <div className="flex flex-col gap-3 border-b border-black/8 pb-3 md:flex-row md:items-start md:justify-between">
+        <div>
+          <p className="kicker !mb-0">{title}</p>
+          <p className="mt-1 text-sm leading-6 text-black/62">{description}</p>
+        </div>
+        {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}
+      </div>
+      <div className="mt-4">{children}</div>
+    </div>
+  );
+}

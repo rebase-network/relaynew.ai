@@ -293,6 +293,22 @@ button {
   .admin-brand {
     flex-wrap: wrap;
   }
+
+  .admin-nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 0.2rem;
+    scrollbar-width: none;
+  }
+
+  .admin-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .admin-nav .pill {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
 }
 
 @media (min-width: 1024px) {

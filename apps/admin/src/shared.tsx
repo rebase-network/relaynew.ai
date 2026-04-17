@@ -815,8 +815,8 @@ export function AdminShell({
                 relaynew.ai 管理台
               </div>
               <div>
-                <h1 className="text-3xl tracking-[-0.05em] md:text-4xl">围绕提交记录和 Relay 列表，收敛运营后台的日常工作流。</h1>
-                <p className="mt-2.5 max-w-2xl text-sm leading-6 text-white/60">
+                <h1 className="text-2xl leading-tight tracking-[-0.05em] md:text-4xl">围绕提交记录和 Relay 列表，收敛运营后台的日常工作流。</h1>
+                <p className="mt-2.5 max-w-xl text-sm leading-6 text-white/60">
                   审批通过后的记录直接进入 Relay 列表；只有 active Relay 会参与自动测试、目录展示和榜单排行。
                 </p>
               </div>

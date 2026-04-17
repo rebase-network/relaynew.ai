@@ -1,53 +1,17 @@
 import * as Shared from "../shared";
+import { WorkflowDetailGrid, WorkflowPriceTable, WorkflowSection } from "../components/relay-workflow";
 
 const {
-  clsx,
-  Link,
-  useEffect,
-  useMemo,
-  useSearchParams,
-  useState,
   Card,
-  ConfirmDialog,
   ErrorCard,
-  FieldError,
   LoadingCard,
-  Notice,
-  PROBE_COMPATIBILITY_OPTIONS,
+  Link,
   PUBLIC_SITE_URL,
-  buildCredentialRoute,
-  buildPriceModelOptions,
-  buildRelayFormState,
-  buildRelaySelectOptions,
-  createDefaultModelFormState,
-  createDefaultPriceFormState,
-  createDefaultSponsorFormState,
-  createRelayPriceRowFormState,
   fetchJson,
-  formatCatalogStatus,
-  formatCompatibilityMode,
-  formatCredentialStatus,
-  formatDate,
   formatDateTime,
   formatHealthStatus,
-  formatModelStatus,
-  formatOverviewMetricLabel,
   formatSubmissionStatus,
-  formatSponsorStatus,
-  formatTime,
-  getModelOptionLabel,
-  getRelayOptionLabel,
-  matchesSearchQuery,
-  pickPreferredCredential,
-  trimString,
   useLoadable,
-  useMutationState,
-  validateModelForm,
-  validatePriceForm,
-  validateProbeCredentialForm,
-  validateRelayForm,
-  validateSponsorForm,
-  withoutFieldError,
 } = Shared;
 
 export function SubmissionHistoryPage() {
@@ -62,9 +26,10 @@ export function SubmissionHistoryPage() {
 
   return (
     <Card title="提交记录历史" kicker="已处理记录">
-      <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/62">
+      <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm leading-6 text-white/62">
         这里保留所有已经处理完成的提交，包括 approved、rejected 和 archived，便于运营追溯历史决策和测试快照。
       </div>
+
       <div className="mt-4 space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -73,44 +38,77 @@ export function SubmissionHistoryPage() {
           </div>
           <p className="text-sm text-white/48">共 {historyRows.length} 条</p>
         </div>
+
         {historyRows.length === 0 ? (
           <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-5 text-sm text-white/58">
             当前还没有历史提交记录。
           </div>
         ) : historyRows.map((row) => (
-          <div key={row.id} className="admin-list-card border border-white/10 bg-white/5 p-3.5">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <p className="text-xl tracking-[-0.03em]">{row.relayName}</p>
-                <p className="mt-1 text-sm text-white/60 break-all">{row.baseUrl}</p>
-                <p className="mt-2 text-xs uppercase tracking-[0.16em] text-white/40">{formatSubmissionStatus(row.status)} · {formatDateTime(row.createdAt)}</p>
-                {row.contactInfo ? <p className="mt-2 text-sm text-white/58">联系方式：{row.contactInfo}</p> : null}
-                {row.description ? <p className="mt-3 text-sm leading-6 text-white/66">{row.description}</p> : null}
-                {row.modelPrices.length > 0 ? (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {row.modelPrices.map((priceRow) => (
-                      <span key={`${row.id}-${priceRow.modelKey}`} className="pill pill-ghost">
-                        {priceRow.modelKey} · {priceRow.inputPricePer1M ?? "-"} / {priceRow.outputPricePer1M ?? "-"}
-                      </span>
-                    ))}
+          <div key={row.id} className="admin-list-card border border-white/10 bg-white/5 p-4">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-xl tracking-[-0.03em]">{row.relayName}</p>
+                    <span className={row.status === "approved" ? "pill pill-active !cursor-default" : "pill pill-idle !cursor-default"}>
+                      {formatSubmissionStatus(row.status)}
+                    </span>
                   </div>
-                ) : null}
-                {row.approvedRelay ? <p className="mt-3 text-sm text-emerald-300/80">已关联 Relay · {row.approvedRelay.name}</p> : null}
-                {row.reviewNotes ? <p className="mt-2 text-sm text-white/55">审核备注：{row.reviewNotes}</p> : null}
-                {row.probeCredential ? (
-                  <p className="mt-2 text-sm text-white/55">
-                    测试快照 · {row.probeCredential.testModel} · {formatHealthStatus(row.probeCredential.lastHealthStatus)}
-                    {row.probeCredential.lastVerifiedAt ? ` · ${formatDateTime(row.probeCredential.lastVerifiedAt)}` : ""}
-                  </p>
-                ) : null}
+                  <p className="mt-2 text-sm break-all text-white/62">{row.baseUrl}</p>
+                </div>
+                <p className="text-sm text-white/44">提交于 {formatDateTime(row.createdAt)}</p>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {row.status === "approved" ? <Link className="pill pill-idle" to="/relays">打开 Relay 列表</Link> : null}
-                {row.approvedRelay ? (
-                  <a className="pill pill-ghost" href={`${PUBLIC_SITE_URL}/relay/${row.approvedRelay.slug}`} rel="noreferrer" target="_blank">
-                    打开前台页面
-                  </a>
-                ) : null}
+
+              <div className="grid gap-3 xl:grid-cols-[minmax(0,1.04fr)_minmax(18rem,0.96fr)]">
+                <div className="space-y-3">
+                  <WorkflowSection title="提交资料" description="保留原始提交内容，便于回看当时填写的信息。">
+                    {row.description ? <p className="text-sm leading-6 text-white/72">{row.description}</p> : <p className="text-sm text-white/48">提交者未填写站点简介。</p>}
+                    <div className="mt-3">
+                      <WorkflowDetailGrid
+                        items={[
+                          { label: "联系方式", value: row.contactInfo ?? "未填写" },
+                          {
+                            label: "关联 Relay",
+                            value: row.approvedRelay ? row.approvedRelay.name : row.status === "approved" ? "创建中或已解绑" : "未创建",
+                          },
+                        ]}
+                      />
+                    </div>
+                  </WorkflowSection>
+
+                  <WorkflowSection title="支持模型及价格表" description="保留提交时的原始价格信息，方便与当前 Relay 配置比对。">
+                    <WorkflowPriceTable rows={row.modelPrices} />
+                  </WorkflowSection>
+                </div>
+
+                <div className="space-y-3">
+                  <WorkflowSection title="审核结果" description="这里汇总审批结论、备注和测试快照。">
+                    <WorkflowDetailGrid
+                      columns={1}
+                      items={[
+                        { label: "处理状态", value: formatSubmissionStatus(row.status) },
+                        { label: "审核备注", value: row.reviewNotes ?? "未填写" },
+                        {
+                          label: "测试快照",
+                          value: row.probeCredential
+                            ? `${row.probeCredential.testModel} · ${formatHealthStatus(row.probeCredential.lastHealthStatus)}${row.probeCredential.lastVerifiedAt ? ` · ${formatDateTime(row.probeCredential.lastVerifiedAt)}` : ""}`
+                            : "没有测试快照",
+                        },
+                      ]}
+                    />
+                  </WorkflowSection>
+
+                  <WorkflowSection title="快捷入口" description="在需要时可以跳转到 Relay 列表或前台详情页继续检查。">
+                    <div className="flex flex-wrap gap-2">
+                      {row.status === "approved" ? <Link className="pill pill-idle" to="/relays">打开 Relay 列表</Link> : null}
+                      {row.approvedRelay ? (
+                        <a className="pill pill-ghost" href={`${PUBLIC_SITE_URL}/relay/${row.approvedRelay.slug}`} rel="noreferrer" target="_blank">
+                          打开前台页面
+                        </a>
+                      ) : null}
+                    </div>
+                  </WorkflowSection>
+                </div>
               </div>
             </div>
           </div>
@@ -119,4 +117,3 @@ export function SubmissionHistoryPage() {
     </Card>
   );
 }
-
