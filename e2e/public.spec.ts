@@ -180,6 +180,7 @@ test("submit flow works from the public site", async ({ page }) => {
   await page.goto("/submit");
   await expect(page.getByRole("heading", { name: /把你的Relay站点信息提交，收录到站点目录中/i })).toBeVisible();
   await expect(page.getByText("运营审批与赞助方展示会独立处理，不会影响评测排名逻辑。")).toBeVisible();
+  await expect(page.getByText(/提交后会立即执行一次自动测试，后续会持续测试/)).toBeVisible();
   await page.getByLabel("中转站名称").fill(relayName);
   await page.getByLabel("Base URL").fill(relayBaseUrl);
   await page.getByLabel("网站地址").fill("https://example.com");
@@ -263,17 +264,33 @@ test("public probe supports manual compatibility override", async ({ page }) => 
   await expect(page.getByText(/^Upstream returned /)).toHaveCount(0);
 });
 
-test("public mobile navigation exposes the primary routes", async ({ page }) => {
+test("public mobile navigation routes to the primary pages", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/probe");
   await page.getByRole("button", { name: "打开菜单" }).click();
-  const mobileNav = page.locator("#mobile-primary-nav");
+  let mobileNav = page.locator("#mobile-primary-nav");
 
   await expect(mobileNav.getByRole("link", { name: "首页" })).toBeVisible();
   await expect(mobileNav.getByRole("link", { name: "榜单" })).toBeVisible();
   await expect(mobileNav.getByRole("link", { name: "评测方式" })).toBeVisible();
   await expect(mobileNav.getByRole("link", { name: "提交站点" })).toBeVisible();
   await expect(mobileNav.getByRole("link", { name: "站点测试" })).toBeVisible();
+
+  await mobileNav.getByRole("link", { name: "榜单" }).click();
+  await expect(page).toHaveURL(/\/leaderboard$/);
+  await expect(page.getByRole("heading", { name: "GPT 5.4" })).toBeVisible();
+
+  await page.getByRole("button", { name: "打开菜单" }).click();
+  mobileNav = page.locator("#mobile-primary-nav");
+  await mobileNav.getByRole("link", { name: "提交站点" }).click();
+  await expect(page).toHaveURL(/\/submit$/);
+  await expect(page.getByRole("heading", { name: /把你的Relay站点信息提交，收录到站点目录中/i })).toBeVisible();
+
+  await page.getByRole("button", { name: "打开菜单" }).click();
+  mobileNav = page.locator("#mobile-primary-nav");
+  await mobileNav.getByRole("link", { name: "站点测试" }).click();
+  await expect(page).toHaveURL(/\/probe$/);
+  await expect(page.getByRole("heading", { name: "运行测试" })).toBeVisible();
 });
 
 test("homepage prioritizes quick probe on mobile", async ({ page }) => {
@@ -302,6 +319,8 @@ test("probe page stays compact on mobile", async ({ page }) => {
   await expect(page.locator(".input-helper-desktop").first()).toBeHidden();
   await expect(page.getByText("Before you run")).toHaveCount(0);
   await expect(page.getByText("What the result includes")).toHaveCount(0);
+  await expect(page.getByText(/自助测试的API Key等信息不会留存/)).toBeVisible();
+  await expect(page.getByText(/结果面板会展示连通性、协议状态、兼容模式识别结果/)).toBeVisible();
   await expect(page.getByRole("button", { name: "开始测试" })).toBeVisible();
 });
 
@@ -332,6 +351,22 @@ test.describe("public metadata smoke", () => {
       canonicalPath: "/leaderboard",
       descriptionPattern: /评测排名|赞助方展示|relay/i,
       titlePattern: /GPT 5\.4|站点榜单|relaynew\.ai/i,
+    });
+
+    await page.goto("/submit?from=metadata");
+    await expect(page.getByRole("heading", { name: /把你的Relay站点信息提交，收录到站点目录中/i })).toBeVisible();
+    await expectPageMetadata(page, {
+      canonicalPath: "/submit",
+      descriptionPattern: /提交站点|初始测试|评测排名/i,
+      titlePattern: /提交站点信息|relaynew\.ai/i,
+    });
+
+    await page.goto("/probe?from=metadata");
+    await expect(page.getByRole("heading", { name: "运行测试" })).toBeVisible();
+    await expectPageMetadata(page, {
+      canonicalPath: "/probe",
+      descriptionPattern: /在线测试站点连通性|HTTP 状态|请求轨迹/i,
+      titlePattern: /站点测试|relaynew\.ai/i,
     });
 
     await page.goto("/relay/aurora-relay?from=metadata");
