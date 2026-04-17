@@ -1247,7 +1247,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const navItems = [
     ["/", "首页"],
     ["/leaderboard", "榜单"],
-    ["/methodology", "方法论"],
+    ["/methodology", "评测方式"],
     ["/submit", "提交 Relay"],
     ["/probe", "Relay 探测"],
   ] as const;
@@ -2154,7 +2154,7 @@ function HomePage() {
         </p>
         <div className="home-bridge-actions">
           <Link className="home-bridge-link" to="/methodology">
-            方法论
+            评测方式
           </Link>
           <Link className="home-bridge-link" to="/policy">
             评估政策
