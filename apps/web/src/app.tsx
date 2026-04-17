@@ -1271,7 +1271,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               <div>
                 <span className="block">relaynew.ai</span>
                 <span className="hidden text-[0.6rem] tracking-[0.2em] text-black/44 md:block">
-                  relay 健康度、延迟、价格与可信信号
+                  relay 健康度、延迟、价格与可信度
                 </span>
               </div>
             </Link>
