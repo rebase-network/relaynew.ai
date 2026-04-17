@@ -288,9 +288,15 @@
 - 第 5 轮的“复审 -> 修复 -> 测试升级”部分已完成：
   - `8005548` `fix(web): harden relay detail states and cache behavior`
   - `df3bb00` `test(e2e): stabilize zh-cn acceptance coverage`
+- 第 5 轮的“公共页 SEO 基础能力”已继续补齐：
+  - route-level `title`
+  - `meta[name="description"]`
+  - `canonical`
+  - 基础 `og:*` / `twitter:*` 同步
 - 已完成内容包括：
   - public / admin E2E 中文断言对齐
   - API 缓存头 E2E 覆盖
+  - 首页、榜单页、Relay 详情页、方法论、政策、提交、Probe 的页面级 metadata
   - 本地 macOS Chrome 回退，规避 Playwright 浏览器下载阻塞
   - 默认关闭视频录制，避免 ffmpeg 缺失导致测试无法启动
   - Postgres 迁移 / seed 重试，减少数据库刚启动时的 flake
@@ -299,13 +305,14 @@
 
 - `corepack pnpm test`
 - `PLAYWRIGHT_VIDEO=off corepack pnpm test:e2e`
+- public metadata smoke 已加入 `e2e/public.spec.ts`
 - 当前结果：
   - 单元 / 类型检查通过
-  - Playwright 全量通过 `18 passed`
+  - Playwright 全量通过 `19 passed`
   - `1 skipped` 为依赖本地 `LLM_API_TYPE` 手动兼容模式配置的 Probe 场景，不属于失败
 
 遗留问题：
 
-- 原计划中第 5 轮包含的 route-level SEO metadata / canonical / description 仍未实现。
+- 当前 SEO 仍属于 CSR 条件下的基础能力，尚未覆盖 SSR / 预渲染、结构化数据、OG 图片等更强能力。
 - Probe 更强的安全硬化（限流、Turnstile、上线前边界）仍需继续推进。
 - 若后续准备面向搜索流量或公开更大规模使用，应优先继续处理 SEO 与 Probe 安全项。

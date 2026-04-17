@@ -35,6 +35,8 @@ import rebaseLogoUrl from "./assets/rebase-logo-wordmark-white-text.svg";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ?? "http://127.0.0.1:8787";
+const PUBLIC_SITE_URL =
+  import.meta.env.VITE_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "https://relaynew.ai";
 
 const PROBE_COMPATIBILITY_OPTIONS: Array<{ value: ProbeCompatibilityMode; label: string }> = [
   { value: "auto", label: "自动识别（推荐）" },
@@ -135,11 +137,78 @@ const LEADERBOARD_DIRECTORY_PATH = "/leaderboard/directory";
 const LOADABLE_CACHE_MAX_AGE_MS = 60_000;
 const THIRTY_DAY_BAR_COUNT = 30;
 
+type PageMetadata = {
+  title: string;
+  description: string;
+  canonicalPath?: string;
+};
+
 const LEADERBOARD_VENDOR_LABELS: Record<string, string> = {
   anthropic: "Anthropic",
   openai: "OpenAI",
   google: "Google",
 };
+
+function buildCanonicalUrl(pathname: string) {
+  const normalizedPath = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  return new URL(normalizedPath, PUBLIC_SITE_URL).toString();
+}
+
+function upsertNamedMeta(name: string, content: string) {
+  let element = document.head.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
+
+  if (!element) {
+    element = document.createElement("meta");
+    element.setAttribute("name", name);
+    document.head.appendChild(element);
+  }
+
+  element.setAttribute("content", content);
+}
+
+function upsertPropertyMeta(property: string, content: string) {
+  let element = document.head.querySelector<HTMLMetaElement>(`meta[property="${property}"]`);
+
+  if (!element) {
+    element = document.createElement("meta");
+    element.setAttribute("property", property);
+    document.head.appendChild(element);
+  }
+
+  element.setAttribute("content", content);
+}
+
+function upsertCanonicalLink(href: string) {
+  let element = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+
+  if (!element) {
+    element = document.createElement("link");
+    element.setAttribute("rel", "canonical");
+    document.head.appendChild(element);
+  }
+
+  element.setAttribute("href", href);
+}
+
+function usePageMetadata(metadata: PageMetadata) {
+  const location = useLocation();
+  const canonicalUrl = buildCanonicalUrl(metadata.canonicalPath ?? location.pathname);
+
+  useEffect(() => {
+    document.title = metadata.title;
+    upsertNamedMeta("description", metadata.description);
+    upsertCanonicalLink(canonicalUrl);
+    upsertPropertyMeta("og:title", metadata.title);
+    upsertPropertyMeta("og:description", metadata.description);
+    upsertPropertyMeta("og:type", "website");
+    upsertPropertyMeta("og:url", canonicalUrl);
+    upsertPropertyMeta("og:site_name", "relaynew.ai");
+    upsertPropertyMeta("og:locale", "zh_CN");
+    upsertNamedMeta("twitter:card", "summary");
+    upsertNamedMeta("twitter:title", metadata.title);
+    upsertNamedMeta("twitter:description", metadata.description);
+  }, [canonicalUrl, metadata.description, metadata.title]);
+}
 
 function formatProbeCompatibilityMode(mode: ProbeResolvedCompatibilityMode | null | undefined) {
   return mode ? PROBE_COMPATIBILITY_LABELS[mode] : "未识别";
@@ -1975,6 +2044,10 @@ function HomePage() {
     [],
   );
   const quickProbe = useProbeController(DEFAULT_PROBE_STATE);
+  usePageMetadata({
+    title: "relaynew.ai｜中转站监控、榜单与探测",
+    description: "面向中国用户的 relay 情报台，提供模型赛道榜单、异常事件、Relay 自助探测与提交入口。",
+  });
 
   if (loading) return <HomePageSkeleton />;
   if (error || !data) return <ErrorPanel message={error ?? "首页加载失败。"} />;
@@ -2130,6 +2203,11 @@ function LeaderboardIndexPage() {
     () => fetchJson("/public/leaderboard-directory"),
     [],
   );
+  usePageMetadata({
+    title: "Relay 榜单目录｜relaynew.ai",
+    description: "按模型赛道查看已跟踪的 relay 榜单目录，快速进入单赛道详情，对比健康状态、延迟与价格信息。",
+    canonicalPath: LEADERBOARD_DIRECTORY_PATH,
+  });
   const boards = data?.boards ?? [];
   const vendorFilter = searchParams.get("vendor") ?? "all";
   const vendorOptions = useMemo(
@@ -2262,6 +2340,14 @@ function LeaderboardPage() {
   const trackedRelayCount = rows.length;
   const healthyRelayCount = rows.filter((row) => row.healthStatus === "healthy").length;
   const degradedRelayCount = rows.filter((row) => row.healthStatus === "degraded").length;
+  const modelName = data?.model.name ?? "Relay";
+  usePageMetadata({
+    title: `${modelName} Relay 榜单｜relaynew.ai`,
+    description:
+      data
+        ? `查看 ${data.model.name} 赛道 relay 自然排名，基于可用性、延迟、稳定性与性价比；赞助展示与自然排名严格分离。`
+        : "查看 relay 自然排名与实测数据，理解健康状态、延迟表现与赞助分离规则。",
+  });
 
   if (loading) return <LeaderboardPageSkeleton />;
   if (error || !data) return <ErrorPanel message={error ?? "榜单加载失败。"} />;
@@ -2949,6 +3035,14 @@ function RelayPage() {
     () => fetchJson(`/public/relay/${slug}/incidents?window=30d`),
     [slug],
   );
+  const relayName = overview.data?.relay.name ?? slug;
+  usePageMetadata({
+    title: `${relayName} Relay 详情｜relaynew.ai`,
+    description:
+      overview.data
+        ? `查看 ${overview.data.relay.name} 的 24h 可用性、延迟走势、模型支持、价格历史与近 30 天事故时间线。`
+        : "查看 relay 的 24h 可用性、延迟走势、模型支持、价格历史与近 30 天事故时间线。",
+  });
   if (overview.loading) return <RelayPageSkeleton />;
   if (overview.error || !overview.data) return <ErrorPanel message={overview.error ?? "Relay 详情加载失败。"} />;
 
@@ -3172,6 +3266,11 @@ function MethodologyPage() {
     () => fetchJson("/public/methodology"),
     [],
   );
+  usePageMetadata({
+    title: "Relay 榜单方法论｜relaynew.ai",
+    description: "解释 relay 评分构成、健康状态定义、徽章含义与榜单阅读方式，帮助运营和用户理解排序依据。",
+    canonicalPath: "/methodology",
+  });
   if (loading) return <MethodologyPageSkeleton />;
   if (error || !data) return <ErrorPanel message={error ?? "方法论页面加载失败。"} />;
 
@@ -3266,6 +3365,12 @@ function MethodologyPage() {
 }
 
 function PolicyPage() {
+  usePageMetadata({
+    title: "Relay 评估政策｜relaynew.ai",
+    description: "说明收录与审核规则、哪些因素影响自然排名、赞助位边界，以及运营者纠错申诉与复核流程。",
+    canonicalPath: "/policy",
+  });
+
   return (
     <div className="space-y-6">
       <section className="panel bg-[#fff0c2]">
@@ -3361,6 +3466,11 @@ function SubmitPage() {
   const [result, setResult] = useState<PublicSubmissionResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<SubmitFormErrors>({});
+  usePageMetadata({
+    title: "提交 Relay｜relaynew.ai",
+    description: "提交 relay 基础信息与测试参数进入审核队列，完成初始探测；赞助流程与自然排名逻辑分离。",
+    canonicalPath: "/submit",
+  });
 
   function updateField<Key extends keyof SubmitFormState>(key: Key, value: SubmitFormState[Key]) {
     setState((current) => ({ ...current, [key]: value }));
@@ -3557,6 +3667,11 @@ function ProbePage() {
     state,
     submitting,
   } = useProbeController(getProbeStateFromSearchParams(searchParams));
+  usePageMetadata({
+    title: "Relay 探测｜relaynew.ai",
+    description: "在线检测 relay 连通性、协议兼容模式、HTTP 状态与请求轨迹，快速定位接入问题。",
+    canonicalPath: "/probe",
+  });
 
   return (
     <div className="space-y-6">
@@ -3791,6 +3906,11 @@ function ProbePage() {
 
 function NotFoundPage() {
   const navigate = useNavigate();
+  usePageMetadata({
+    title: "页面不存在｜relaynew.ai",
+    description: "你访问的页面不存在，系统将返回 relaynew.ai 首页。",
+  });
+
   useEffect(() => {
     const timer = window.setTimeout(() => navigate("/"), 2000);
     return () => window.clearTimeout(timer);

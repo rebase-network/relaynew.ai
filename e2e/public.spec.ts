@@ -85,6 +85,31 @@ async function expectVisibleText(locator: Locator, pattern: RegExp) {
   await expect(locator.getByText(pattern).first()).toBeVisible();
 }
 
+async function expectPageMetadata(page: Page, expectation: {
+  canonicalPath: string;
+  descriptionPattern: RegExp;
+  titlePattern: RegExp;
+}) {
+  await expect(page).toHaveTitle(expectation.titlePattern);
+
+  const description = page.locator('meta[name="description"]');
+  await expect(description).toHaveCount(1);
+  const descriptionContent = await description.getAttribute("content");
+  expect(descriptionContent).not.toBeNull();
+  expect(descriptionContent!.length).toBeGreaterThanOrEqual(20);
+  expect(descriptionContent!.length).toBeLessThanOrEqual(220);
+  expect(descriptionContent!).toMatch(expectation.descriptionPattern);
+
+  const canonical = page.locator('link[rel="canonical"]');
+  await expect(canonical).toHaveCount(1);
+  const canonicalHref = await canonical.getAttribute("href");
+  expect(canonicalHref).not.toBeNull();
+  const canonicalUrl = new URL(canonicalHref!);
+  expect(canonicalUrl.pathname).toBe(expectation.canonicalPath);
+  expect(canonicalUrl.search).toBe("");
+  expect(canonicalUrl.hash).toBe("");
+}
+
 test("public site renders the main discovery flow", async ({ page }) => {
   await gotoHome(page);
   await expect(page.getByRole("heading", { name: /快速发现优质 relay/i })).toBeVisible();
@@ -301,4 +326,31 @@ test("leaderboard remains readable on mobile", async ({ page }) => {
   await expect(page.getByText("P50 延迟").first()).toBeVisible();
   await expectVisibleText(page.locator("main"), /自然排名|方法论入口|赞助分离/);
   await expect(page.getByText("当前表格不含赞助位")).toBeVisible();
+});
+
+test.describe("public metadata smoke", () => {
+  test("critical public routes expose route-level metadata", async ({ page }) => {
+    await gotoHome(page);
+    await expectPageMetadata(page, {
+      canonicalPath: "/",
+      descriptionPattern: /relay|榜单|探测/i,
+      titlePattern: /relaynew\.ai|中转站监控|榜单与探测/i,
+    });
+
+    await page.goto("/leaderboard?foo=bar#metadata");
+    await expect(page.getByRole("heading", { name: "GPT 5.4" })).toBeVisible();
+    await expectPageMetadata(page, {
+      canonicalPath: "/leaderboard",
+      descriptionPattern: /自然排名|赞助展示|relay/i,
+      titlePattern: /GPT 5\.4|Relay 榜单|relaynew\.ai/i,
+    });
+
+    await page.goto("/relay/aurora-relay?from=metadata");
+    await expect(page.getByRole("heading", { name: "Aurora Relay" })).toBeVisible();
+    await expectPageMetadata(page, {
+      canonicalPath: "/relay/aurora-relay",
+      descriptionPattern: /价格历史|事故时间线|Aurora Relay/i,
+      titlePattern: /Aurora Relay|Relay 详情|relaynew\.ai/i,
+    });
+  });
 });

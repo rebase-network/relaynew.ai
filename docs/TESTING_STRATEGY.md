@@ -130,6 +130,8 @@ These tests help catch contract regressions earlier than full browser failures.
 
 - the browser acceptance suite lives in `e2e/`
 - Playwright is configured from `playwright.config.ts`
+- public-route smoke coverage should include head metadata checks for critical pages,
+  especially `title`, `meta[name=description]`, and `canonical`
 - `pnpm test` runs the package-level verification layer: API tests plus frontend and
   edge-worker typechecks
 - `pnpm test:e2e` starts an isolated PostgreSQL test container, seeds the API
