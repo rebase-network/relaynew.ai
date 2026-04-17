@@ -2061,7 +2061,7 @@ function HomePage() {
               发现优质中转站点，快速测试API可用性，建立公开站点目录
             </h1>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-black/72 md:mt-4 md:text-base md:leading-7">
-              你可以查看各模型赛道榜单、快速做一次 relay 自检，或在需要更深入诊断时进入完整探测工作台。
+              你可以查看各模型站点榜单、快速检测站点，或在需要更深入诊断时进入完整探测工作台。
             </p>
             <div className="mt-5 flex flex-wrap gap-2.5">
               <Link className="button-dark" to="/leaderboard">查看榜单</Link>
