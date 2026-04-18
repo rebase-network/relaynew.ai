@@ -1,15 +1,12 @@
 import * as Shared from "../shared";
 import { InfoTip } from "../components/info-tip";
 import { RelayInspectorDrawer } from "../components/relay-inspector-drawer";
-import { StatusBadge } from "../components/status-badge";
+import { RelayListCard } from "../components/relay-list-card";
 
 const {
-  clsx,
   Card,
   ErrorCard,
   LoadingCard,
-  formatDateTime,
-  statusToneForCatalogStatus,
   useEffect,
   useLoadable,
   useState,
@@ -60,51 +57,18 @@ export function RelayHistoryPage() {
         </div>
 
         <div className="mt-2.5 space-y-2.5">
-
           {archivedRelays.length === 0 ? (
             <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-5 text-sm text-white/58">
               当前没有已归档的 Relay。
             </div>
           ) : archivedRelays.map((relay) => (
-            <div
+            <RelayListCard
               key={relay.id}
-              className={clsx(
-                "admin-list-card cursor-pointer border bg-white/5 p-3.5",
-                relay.id === selectedRelayId ? "border-[#ffd06a]/45 bg-white/[0.07] shadow-[rgba(255,208,106,0.16)_0_0_0_1px]" : "border-white/10",
-              )}
-              onClick={() => openRelayDrawer(relay.id, "detail")}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  openRelayDrawer(relay.id, "detail");
-                }
-              }}
-              role="button"
-              tabIndex={0}
-            >
-              <div className="grid gap-3 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] xl:items-center">
-                <div className="min-w-0 text-left">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-lg tracking-[-0.03em]">{relay.name}</p>
-                    <StatusBadge tone={statusToneForCatalogStatus("archived")}>已归档</StatusBadge>
-                  </div>
-                  <p className="mt-1 text-xs uppercase tracking-[0.16em] text-white/40">{relay.slug}</p>
-                  <p className="mt-2 truncate text-sm text-white/64">{relay.baseUrl}</p>
-                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-white/58">
-                    <span className="rounded-full border border-white/10 bg-black/10 px-2.5 py-1">模型 {relay.modelPrices.length}</span>
-                    <span className="rounded-full border border-white/10 bg-black/10 px-2.5 py-1">
-                      {relay.contactInfo ? "已填联系方式" : "未填联系方式"}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-white/10 bg-black/10 px-3 py-2.5">
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-white/38">归档信息</p>
-                  <p className="mt-1.5 text-sm text-white/72">最近更新 {formatDateTime(relay.updatedAt)}</p>
-                  <p className="mt-1 text-sm text-white/58">{relay.contactInfo ?? "未填写联系方式"}</p>
-                </div>
-              </div>
-            </div>
+              onSelect={() => openRelayDrawer(relay.id, "detail")}
+              selected={relay.id === selectedRelayId}
+              variant="history"
+              relay={relay}
+            />
           ))}
         </div>
       </Card>

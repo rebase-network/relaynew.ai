@@ -2,6 +2,7 @@ import * as Shared from "../shared";
 import { AdminDrawer } from "./admin-drawer";
 import { StatusBadge } from "./status-badge";
 import { WorkflowDetailGrid, WorkflowPriceTable, WorkflowSection } from "./relay-workflow";
+import { useDrawerPresence } from "../hooks/use-drawer-presence";
 
 const {
   Notice,
@@ -29,29 +30,9 @@ export function SubmissionInspectorDrawer({
   onClose: () => void;
   onReload: () => Promise<unknown>;
 }) {
-  const [presentedSubmission, setPresentedSubmission] = useState<Shared.AdminSubmissionsResponse["rows"][number] | null>(submission);
+  const presentedSubmission = useDrawerPresence(open, submission);
   const [reviewNotes, setReviewNotes] = useState("");
   const [mutation, setMutation] = useMutationState();
-
-  useEffect(() => {
-    if (submission) {
-      setPresentedSubmission(submission);
-    }
-  }, [submission]);
-
-  useEffect(() => {
-    if (open || !presentedSubmission) {
-      return;
-    }
-
-    const timeout = window.setTimeout(() => {
-      setPresentedSubmission(null);
-    }, 240);
-
-    return () => {
-      window.clearTimeout(timeout);
-    };
-  }, [open, presentedSubmission]);
 
   useEffect(() => {
     if (!open || !submission) {

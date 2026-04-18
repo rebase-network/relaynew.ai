@@ -49,21 +49,20 @@ async function openAdmin(page: Page, path = "/") {
   await expect(adminBrand).toBeVisible();
 }
 
-test("admin overview shows the simplified operator navigation", async ({ page }) => {
+test("admin defaults to relay operations and exposes the simplified operator navigation", async ({ page }) => {
   await openAdmin(page, "/");
 
-  await expect(page.getByText("围绕提交记录和 Relay 列表，收敛运营后台的日常工作流。", { exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/relays$/);
+  await expect(page.getByRole("heading", { name: "Relay 列表", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Relay", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Relay历史", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "提交记录", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "提交记录历史", exact: true })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "提交历史", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "赞助位", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "模型", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "密钥", exact: true })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "价格", exact: true })).toHaveCount(0);
-
-  await page.getByRole("link", { name: "Relay", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Relay 列表", exact: true })).toBeVisible();
 
   await page.getByRole("link", { name: "Relay历史", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Relay 历史", exact: true })).toBeVisible();
@@ -72,7 +71,7 @@ test("admin overview shows the simplified operator navigation", async ({ page })
   await expect(page.getByRole("heading", { name: "提交记录", exact: true })).toBeVisible();
 
   await page.getByRole("link", { name: "提交历史", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "提交记录历史", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "提交历史", exact: true })).toBeVisible();
 });
 
 test("admin can manually create a relay with model prices", async ({ page }) => {
@@ -85,16 +84,21 @@ test("admin can manually create a relay with model prices", async ({ page }) => 
   const relayBaseUrl = `https://example.com/manual-relay-${Date.now()}`;
 
   await openAdmin(page, "/relays");
-  await page.getByLabel("站点名字").fill(relayName);
-  await page.getByLabel("Base URL").fill(relayBaseUrl);
-  await page.getByLabel("站点网站").fill("https://example.com");
-  await page.getByLabel("联系方式").fill("Telegram: @northwind_manual");
-  await page.getByLabel("站点简介").fill("后台手动新增 Relay 的 Playwright 覆盖用例。");
-  await page.getByLabel("模型").fill("openai-gpt-5.4");
-  await page.getByLabel("Input价格").fill("4.6");
-  await page.getByLabel("Output价格").fill("13.2");
-  await page.getByLabel("测试API Key").fill("sk-manual-create");
-  await page.getByRole("button", { name: "创建 Relay" }).click();
+  await page.getByRole("button", { name: "手动添加 Relay" }).click();
+
+  const drawer = page.locator("aside").filter({ has: page.getByRole("heading", { name: "手动添加 Relay" }) });
+  await expect(drawer).toBeVisible();
+
+  await drawer.getByLabel("站点名字").fill(relayName);
+  await drawer.getByLabel("Base URL").fill(relayBaseUrl);
+  await drawer.getByLabel("站点网站").fill("https://example.com");
+  await drawer.getByLabel("联系方式").fill("Telegram: @northwind_manual");
+  await drawer.getByLabel("站点简介").fill("后台手动新增 Relay 的 Playwright 覆盖用例。");
+  await drawer.getByLabel(/第 1 行模型/).fill("openai-gpt-5.4");
+  await drawer.getByLabel(/第 1 行 Input价格/).fill("4.6");
+  await drawer.getByLabel(/第 1 行 Output价格/).fill("13.2");
+  await drawer.getByLabel("测试API Key").fill("sk-manual-create");
+  await drawer.getByRole("button", { name: "创建 Relay" }).click();
 
   await expect(page.getByText("Relay 已创建并加入当前列表。", { exact: true })).toBeVisible();
   await expect(page.locator(".admin-list-card").filter({ hasText: relayName })).toBeVisible();
@@ -133,9 +137,12 @@ test("admin can approve a submission and move it into history plus relay list", 
   await openAdmin(page, "/intake");
   const queueCard = page.locator(".admin-list-card").filter({ hasText: relayName }).first();
   await expect(queueCard).toBeVisible();
-  await queueCard.getByRole("button", { name: "批准" }).click();
+  await queueCard.click();
 
-  await expect(page.getByText("提交已通过，记录已进入提交历史，同时 Relay 已进入当前列表。", { exact: true })).toBeVisible();
+  const drawer = page.locator("aside").filter({ has: page.getByRole("heading", { name: relayName }) });
+  await expect(drawer).toBeVisible();
+  await drawer.getByRole("button", { name: "批准并创建 Relay" }).click();
+
   await expect(page.locator(".admin-list-card").filter({ hasText: relayName })).toHaveCount(0);
 
   await page.goto(`${adminBaseUrl}/intake/history`);
@@ -184,7 +191,7 @@ test("admin can pause, archive, and reactivate a relay", async ({ page, request 
   await expect(relayCard).toBeVisible();
 
   await relayCard.getByRole("button", { name: "暂停" }).click();
-  await expect(page.getByText(`${relayName} 已暂停，后续不会参与自动测试和公开展示。`, { exact: true })).toBeVisible();
+  await expect(page.getByText(`${relayName} 已暂停。`, { exact: true })).toBeVisible();
 
   const pausedCard = page.locator(".admin-list-card").filter({ hasText: relayName }).first();
   await expect(pausedCard).toContainText(/已暂停|paused/i);
@@ -196,8 +203,11 @@ test("admin can pause, archive, and reactivate a relay", async ({ page, request 
   await page.goto(`${adminBaseUrl}/relays/history`);
   const archivedCard = page.locator(".admin-list-card").filter({ hasText: relayName }).first();
   await expect(archivedCard).toBeVisible();
-  await archivedCard.getByRole("button", { name: "重新激活" }).click();
-  await expect(page.getByText(`${relayName} 已重新激活并回到当前 Relay 列表。`, { exact: true })).toBeVisible();
+  await archivedCard.click();
+  const drawer = page.locator("aside").filter({ has: page.getByRole("heading", { name: relayName }) });
+  await expect(drawer).toBeVisible();
+  await drawer.getByRole("button", { name: "重新激活" }).click();
+  await expect(drawer).toHaveCount(0);
 
   await page.goto(`${adminBaseUrl}/relays`);
   await expect(page.locator(".admin-list-card").filter({ hasText: relayName })).toBeVisible();

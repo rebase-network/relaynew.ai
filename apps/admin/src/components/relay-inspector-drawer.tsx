@@ -3,11 +3,12 @@ import { AdminDrawer } from "./admin-drawer";
 import { RelayEditorForm } from "./relay-editor-form";
 import { StatusBadge } from "./status-badge";
 import { WorkflowDetailGrid, WorkflowPriceTable, WorkflowSection } from "./relay-workflow";
+import { useDrawerPresence } from "../hooks/use-drawer-presence";
+import { useRelayFormController } from "../hooks/use-relay-form-controller";
 
 const {
   PUBLIC_SITE_URL,
   buildRelayFormState,
-  createRelayPriceRowFormState,
   fetchJson,
   formatCatalogStatus,
   formatCredentialStatus,
@@ -18,7 +19,6 @@ const {
   useMutationState,
   useState,
   validateRelayForm,
-  withoutFieldError,
 } = Shared;
 
 export function RelayInspectorDrawer({
@@ -34,31 +34,10 @@ export function RelayInspectorDrawer({
   onClose: () => void;
   onReload: () => Promise<unknown>;
 }) {
-  const [presentedRelay, setPresentedRelay] = useState<Shared.AdminRelaysResponse["rows"][number] | null>(relay);
+  const presentedRelay = useDrawerPresence(open, relay);
   const [mode, setMode] = useState<"detail" | "edit">(initialMode);
-  const [form, setForm] = useState<Shared.RelayFormState>(() => buildRelayFormState());
-  const [fieldErrors, setFieldErrors] = useState<Shared.RelayFormErrors>({});
   const [mutation, setMutation] = useMutationState();
-
-  useEffect(() => {
-    if (relay) {
-      setPresentedRelay(relay);
-    }
-  }, [relay]);
-
-  useEffect(() => {
-    if (open || !presentedRelay) {
-      return;
-    }
-
-    const timeout = window.setTimeout(() => {
-      setPresentedRelay(null);
-    }, 240);
-
-    return () => {
-      window.clearTimeout(timeout);
-    };
-  }, [open, presentedRelay]);
+  const formController = useRelayFormController(relay, () => setMutation((current) => ({ ...current, error: null })));
 
   useEffect(() => {
     if (!open || !relay) {
@@ -66,52 +45,16 @@ export function RelayInspectorDrawer({
     }
 
     setMode(initialMode);
-    setForm(buildRelayFormState(relay));
-    setFieldErrors({});
+    formController.loadRelay(relay);
     setMutation({ pending: false, error: null, success: null });
-  }, [initialMode, open, relay]);
-
-  function updateForm<Key extends keyof Shared.RelayFormState>(key: Key, value: Shared.RelayFormState[Key]) {
-    setForm((current) => ({ ...current, [key]: value }));
-    setFieldErrors((current) => ({ ...current, [key]: undefined }));
-    setMutation((current) => ({ ...current, error: null }));
-  }
-
-  function updatePriceRow(rowId: string, key: keyof Shared.RelayPriceRowFormState, value: string) {
-    setForm((current) => ({
-      ...current,
-      modelPrices: current.modelPrices.map((row) => (row.id === rowId ? { ...row, [key]: value } : row)),
-    }));
-    setFieldErrors((current) => withoutFieldError(current, "modelPrices"));
-    setMutation((current) => ({ ...current, error: null }));
-  }
-
-  function addPriceRow() {
-    setForm((current) => ({
-      ...current,
-      modelPrices: [...current.modelPrices, createRelayPriceRowFormState(current.modelPrices.length)],
-    }));
-    setFieldErrors((current) => withoutFieldError(current, "modelPrices"));
-  }
-
-  function removePriceRow(rowId: string) {
-    setForm((current) => ({
-      ...current,
-      modelPrices:
-        current.modelPrices.length > 1
-          ? current.modelPrices.filter((row) => row.id !== rowId)
-          : [createRelayPriceRowFormState()],
-    }));
-    setFieldErrors((current) => withoutFieldError(current, "modelPrices"));
-  }
+  }, [formController.loadRelay, initialMode, open, relay, setMutation]);
 
   function resetForm() {
     if (!relay) {
       return;
     }
 
-    setForm(buildRelayFormState(relay));
-    setFieldErrors({});
+    formController.loadRelay(relay);
     setMutation({ pending: false, error: null, success: null });
   }
 
@@ -120,8 +63,8 @@ export function RelayInspectorDrawer({
       return;
     }
 
-    const { errors, payload } = validateRelayForm(form, { editing: true });
-    setFieldErrors(errors);
+    const { errors, payload } = validateRelayForm(formController.form, { editing: true });
+    formController.setFieldErrors(errors);
     if (Object.keys(errors).length > 0) {
       setMutation({ pending: false, error: "请先修正高亮字段，再保存 Relay。", success: null });
       return;
@@ -280,8 +223,8 @@ export function RelayInspectorDrawer({
         ) : (
           <RelayEditorForm
             mode="edit"
-            form={form}
-            fieldErrors={fieldErrors}
+            form={formController.form}
+            fieldErrors={formController.fieldErrors}
             mutation={mutation}
             submitLabel="保存修改"
             submittingLabel="保存中..."
@@ -293,10 +236,10 @@ export function RelayInspectorDrawer({
             }
             onSubmit={() => void submitRelay()}
             onReset={resetForm}
-            onUpdateForm={updateForm}
-            onUpdatePriceRow={updatePriceRow}
-            onAddPriceRow={addPriceRow}
-            onRemovePriceRow={removePriceRow}
+            onUpdateForm={formController.updateForm}
+            onUpdatePriceRow={formController.updatePriceRow}
+            onAddPriceRow={formController.addPriceRow}
+            onRemovePriceRow={formController.removePriceRow}
           />
         )}
       </div>

@@ -2,28 +2,21 @@ import * as Shared from "../shared";
 import { AdminDrawer } from "../components/admin-drawer";
 import { RelayEditorForm } from "../components/relay-editor-form";
 import { RelayInspectorDrawer } from "../components/relay-inspector-drawer";
-import { StatusBadge } from "../components/status-badge";
+import { RelayListCard } from "../components/relay-list-card";
+import { useRelayFormController } from "../hooks/use-relay-form-controller";
 
 const {
-  clsx,
   Card,
   ConfirmDialog,
   ErrorCard,
   LoadingCard,
   buildRelayFormState,
-  createRelayPriceRowFormState,
   fetchJson,
-  formatCatalogStatus,
-  formatCredentialStatus,
-  formatDateTime,
-  formatHealthStatus,
-  statusToneForCatalogStatus,
   useEffect,
   useLoadable,
   useMutationState,
   useState,
   validateRelayForm,
-  withoutFieldError,
 } = Shared;
 
 export function RelaysPage() {
@@ -34,10 +27,9 @@ export function RelaysPage() {
   const [archiveTarget, setArchiveTarget] = useState<Shared.AdminRelaysResponse["rows"][number] | null>(null);
   const [actionMutation, setActionMutation] = useMutationState();
   const [createMutation, setCreateMutation] = useMutationState();
-  const [form, setForm] = useState<Shared.RelayFormState>(() => buildRelayFormState());
-  const [fieldErrors, setFieldErrors] = useState<Shared.RelayFormErrors>({});
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "paused">("all");
   const [highlightedRelayId, setHighlightedRelayId] = useState<string | null>(null);
+  const createController = useRelayFormController(null, () => setCreateMutation((current) => ({ ...current, error: null })));
 
   const currentRelays = (relays.data?.rows ?? []).filter((relay) => relay.catalogStatus === "active" || relay.catalogStatus === "paused");
   const selectedRelay = currentRelays.find((relay) => relay.id === selectedRelayId) ?? null;
@@ -56,8 +48,7 @@ export function RelaysPage() {
   }, [relays.loading, selectedRelay, selectedRelayId]);
 
   function resetCreateForm() {
-    setForm(buildRelayFormState());
-    setFieldErrors({});
+    createController.loadRelay(null);
     setCreateMutation({ pending: false, error: null, success: null });
   }
 
@@ -81,43 +72,9 @@ export function RelaysPage() {
     setSelectedMode("detail");
   }
 
-  function updateForm<Key extends keyof Shared.RelayFormState>(key: Key, value: Shared.RelayFormState[Key]) {
-    setForm((current) => ({ ...current, [key]: value }));
-    setFieldErrors((current) => ({ ...current, [key]: undefined }));
-    setCreateMutation((current) => ({ ...current, error: null }));
-  }
-
-  function updatePriceRow(rowId: string, key: keyof Shared.RelayPriceRowFormState, value: string) {
-    setForm((current) => ({
-      ...current,
-      modelPrices: current.modelPrices.map((row) => (row.id === rowId ? { ...row, [key]: value } : row)),
-    }));
-    setFieldErrors((current) => withoutFieldError(current, "modelPrices"));
-    setCreateMutation((current) => ({ ...current, error: null }));
-  }
-
-  function addPriceRow() {
-    setForm((current) => ({
-      ...current,
-      modelPrices: [...current.modelPrices, createRelayPriceRowFormState(current.modelPrices.length)],
-    }));
-    setFieldErrors((current) => withoutFieldError(current, "modelPrices"));
-  }
-
-  function removePriceRow(rowId: string) {
-    setForm((current) => ({
-      ...current,
-      modelPrices:
-        current.modelPrices.length > 1
-          ? current.modelPrices.filter((row) => row.id !== rowId)
-          : [createRelayPriceRowFormState()],
-    }));
-    setFieldErrors((current) => withoutFieldError(current, "modelPrices"));
-  }
-
   async function createRelay() {
-    const { errors, payload } = validateRelayForm(form, { editing: false });
-    setFieldErrors(errors);
+    const { errors, payload } = validateRelayForm(createController.form, { editing: false });
+    createController.setFieldErrors(errors);
     if (Object.keys(errors).length > 0) {
       setCreateMutation({ pending: false, error: "请先修正高亮字段，再创建 Relay。", success: null });
       return;
@@ -219,109 +176,18 @@ export function RelaysPage() {
               当前筛选条件下没有匹配的 Relay。
             </div>
           ) : filteredRelays.map((relay) => (
-            <div
+            <RelayListCard
               key={relay.id}
-              className={clsx(
-                "admin-list-card cursor-pointer border bg-white/5 p-3",
-                relay.id === highlightedRelayId
-                  ? "border-[#ffd06a]/45 bg-white/[0.07] shadow-[rgba(255,208,106,0.16)_0_0_0_1px]"
-                  : "border-white/10",
-              )}
-              onClick={() => openRelayDrawer(relay.id, "detail")}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  openRelayDrawer(relay.id, "detail");
-                }
-              }}
-              role="button"
-              tabIndex={0}
-            >
-              <div className="grid gap-3 xl:grid-cols-[minmax(0,1.7fr)_minmax(0,0.88fr)_auto] xl:items-center">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-lg tracking-[-0.03em]">{relay.name}</p>
-                    <StatusBadge tone={statusToneForCatalogStatus(relay.catalogStatus)}>
-                      {formatCatalogStatus(relay.catalogStatus)}
-                    </StatusBadge>
-                    {relay.id === highlightedRelayId ? <span className="pill pill-ghost !bg-[#ffd06a]/14 !text-[#ffe6a7]">刚创建</span> : null}
-                  </div>
-                  <p className="mt-1 text-xs uppercase tracking-[0.16em] text-white/40">{relay.slug}</p>
-                  <p className="mt-1.5 truncate text-sm text-white/62">{relay.baseUrl}</p>
-                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-white/58">
-                    <span className="rounded-full border border-white/10 bg-black/10 px-2.5 py-1">模型 {relay.modelPrices.length}</span>
-                    {relay.contactInfo ? <span className="rounded-full border border-white/10 bg-black/10 px-2.5 py-1">{relay.contactInfo}</span> : null}
-                    {relay.websiteUrl ? <span className="rounded-full border border-white/10 bg-black/10 px-2.5 py-1">已填写网站</span> : null}
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-white/10 bg-black/10 px-3 py-2.5">
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-white/38">测试状态</p>
-                  {relay.probeCredential ? (
-                    <>
-                      <p className="mt-1.5 text-sm text-white/72">
-                        {formatCredentialStatus(relay.probeCredential.status)} · {formatHealthStatus(relay.probeCredential.lastHealthStatus)}
-                      </p>
-                      <p className="mt-1 truncate text-xs text-white/54">{relay.probeCredential.testModel}</p>
-                      <p className="mt-1 text-xs text-white/42">
-                        {relay.probeCredential.lastVerifiedAt ? formatDateTime(relay.probeCredential.lastVerifiedAt) : "尚未完成验证"}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="mt-1.5 text-sm text-[#ffd892]">没有可用测试 Key</p>
-                  )}
-                </div>
-
-                <div className="flex flex-wrap gap-2 xl:flex-col xl:items-end">
-                  <button
-                    className="pill pill-active"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      openRelayDrawer(relay.id, "edit");
-                    }}
-                    type="button"
-                  >
-                    编辑
-                  </button>
-                  {relay.catalogStatus === "active" ? (
-                    <button
-                      className="pill pill-idle"
-                      disabled={actionMutation.pending}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        void updateRelayStatus(relay, "paused");
-                      }}
-                      type="button"
-                    >
-                      暂停
-                    </button>
-                  ) : (
-                    <button
-                      className="pill pill-idle"
-                      disabled={actionMutation.pending}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        void updateRelayStatus(relay, "active");
-                      }}
-                      type="button"
-                    >
-                      重新激活
-                    </button>
-                  )}
-                  <button
-                    className="pill pill-ghost"
-                    disabled={actionMutation.pending}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setArchiveTarget(relay);
-                    }}
-                    type="button"
-                  >
-                    归档
-                  </button>
-                </div>
-              </div>
-            </div>
+              actionPending={actionMutation.pending}
+              highlighted={relay.id === highlightedRelayId}
+              onArchive={() => setArchiveTarget(relay)}
+              onEdit={() => openRelayDrawer(relay.id, "edit")}
+              onSelect={() => openRelayDrawer(relay.id, "detail")}
+              onToggleStatus={() => void updateRelayStatus(relay, relay.catalogStatus === "active" ? "paused" : "active")}
+              selected={relay.id === selectedRelayId}
+              variant="catalog"
+              relay={relay}
+            />
           ))}
         </div>
 
@@ -348,18 +214,18 @@ export function RelaysPage() {
       <AdminDrawer open={createOpen} title="手动添加 Relay" onClose={closeCreateDrawer}>
         <RelayEditorForm
           mode="create"
-          form={form}
-          fieldErrors={fieldErrors}
+          form={createController.form}
+          fieldErrors={createController.fieldErrors}
           mutation={createMutation}
           submitLabel="创建 Relay"
           submittingLabel="创建中..."
           resetLabel="清空表单"
           onSubmit={() => void createRelay()}
           onReset={resetCreateForm}
-          onUpdateForm={updateForm}
-          onUpdatePriceRow={updatePriceRow}
-          onAddPriceRow={addPriceRow}
-          onRemovePriceRow={removePriceRow}
+          onUpdateForm={createController.updateForm}
+          onUpdatePriceRow={createController.updatePriceRow}
+          onAddPriceRow={createController.addPriceRow}
+          onRemovePriceRow={createController.removePriceRow}
         />
       </AdminDrawer>
 
