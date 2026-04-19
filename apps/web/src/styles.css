@@ -1300,79 +1300,105 @@ textarea {
   background: linear-gradient(90deg, rgba(255, 217, 0, 0.88), rgba(250, 82, 15, 0.88));
 }
 
-.methodology-hero,
-.policy-hero {
-  padding-bottom: 1.35rem;
+.methodology-hero {
+  padding-top: 1.3rem;
+  padding-bottom: 1.1rem;
 }
 
 .methodology-hero-grid {
   display: grid;
-  gap: 1.15rem;
+  gap: 1.2rem;
 }
 
-.methodology-map-card {
-  padding: 0.84rem 0.88rem;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.58), rgba(255, 249, 238, 0.74));
-  border-color: rgba(31, 31, 31, 0.05);
-  box-shadow: none;
+.methodology-eyebrow {
+  margin: 0 0 0.72rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  line-height: 1.4;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(31, 31, 31, 0.56);
 }
 
-.methodology-map-list {
-  margin-top: 0.7rem;
-  display: grid;
-  gap: 0.62rem;
+.methodology-hero-title {
+  max-width: 52rem;
+  margin: 0;
+  font-size: clamp(2.55rem, 5.2vw, 4rem);
+  line-height: 0.98;
+  letter-spacing: -0.045em;
 }
 
-.methodology-map-link {
-  display: block;
+.methodology-hero-summary {
+  max-width: 42rem;
+  margin: 1rem 0 0;
+  font-size: 1rem;
+  line-height: 1.74;
+  color: rgba(31, 31, 31, 0.82);
+}
+
+.methodology-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.72rem;
+  margin-top: 1.15rem;
+}
+
+.methodology-hero-side {
   border-top: 1px solid rgba(31, 31, 31, 0.08);
-  padding-top: 0.64rem;
+  padding-top: 1rem;
+}
+
+.methodology-hero-side-label {
+  margin: 0 0 0.48rem;
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  line-height: 1.4;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(31, 31, 31, 0.56);
+}
+
+.methodology-hero-side-value {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: rgba(31, 31, 31, 0.9);
+}
+
+.methodology-hero-side-copy {
+  margin: 0.5rem 0 0;
+  font-size: 0.89rem;
+  line-height: 1.62;
+  color: rgba(31, 31, 31, 0.72);
+}
+
+.methodology-anchor-strip {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 1rem;
+}
+
+.methodology-anchor-link {
+  display: block;
+  border: 1px solid rgba(31, 31, 31, 0.08);
+  background: rgba(255, 255, 255, 0.72);
+  padding: 0.88rem 0.94rem;
   text-decoration: none;
 }
 
-.methodology-map-title {
+.methodology-anchor-title {
   margin: 0;
-  font-size: 0.96rem;
-  line-height: 1.38;
-  letter-spacing: -0.01em;
-  color: rgba(31, 31, 31, 0.88);
-  font-weight: 600;
+  font-size: 1.18rem;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  color: rgba(31, 31, 31, 0.9);
 }
 
-.methodology-map-copy {
-  margin: 0.28rem 0 0;
-  font-size: 0.8rem;
-  line-height: 1.54;
-  color: rgba(31, 31, 31, 0.68);
-}
-
-.methodology-hero-support {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.42rem 0.58rem;
-  margin: 0.95rem 0 0;
-  font-size: 0.88rem;
-  line-height: 1.6;
-  color: rgba(31, 31, 31, 0.68);
-}
-
-.methodology-hero-support-label {
-  font-family: var(--font-mono);
-  font-size: 0.66rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: rgba(31, 31, 31, 0.54);
-}
-
-.methodology-hero-meta {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: rgba(31, 31, 31, 0.58);
+.methodology-anchor-copy {
+  margin: 0.45rem 0 0;
+  font-size: 0.86rem;
+  line-height: 1.58;
+  color: rgba(31, 31, 31, 0.7);
 }
 
 .methodology-section-shell {
@@ -1383,72 +1409,99 @@ textarea {
 
 .methodology-governance-shell {
   background:
-    linear-gradient(180deg, rgba(255, 248, 228, 0.96), rgba(255, 243, 209, 0.94));
+    linear-gradient(180deg, rgba(255, 248, 228, 0.96), rgba(255, 244, 214, 0.94));
 }
 
 .methodology-section-head {
   display: grid;
-  gap: 0.8rem;
-  margin-bottom: 1.75rem;
+  gap: 0.72rem;
+  margin-bottom: 1.2rem;
 }
 
 .methodology-section-label {
-  margin: 0 0 0.45rem;
+  margin: 0 0 0.58rem;
   font-family: var(--font-mono);
   font-size: 0.68rem;
+  line-height: 1.4;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: rgba(31, 31, 31, 0.54);
+  color: rgba(31, 31, 31, 0.56);
 }
 
 .methodology-section-title {
   margin: 0;
-  font-size: 2.12rem;
-  line-height: 1.14;
-  letter-spacing: -0.02em;
+  font-size: clamp(2.12rem, 3.3vw, 3rem);
+  line-height: 1.02;
+  letter-spacing: -0.04em;
 }
 
 .methodology-section-copy {
-  margin: 0.58rem 0 0;
-  max-width: 42rem;
+  max-width: 46rem;
+  margin: 0.62rem 0 0;
   font-size: 0.98rem;
-  line-height: 1.74;
+  line-height: 1.72;
   color: rgba(31, 31, 31, 0.8);
 }
 
-.methodology-section-meta {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  margin: 0.88rem 0 0;
+.methodology-section-note {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.55;
+  color: rgba(31, 31, 31, 0.56);
+}
+
+.methodology-scoring-grid,
+.methodology-governance-top,
+.methodology-governance-grid,
+.methodology-principles-grid {
+  display: grid;
+  gap: 0.95rem;
+}
+
+.methodology-governance-grid {
+  margin-top: 0.95rem;
+}
+
+.methodology-card {
+  min-height: 100%;
   border: 1px solid rgba(31, 31, 31, 0.08);
-  background: rgba(255, 255, 255, 0.78);
-  padding: 0.36rem 0.62rem;
-  font-size: 0.78rem;
-  line-height: 1.4;
-  letter-spacing: 0.01em;
-  color: rgba(31, 31, 31, 0.68);
+  background: rgba(255, 255, 255, 0.82);
+  padding: 1rem 1.02rem 0.96rem;
+  box-shadow: rgba(127, 99, 21, 0.06) 0 12px 24px;
 }
 
-.methodology-section-grid,
-.methodology-governance-top {
+.methodology-card-strong {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 248, 227, 0.92));
+}
+
+.methodology-card-title {
+  margin: 0;
+  font-size: 1.72rem;
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+}
+
+.methodology-card-intro {
+  margin: 0.58rem 0 0;
+  font-size: 0.89rem;
+  line-height: 1.66;
+  color: rgba(31, 31, 31, 0.72);
+}
+
+.methodology-weight-list,
+.methodology-stack-list,
+.methodology-badge-list {
   display: grid;
-  gap: 1.45rem;
-}
-
-.methodology-weight-card {
-  padding: 1rem 1.04rem;
-}
-
-.methodology-weight-list {
+  gap: 0.78rem;
   margin-top: 1rem;
-  display: grid;
-  gap: 0.98rem;
 }
 
-.methodology-weight-row {
+.methodology-weight-row,
+.methodology-stack-row,
+.methodology-badge-row {
   border-top: 1px solid rgba(31, 31, 31, 0.08);
-  padding-top: 0.8rem;
+  padding-top: 0.78rem;
 }
 
 .methodology-weight-head {
@@ -1461,154 +1514,118 @@ textarea {
 .methodology-weight-label {
   margin: 0;
   font-size: 0.9rem;
-  line-height: 1.48;
-  color: rgba(31, 31, 31, 0.78);
+  line-height: 1.5;
+  color: rgba(31, 31, 31, 0.8);
 }
 
 .methodology-weight-value {
   margin: 0;
   font-family: var(--font-mono);
-  font-size: 0.78rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(31, 31, 31, 0.68);
-}
-
-.methodology-status-list,
-.methodology-badge-grid,
-.policy-list,
-.policy-step-list,
-.policy-sequence-grid,
-.policy-pillars-grid {
-  display: grid;
-  gap: 0.88rem;
-}
-
-.methodology-status-row,
-.methodology-badge-row,
-.policy-list-row,
-.policy-step-row,
-.policy-sequence-step {
-  border-top: 1px solid rgba(31, 31, 31, 0.08);
-  padding-top: 0.8rem;
-}
-
-.methodology-status-head {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: rgba(31, 31, 31, 0.68);
-}
-
-.methodology-status-copy,
-.methodology-badge-copy,
-.policy-pillar-copy,
-.policy-list-row,
-.policy-step-copy {
-  margin: 0.45rem 0 0;
-  font-size: 0.91rem;
-  line-height: 1.66;
-  color: rgba(31, 31, 31, 0.8);
-}
-
-.policy-pillar {
-  border: 1px solid rgba(31, 31, 31, 0.08);
-  background: rgba(255, 255, 255, 0.72);
-  padding: 1rem;
-}
-
-.methodology-governance-card {
-  padding: 1.08rem;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(255, 246, 221, 0.84));
-}
-
-.methodology-governance-copy {
-  margin: 0;
-  font-size: 0.98rem;
-  line-height: 1.74;
-  color: rgba(31, 31, 31, 0.82);
-}
-
-.policy-pillar-title {
-  margin: 0;
-  font-size: 0.96rem;
-  line-height: 1.36;
-  letter-spacing: -0.01em;
-  color: rgba(31, 31, 31, 0.88);
-  font-weight: 600;
-}
-
-.policy-step-row,
-.policy-sequence-step {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 0.75rem;
-  align-items: start;
-}
-
-.policy-step-index {
-  display: inline-flex;
-  min-width: 2rem;
-  height: 2rem;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(31, 31, 31, 0.09);
-  background: rgba(255, 255, 255, 0.74);
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.74rem;
+  line-height: 1.3;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: rgba(31, 31, 31, 0.62);
 }
 
-.methodology-section-panel,
-.policy-compare-panel,
-.policy-process-panel {
-  padding: 1.12rem;
+.methodology-weight-bar {
+  height: 0.5rem;
+  margin-top: 0.45rem;
+  background: rgba(31, 31, 31, 0.08);
 }
 
-.methodology-scoring-side {
-  display: grid;
-  gap: 1.12rem;
+.methodology-weight-bar-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #ffd900, #ffa110 60%, #fa520f);
 }
 
-.methodology-governance-principles {
-  align-content: start;
+.methodology-stack-title {
+  margin: 0;
+  font-size: 1.08rem;
+  line-height: 1.2;
+  color: rgba(31, 31, 31, 0.9);
+}
+
+.methodology-stack-copy,
+.methodology-badge-copy,
+.methodology-principle-copy {
+  margin: 0.46rem 0 0;
+  font-size: 0.9rem;
+  line-height: 1.64;
+  color: rgba(31, 31, 31, 0.78);
+}
+
+.methodology-badge-row .signal-chip {
+  margin-bottom: 0.12rem;
+}
+
+.methodology-principle-card {
+  border: 1px solid rgba(31, 31, 31, 0.08);
+  background: rgba(255, 255, 255, 0.74);
+  padding: 0.96rem;
+}
+
+.methodology-principle-title {
+  margin: 0;
+  font-size: 1.18rem;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  color: rgba(31, 31, 31, 0.9);
 }
 
 .methodology-governance-action {
   align-self: start;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 247, 226, 0.8));
 }
 
-.methodology-governance-compare,
-.methodology-governance-flow {
+.methodology-governance-copy {
+  margin: 0.7rem 0 0;
+  font-size: 0.95rem;
+  line-height: 1.72;
+  color: rgba(31, 31, 31, 0.82);
+}
+
+.methodology-governance-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.72rem;
+  margin-top: 1rem;
+}
+
+.methodology-ordered-list {
   display: grid;
-  gap: 1.18rem;
+  gap: 0.78rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: methodology-item;
 }
 
-.methodology-governance-compare {
-  margin-top: 1.8rem;
+.methodology-ordered-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 0.75rem;
+  border-top: 1px solid rgba(31, 31, 31, 0.08);
+  padding-top: 0.78rem;
+  counter-increment: methodology-item;
 }
 
-.methodology-governance-flow {
-  margin-top: 1.35rem;
+.methodology-ordered-row::before {
+  content: counter(methodology-item, decimal-leading-zero);
+  display: block;
+  min-width: 1.5rem;
+  padding-top: 0.12rem;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  line-height: 1.2;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(31, 31, 31, 0.4);
 }
 
-.methodology-compare-panel {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(255, 249, 236, 0.9));
-}
-
-.methodology-flow-panel {
-  background:
-    linear-gradient(180deg, rgba(255, 247, 229, 0.94), rgba(255, 242, 214, 0.96));
+.methodology-ordered-row .methodology-stack-copy {
+  margin-top: 0;
 }
 
 .form-field {
@@ -1817,13 +1834,14 @@ textarea {
     align-items: end;
   }
 
-  .methodology-badge-grid,
-  .policy-pillars-grid {
+  .methodology-anchor-strip,
+  .methodology-principles-grid,
+  .methodology-governance-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .methodology-hero {
-    padding-bottom: 1.5rem;
+    padding-bottom: 1.32rem;
   }
 
   .methodology-section-shell {
@@ -1831,7 +1849,7 @@ textarea {
   }
 
   .methodology-section-head {
-    margin-bottom: 1.95rem;
+    margin-bottom: 1.55rem;
   }
 }
 
@@ -2133,26 +2151,47 @@ textarea {
   }
 
   .methodology-hero-grid {
-    grid-template-columns: minmax(0, 1.34fr) minmax(14rem, 0.56fr);
-    align-items: start;
+    grid-template-columns: minmax(0, 1fr) minmax(14rem, 15rem);
+    align-items: end;
     gap: 1.7rem;
   }
 
-  .methodology-map-card {
-    max-width: 17rem;
-    justify-self: end;
+  .methodology-hero-side {
+    border-top: 0;
+    border-left: 1px solid rgba(31, 31, 31, 0.08);
+    padding-top: 0;
+    padding-left: 1.25rem;
   }
 
-  .methodology-section-grid {
-    grid-template-columns: minmax(0, 0.86fr) minmax(0, 1.14fr);
-    align-items: start;
+  .methodology-anchor-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem;
+  }
+
+  .methodology-section-head {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
     gap: 1.75rem;
+  }
+
+  .methodology-section-note {
+    text-align: right;
+  }
+
+  .methodology-scoring-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
+    gap: 1rem;
   }
 
   .methodology-governance-top {
-    grid-template-columns: minmax(0, 1.16fr) minmax(0, 0.84fr);
+    grid-template-columns: minmax(0, 1.18fr) minmax(0, 0.82fr);
     align-items: start;
-    gap: 1.75rem;
+    gap: 1rem;
+  }
+
+  .methodology-principles-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .methodology-governance-action {
@@ -2160,18 +2199,9 @@ textarea {
     justify-self: end;
   }
 
-  .methodology-governance-compare {
+  .methodology-governance-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1.35rem;
-  }
-
-  .methodology-governance-flow {
-    grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
-    gap: 1.35rem;
-  }
-
-  .policy-sequence-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
   }
 
   .directory-filters-compact {

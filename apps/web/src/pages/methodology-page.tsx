@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import * as Shared from "../shared";
 
 const {
@@ -6,9 +7,8 @@ const {
   HEALTH_STATUS_COPY,
   Link,
   MethodologyPageSkeleton,
-  Panel,
   POLICY_PILLARS,
-  StatusDot,
+  clsx,
   fetchJson,
   formatBadgeLabel,
   formatDateTime,
@@ -59,8 +59,35 @@ const OPERATOR_SEQUENCE = [
   "最后持续观察公开榜单、状态变化和备注",
 ] as const;
 
-const METHODOLOGY_PANEL_TITLE_CLASS_NAME =
-  "text-[1.12rem] leading-[1.24] tracking-[-0.01em] md:text-[1.32rem]";
+const WEIGHT_ORDER: Array<keyof Shared.MethodologyResponse["weights"]> = [
+  "availability",
+  "latency",
+  "consistency",
+  "value",
+  "stability",
+];
+
+function MethodologyCard({
+  title,
+  intro,
+  children,
+  strong = false,
+  className,
+}: {
+  title: string;
+  intro?: string;
+  children: ReactNode;
+  strong?: boolean;
+  className?: string;
+}) {
+  return (
+    <article className={clsx("methodology-card", strong && "methodology-card-strong", className)}>
+      <h3 className="methodology-card-title">{title}</h3>
+      {intro ? <p className="methodology-card-intro">{intro}</p> : null}
+      {children}
+    </article>
+  );
+}
 
 export function MethodologyPage() {
   const location = useLocation();
@@ -90,39 +117,37 @@ export function MethodologyPage() {
   if (error || !data) return <ErrorPanel message={error ?? "评测方式页面加载失败。"} />;
 
   return (
-    <div className="methodology-page-shell space-y-7 lg:space-y-8">
+    <div className="methodology-page-shell space-y-4 md:space-y-5">
       <section className="panel methodology-hero bg-[#fff0c2]">
-        <p className="kicker">评测方式</p>
         <div className="methodology-hero-grid">
           <div className="methodology-hero-copy">
-            <h1 className="max-w-3xl text-[2.3rem] leading-[1.1] tracking-[-0.02em] md:text-[2.82rem]">
-              我们如何测试并评估站点服务质量
-            </h1>
-            <p className="mt-3 max-w-[40rem] text-[1.02rem] leading-8 text-black/78">
+            <p className="methodology-eyebrow">评测方式</p>
+            <h1 className="methodology-hero-title">我们如何测试并评估站点服务质量</h1>
+            <p className="methodology-hero-summary">
               评测只看公开测试信号：可用性、延迟、一致性、性价比与稳定性。
               赞助展示不会并入评分，榜单排序只由自动化测试结果生成。
             </p>
-            <p className="methodology-hero-support">
-              <span className="methodology-hero-support-label">最近快照</span>
-              北京时间 {formatDateTime(data.measuredAt)}
-            </p>
-            <div className="mt-5 flex flex-wrap gap-2.5">
+            <div className="methodology-hero-actions">
               <Link className="button-dark" to="/methodology#governance">收录与复核</Link>
               <Link className="button-cream" to="/probe">开始测试</Link>
             </div>
           </div>
-          <nav aria-label="评测方式页内导航" className="surface-card methodology-map-card">
-            <p className="kicker">本页内容</p>
-            <div className="methodology-map-list">
-              {PAGE_MAP.map((item) => (
-                <Link key={item.title} className="methodology-map-link" to={item.to}>
-                  <p className="methodology-map-title">{item.title}</p>
-                  <p className="methodology-map-copy">{item.copy}</p>
-                </Link>
-              ))}
-            </div>
-          </nav>
+          <aside className="methodology-hero-side">
+            <p className="methodology-hero-side-label">最近快照</p>
+            <p className="methodology-hero-side-value">北京时间 {formatDateTime(data.measuredAt)}</p>
+            <p className="methodology-hero-side-copy">
+              榜单、目录和状态说明都会跟随最近一次公开测试快照同步更新，只展示可追溯的公开证据。
+            </p>
+          </aside>
         </div>
+        <nav aria-label="评测方式页内导航" className="methodology-anchor-strip">
+          {PAGE_MAP.map((item) => (
+            <Link key={item.title} className="methodology-anchor-link" to={item.to}>
+              <p className="methodology-anchor-title">{item.title}</p>
+              <p className="methodology-anchor-copy">{item.copy}</p>
+            </Link>
+          ))}
+        </nav>
       </section>
 
       <section id="scoring" className="panel methodology-section-shell">
@@ -131,69 +156,65 @@ export function MethodologyPage() {
             <p className="methodology-section-label">评分逻辑</p>
             <h2 className="methodology-section-title">公开排名如何生成</h2>
             <p className="methodology-section-copy">
-              排名只看自动化测试得到的公开证据。这里说明当前权重、状态定义，以及榜单里出现的徽章含义。
+              排名只看自动化测试得到的公开证据。这里集中说明当前权重、公开状态定义，以及榜单里出现的徽章含义。
             </p>
-            <p className="methodology-section-meta">五项公开信号 / 赞助不参与排序</p>
           </div>
+          <p className="methodology-section-note">自动化测试信号 / 赞助不参与排序</p>
         </div>
-        <div className="methodology-section-grid">
-          <div className="surface-card methodology-weight-card">
-            <p className="kicker">当前评分构成</p>
+        <div className="methodology-scoring-grid">
+          <MethodologyCard
+            title="评分构成"
+            strong
+            intro="五项公开信号共同决定总分，所有维度都来自自动化测试证据。"
+          >
             <div className="methodology-weight-list">
-              {Object.entries(data.weights).map(([label, value]) => (
+              {WEIGHT_ORDER.map((label) => (
                 <div key={label} className="methodology-weight-row">
                   <div className="methodology-weight-head">
                     <p className="methodology-weight-label">
                       {formatScoreMetricLabel(label as keyof Shared.RelayOverviewResponse["scoreSummary"])}
                     </p>
-                    <p className="methodology-weight-value">{value}%</p>
+                    <p className="methodology-weight-value">{data.weights[label]}%</p>
                   </div>
-                  <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-white/55">
+                  <div className="methodology-weight-bar">
                     <div
-                      className="h-full rounded-full bg-[linear-gradient(90deg,#ffd900,#fa520f)]"
-                      style={{ width: `${value}%` }}
+                      className="methodology-weight-bar-fill"
+                      style={{ width: `${data.weights[label]}%` }}
                     />
                   </div>
                 </div>
               ))}
             </div>
-          </div>
-          <div className="methodology-scoring-side">
-            <Panel
-              title="公开状态说明"
-              className="methodology-section-panel"
-              titleClassName={METHODOLOGY_PANEL_TITLE_CLASS_NAME}
-            >
-              <div className="methodology-status-list">
-                {data.healthStatuses.map((status) => (
-                  <div key={status} className="methodology-status-row">
-                    <div className="methodology-status-head">
-                      <StatusDot status={status} /> {formatHealthStatusLabel(status)}
-                    </div>
-                    <p className="methodology-status-copy">
-                      {HEALTH_STATUS_COPY[status] ?? "公开状态文案基于最近一次的实测证据生成。"}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </Panel>
-            <Panel
-              title="徽章含义"
-              className="methodology-section-panel"
-              titleClassName={METHODOLOGY_PANEL_TITLE_CLASS_NAME}
-            >
-              <div className="methodology-badge-grid">
-                {data.badges.map((badge) => (
-                  <div key={badge} className="methodology-badge-row">
-                    <span className="signal-chip">{formatBadgeLabel(badge)}</span>
-                    <p className="methodology-badge-copy">
-                      {BADGE_COPY[badge] ?? "这个徽章用于解释当前的置信度、性价比或运行状态。"}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </Panel>
-          </div>
+          </MethodologyCard>
+
+          <MethodologyCard
+            title="公开状态"
+            intro="状态只描述最近测试窗口的服务表现，不等于运营背书，也不会替代原始得分。"
+          >
+            <div className="methodology-stack-list">
+              {data.healthStatuses.map((status) => (
+                <div key={status} className="methodology-stack-row">
+                  <p className="methodology-stack-title">{formatHealthStatusLabel(status)}</p>
+                  <p className="methodology-stack-copy">
+                    {HEALTH_STATUS_COPY[status] ?? "公开状态文案基于最近一次的实测证据生成。"}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </MethodologyCard>
+
+          <MethodologyCard title="徽章含义" intro="徽章用于补充解释得分与置信度，不单独决定排名。">
+            <div className="methodology-badge-list">
+              {data.badges.map((badge) => (
+                <div key={badge} className="methodology-badge-row">
+                  <span className="signal-chip">{formatBadgeLabel(badge)}</span>
+                  <p className="methodology-badge-copy">
+                    {BADGE_COPY[badge] ?? "这个徽章用于解释当前的置信度、性价比或运行状态。"}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </MethodologyCard>
         </div>
       </section>
 
@@ -205,81 +226,69 @@ export function MethodologyPage() {
             <p className="methodology-section-copy">
               这里说明哪些因素会影响公开排名，哪些内容不会改变评测结果，以及站点运营者如何补充资料和发起复核。
             </p>
-            <p className="methodology-section-meta">赞助独立展示 / 支持申诉复核</p>
           </div>
+          <p className="methodology-section-note">收录原则 / 赞助分离 / 支持复核</p>
         </div>
         <div className="methodology-governance-top">
-          <div className="policy-pillars-grid methodology-governance-principles">
+          <div className="methodology-principles-grid">
             {POLICY_PILLARS.map((pillar) => (
-              <div key={pillar.title} className="policy-pillar">
-                <p className="policy-pillar-title">{pillar.title}</p>
-                <p className="policy-pillar-copy">{pillar.body}</p>
+              <div key={pillar.title} className="methodology-principle-card">
+                <p className="methodology-principle-title">{pillar.title}</p>
+                <p className="methodology-principle-copy">{pillar.body}</p>
               </div>
             ))}
           </div>
-          <div className="surface-card methodology-governance-card methodology-governance-action">
+          <MethodologyCard
+            title="给站点运营者"
+            strong
+            className="methodology-governance-action"
+          >
             <p className="methodology-governance-copy">
               如果你是站点运营者，建议先确认公开 Base URL、支持模型与测试结果，再提交资料或发起复核。目录优先保留可验证、能复测、能持续观察的信息。
             </p>
-            <div className="mt-5 flex flex-wrap gap-2.5">
+            <div className="methodology-governance-actions">
               <Link className="button-dark" to="/submit">提交站点</Link>
               <Link className="button-cream" to="/probe">先做一次测试</Link>
             </div>
-          </div>
+          </MethodologyCard>
         </div>
-        <div className="methodology-governance-compare">
-          <Panel
-            title="哪些因素会影响榜单顺序"
-            className="policy-compare-panel methodology-compare-panel"
-            titleClassName={METHODOLOGY_PANEL_TITLE_CLASS_NAME}
-          >
-            <div className="policy-list">
+        <div className="methodology-governance-grid">
+          <MethodologyCard title="会影响排名">
+            <ol className="methodology-ordered-list">
               {RANKING_SIGNALS.map((item) => (
-                <div key={item} className="policy-list-row">{item}</div>
+                <li key={item} className="methodology-ordered-row">
+                  <p className="methodology-stack-copy">{item}</p>
+                </li>
               ))}
-            </div>
-          </Panel>
-          <Panel
-            title="哪些因素不会改变评测排名"
-            className="policy-compare-panel methodology-compare-panel"
-            titleClassName={METHODOLOGY_PANEL_TITLE_CLASS_NAME}
-          >
-            <div className="policy-list">
+            </ol>
+          </MethodologyCard>
+          <MethodologyCard title="不会改变排名">
+            <ol className="methodology-ordered-list">
               {RANKING_EXCLUSIONS.map((item) => (
-                <div key={item} className="policy-list-row">{item}</div>
+                <li key={item} className="methodology-ordered-row">
+                  <p className="methodology-stack-copy">{item}</p>
+                </li>
               ))}
-            </div>
-          </Panel>
-        </div>
-        <div className="methodology-governance-flow">
-          <Panel
-            title="运营者复核路径"
-            className="policy-process-panel methodology-flow-panel"
-            titleClassName={METHODOLOGY_PANEL_TITLE_CLASS_NAME}
-          >
-            <div className="policy-step-list">
-              {REVIEW_STEPS.map((item, index) => (
-                <div key={item} className="policy-step-row">
-                  <span className="policy-step-index">{String(index + 1).padStart(2, "0")}</span>
-                  <p className="policy-step-copy">{item}</p>
-                </div>
+            </ol>
+          </MethodologyCard>
+          <MethodologyCard title="复核路径">
+            <ol className="methodology-ordered-list">
+              {REVIEW_STEPS.map((item) => (
+                <li key={item} className="methodology-ordered-row">
+                  <p className="methodology-stack-copy">{item}</p>
+                </li>
               ))}
-            </div>
-          </Panel>
-          <Panel
-            title="建议的运营动作顺序"
-            className="policy-process-panel methodology-flow-panel"
-            titleClassName={METHODOLOGY_PANEL_TITLE_CLASS_NAME}
-          >
-            <div className="policy-sequence-grid">
-              {OPERATOR_SEQUENCE.map((item, index) => (
-                <div key={item} className="policy-sequence-step">
-                  <span className="policy-step-index">{index + 1}</span>
-                  <p className="policy-step-copy">{item}</p>
-                </div>
+            </ol>
+          </MethodologyCard>
+          <MethodologyCard title="建议动作顺序">
+            <ol className="methodology-ordered-list">
+              {OPERATOR_SEQUENCE.map((item) => (
+                <li key={item} className="methodology-ordered-row">
+                  <p className="methodology-stack-copy">{item}</p>
+                </li>
               ))}
-            </div>
-          </Panel>
+            </ol>
+          </MethodologyCard>
         </div>
       </section>
     </div>
