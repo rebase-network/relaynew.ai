@@ -97,7 +97,7 @@ export function HomePage() {
           <div className="order-2 md:order-1">
             <p className="kicker !mb-3 !text-black/60">公开目录与实测榜单</p>
             <h1 className="max-w-4xl text-[3rem] leading-[0.92] tracking-[-0.07em] md:text-5xl xl:text-[3.6rem]">
-              发现优质AI服务商，快读测试API，建立公开目录
+              发现优质AI服务商，快速测试API，建立公开目录
             </h1>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-black/72 md:mt-4 md:text-base md:leading-7">
               你可以查看各模型站点榜单、快速检测站点，或在需要更深入诊断时进入完整测试工作台。
