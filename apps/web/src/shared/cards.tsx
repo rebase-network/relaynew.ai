@@ -116,7 +116,6 @@ export function LeaderboardPreviewCard({
           </Link>
         ))}
       </div>
-      <p className="leaderboard-preview-snapshot">快照时间：{formatDateTime(board.measuredAt)}</p>
     </section>
   );
 }

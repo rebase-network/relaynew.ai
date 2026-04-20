@@ -2109,16 +2109,6 @@ textarea {
   color: rgba(31, 31, 31, 0.56);
 }
 
-.leaderboard-preview-snapshot {
-  margin-top: auto;
-  padding-top: 0.85rem;
-  font-size: 0.65rem;
-  line-height: 1.4;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: rgba(31, 31, 31, 0.44);
-}
-
 @media (max-width: 767px) {
   .directory-filters-compact .directory-filter-meta {
     white-space: normal;
