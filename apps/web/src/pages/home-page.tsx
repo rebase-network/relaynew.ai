@@ -196,7 +196,7 @@ export function HomePage() {
       </section>
 
       {data.highlights.length > 0 ? (
-        <section className="panel sponsor-home-panel">
+        <section className="panel">
           <div className="home-section-header">
             <div>
               <p className="kicker !mb-1">赞助商</p>
@@ -208,19 +208,20 @@ export function HomePage() {
               <Link
                 key={relay.slug}
                 to={`/relay/${relay.slug}`}
-                className="home-sponsor-card"
+                className="surface-link leaderboard-preview-row home-sponsor-card"
               >
-                <div className="min-w-0">
-                  <div className="home-sponsor-card-top">
-                    <span className="home-sponsor-badge">赞助展示</span>
-                    <span className="home-sponsor-status">
-                      <StatusDot status={relay.healthStatus} /> {formatHealthStatusLabel(relay.healthStatus)}
-                    </span>
+                <div className="leaderboard-preview-main min-w-0">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <p className="home-sponsor-label">赞助商</p>
+                    <p className="leaderboard-preview-name">{relay.name}</p>
                   </div>
-                  <p className="home-sponsor-title">{relay.name}</p>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <span className="signal-chip">{formatBadgeLabel(relay.badge)}</span>
+                  <CompactBadgeList badges={[formatBadgeLabel(relay.badge)]} className="leaderboard-preview-badges" limit={1} />
+                </div>
+                <div className="leaderboard-preview-score home-sponsor-score">
+                  <div className="leaderboard-preview-scoreline">
+                    <StatusDot status={relay.healthStatus} /> {formatHealthStatusLabel(relay.healthStatus)}
                   </div>
+                  <p className="leaderboard-preview-metrics">独立展示，不参与榜单排序</p>
                 </div>
               </Link>
             ))}
