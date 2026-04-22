@@ -5,7 +5,7 @@
   "packageManager": "pnpm@10.33.0",
   "scripts": {
     "build": "pnpm -r run build",
-    "build:admin:prod": "VITE_API_BASE_URL=https://api.relaynew.ai VITE_PUBLIC_SITE_URL=https://relaynew.ai VITE_ADMIN_SITE_URL=https://admin.relaynew.ai pnpm --filter @relaynews/admin run build",
+    "build:admin:prod": "VITE_API_BASE_URL=https://api.relaynew.ai VITE_PUBLIC_SITE_URL=https://relaynew.ai VITE_ADMIN_SITE_URL=https://a.relaynew.ai pnpm --filter @relaynews/admin run build",
     "build:api-edge": "bash ops/manage-api-edge.sh build",
     "build:web:prod": "VITE_API_BASE_URL=https://api.relaynew.ai VITE_PUBLIC_SITE_URL=https://relaynew.ai pnpm --filter @relaynews/web run build",
     "dev:admin": "pnpm --filter @relaynews/admin run dev",
@@ -17,9 +17,9 @@
     "typecheck": "pnpm -r run typecheck",
     "test": "pnpm -r run test",
     "test:e2e": "playwright test",
-    "test:e2e:deployed": "env E2E_DEPLOYED=1 WEB_BASE_URL=https://relaynew.ai ADMIN_BASE_URL=https://admin.relaynew.ai playwright test",
-    "test:e2e:deployed:writes": "env E2E_DEPLOYED=1 E2E_ALLOW_DEPLOYED_WRITES=1 WEB_BASE_URL=https://relaynew.ai ADMIN_BASE_URL=https://admin.relaynew.ai API_BASE_URL=https://api.relaynew.ai playwright test",
-    "test:e2e:deployed:headed": "env E2E_DEPLOYED=1 WEB_BASE_URL=https://relaynew.ai ADMIN_BASE_URL=https://admin.relaynew.ai playwright test --headed",
+    "test:e2e:deployed": "env E2E_DEPLOYED=1 WEB_BASE_URL=https://relaynew.ai ADMIN_BASE_URL=https://a.relaynew.ai playwright test",
+    "test:e2e:deployed:writes": "env E2E_DEPLOYED=1 E2E_ALLOW_DEPLOYED_WRITES=1 WEB_BASE_URL=https://relaynew.ai ADMIN_BASE_URL=https://a.relaynew.ai API_BASE_URL=https://api.relaynew.ai playwright test",
+    "test:e2e:deployed:headed": "env E2E_DEPLOYED=1 WEB_BASE_URL=https://relaynew.ai ADMIN_BASE_URL=https://a.relaynew.ai playwright test --headed",
     "test:e2e:headed": "playwright test --headed"
   },
   "devDependencies": {

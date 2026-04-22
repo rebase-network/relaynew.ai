@@ -32,7 +32,7 @@ The site currently provides:
 
 - Public site: `relaynew.ai`
 - Public API: `api.relaynew.ai`
-- Admin site: `admin.relaynew.ai`
+- Admin site: `a.relaynew.ai`
 
 ## Repository Layout
 
@@ -120,4 +120,4 @@ Use `docs/DEVELOPMENT_PLAN.md` as the canonical phased build order.
 - inspect or update the dedicated Cloudflare Tunnel rule: `./ops/manage-tunnel.sh status`
 - preview the API edge Worker deploy locally: `./ops/manage-api-edge.sh preview`
 - deploy the API edge Worker manually: `./ops/manage-api-edge.sh deploy`
-- deploy `relaynew.ai` and `admin.relaynew.ai` by pushing committed changes to GitHub
+- deploy `relaynew.ai` and `a.relaynew.ai` by pushing committed changes to GitHub

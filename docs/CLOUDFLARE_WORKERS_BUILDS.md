@@ -99,7 +99,7 @@ Notes:
 - production frontend URLs are now baked into the repository build scripts:
   - `pnpm run build:web:prod`
   - `pnpm run build:admin:prod`
-- this keeps `relaynew.ai`, `admin.relaynew.ai`, and `api.relaynew.ai` out of the
+- this keeps `relaynew.ai`, `a.relaynew.ai`, and `api.relaynew.ai` out of the
   Cloudflare dashboard build variables for normal production deploys
 - if you later want a staging frontend domain, add separate staging build scripts
   instead of editing the production ones in the dashboard

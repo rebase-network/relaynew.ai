@@ -2,7 +2,7 @@
 
 ## 适用范围
 
-本文面向 `relaynew.ai` 的中文运营人员，说明当前 `admin.relaynew.ai` 后台已经实现的日常操作流程、页面职责、注意事项和当前限制。
+本文面向 `relaynew.ai` 的中文运营人员，说明当前 `a.relaynew.ai` 后台已经实现的日常操作流程、页面职责、注意事项和当前限制。
 
 当前后台是运营控制台，不负责：
 
@@ -17,7 +17,7 @@
 
 ### 访问地址
 
-- 管理后台：`https://admin.relaynew.ai`
+- 管理后台：`https://a.relaynew.ai`
 - 后端 API：`https://api.relaynew.ai`
 
 对应路由说明见 `docs/ROUTES.md`。

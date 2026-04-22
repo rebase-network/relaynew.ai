@@ -65,7 +65,7 @@ Recommended verification after deploy:
 
    Expected result: `200 OK`
 
-4. Confirm `https://admin.relaynew.ai` shows the login screen before loading admin
+4. Confirm `https://a.relaynew.ai` shows the login screen before loading admin
    content.
 
 ## Notes

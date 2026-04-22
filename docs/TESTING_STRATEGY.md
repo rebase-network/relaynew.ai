@@ -75,7 +75,7 @@ probe assertions remain stable.
 ### Deployed Smoke
 
 The repository also supports a deployed smoke mode for `relaynew.ai` and
-`admin.relaynew.ai`:
+`a.relaynew.ai`:
 
 - run `pnpm test:e2e:deployed` against the live frontends
 - keep this suite read-mostly and skip write-path checks that would mutate deployed
@@ -147,7 +147,7 @@ These tests help catch contract regressions earlier than full browser failures.
 - `pnpm test:e2e` starts an isolated PostgreSQL test container, seeds the API
   database, boots `api`, `web`, and `admin`, and then runs the browser suite
 - `pnpm test:e2e:deployed` reuses the same Playwright specs against
-  `https://relaynew.ai` and `https://admin.relaynew.ai`
+  `https://relaynew.ai` and `https://a.relaynew.ai`
 - `pnpm test:e2e:deployed:writes` enables deployed write-path coverage and should be
   used only when remote data mutation is acceptable
 - deployed runs intentionally skip relay creation, submission review, sponsor

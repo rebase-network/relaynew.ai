@@ -7,7 +7,7 @@ This document describes the current deployment shape for the MVP.
 - `apps/api` runs on the remote server through Docker Compose
 - `apps/web` deploys to Cloudflare Workers Static Assets at `relaynew.ai`
 - `apps/api-edge` deploys a Cloudflare Worker custom domain at `api.relaynew.ai`
-- `apps/admin` deploys to Cloudflare Workers Static Assets at `admin.relaynew.ai`
+- `apps/admin` deploys to Cloudflare Workers Static Assets at `a.relaynew.ai`
 - a dedicated Cloudflare Tunnel in the product account carries API traffic without sharing the legacy tunnel
 
 ## Required Tooling
@@ -44,7 +44,7 @@ Recommended production values:
   API routes
 - leave both values blank only for local development or temporary debugging
 - if you also want to hide the static admin assets themselves, add Cloudflare Access
-  in front of `admin.relaynew.ai`
+  in front of `a.relaynew.ai`
 
 The remote Docker Compose stack now includes a dedicated `postgres` container and a
 project-local Docker volume. That keeps this product isolated from any pre-existing
@@ -56,7 +56,7 @@ The primary production frontend flow now bakes the product URLs directly into th
 repository build scripts:
 
 - `pnpm run build:web:prod` -> `relaynew.ai` + `api.relaynew.ai`
-- `pnpm run build:admin:prod` -> `admin.relaynew.ai` + `relaynew.ai` + `api.relaynew.ai`
+- `pnpm run build:admin:prod` -> `a.relaynew.ai` + `relaynew.ai` + `api.relaynew.ai`
 
 That means the required GitHub -> Cloudflare Workers Builds production path does
 not need dashboard-level `VITE_*` production URL variables.
@@ -150,7 +150,7 @@ Use this checklist when turning on admin protection for a remote environment.
 
    Expected result: `200 OK`
 
-6. Open `https://admin.relaynew.ai` and confirm the admin login screen appears before
+6. Open `https://a.relaynew.ai` and confirm the admin login screen appears before
    any control-deck data loads.
 
 Current app behavior:
@@ -164,7 +164,7 @@ Operational note:
 
 - `./ops/manage.sh health` only checks the public `/health` endpoint; it does not
   confirm that admin auth is enabled correctly
-- if you later add Cloudflare Access in front of `admin.relaynew.ai`, keep the API
+- if you later add Cloudflare Access in front of `a.relaynew.ai`, keep the API
   Basic Auth enabled as a second layer rather than replacing it
 
 ## Cloudflare Deploy Flow
@@ -172,7 +172,7 @@ Operational note:
 Before the first production deploy, make sure:
 
 - the `relaynew.ai` zone already exists in Cloudflare account `5abb6d6f38eb7d3dabf8a5adf095c5f7`
-- `relaynew.ai`, `api.relaynew.ai`, and `admin.relaynew.ai` are intended to run behind Cloudflare proxy
+- `relaynew.ai`, `api.relaynew.ai`, and `a.relaynew.ai` are intended to run behind Cloudflare proxy
 - the dedicated product tunnel has been created in the same Cloudflare account
 - the tunnel token has been stored in the remote API env file as `CLOUDFLARE_TUNNEL_TOKEN`
 - the dedicated tunnel ingress rule is present:
@@ -218,7 +218,7 @@ GitHub-triggered Workers Builds path.
 The intended Cloudflare Worker inventory for this project is:
 
 - `relaynews-web` -> public site at `relaynew.ai`
-- `relaynews-admin` -> admin site at `admin.relaynew.ai`
+- `relaynews-admin` -> admin site at `a.relaynew.ai`
 - `relaynews-api-edge` -> API edge proxy at `api.relaynew.ai`
 
 Important distinction:
@@ -261,7 +261,7 @@ For a shorter dashboard-oriented checklist, see
 ### Required Worker Mapping
 
 - `relaynews-web` -> `apps/web/wrangler.jsonc` -> `relaynew.ai`
-- `relaynews-admin` -> `apps/admin/wrangler.jsonc` -> `admin.relaynew.ai`
+- `relaynews-admin` -> `apps/admin/wrangler.jsonc` -> `a.relaynew.ai`
 
 Cloudflare requires the Worker name in the dashboard to match the `name` in the
 Wrangler configuration file found in the configured root directory.

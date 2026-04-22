@@ -66,7 +66,7 @@ Browser
         - client-side data fetches
         - calls public API at api.relaynew.ai
 
-  -> admin.relaynew.ai
+  -> a.relaynew.ai
      -> Cloudflare Workers Static Assets
         - built admin app assets
         - SPA fallback routing
@@ -192,7 +192,7 @@ Assets.
 - the public route set now includes `/`, `/leaderboard`, `/leaderboard/directory`,
   `/leaderboard/:modelKey`, `/relay/:slug`, `/methodology`, `/submit`, and `/probe`;
   `/policy` remains only as a compatibility redirect into the merged governance section
-- admin routes render through a separate admin SPA shell on `admin.relaynew.ai`, with
+- admin routes render through a separate admin SPA shell on `a.relaynew.ai`, with
   `/` redirecting to `/relays` after the initial auth/bootstrap check
 - probe flows and chart modules stay client-rendered
 - the probe page should default to URL + key + model input, with compatibility override
@@ -281,7 +281,7 @@ MVP assumption:
 
 - `relaynew.ai` serves the public site via Cloudflare Workers Static Assets
 - `api.relaynew.ai` sits behind a product-owned Cloudflare Worker and dedicated tunnel
-- `admin.relaynew.ai` is the dedicated administrative entry point
+- `a.relaynew.ai` is the dedicated administrative entry point
 - the public site should not expose an admin navigation entry
 - admin endpoints should be protected with API-level auth at minimum, and Cloudflare
   Access can be layered on later if the static admin assets should also stay private

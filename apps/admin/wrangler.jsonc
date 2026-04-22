@@ -10,7 +10,7 @@
   },
   "routes": [
     {
-      "pattern": "admin.relaynew.ai",
+      "pattern": "a.relaynew.ai",
       "custom_domain": true
     }
   ]

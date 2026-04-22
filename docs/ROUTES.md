@@ -6,7 +6,7 @@ for each route, and the primary data source that should back it.
 ## Rendering Rules
 
 - use CSR for the current MVP frontend deployed through Cloudflare Workers Static Assets
-- keep the public site on `relaynew.ai` and the admin app on `admin.relaynew.ai`
+- keep the public site on `relaynew.ai` and the admin app on `a.relaynew.ai`
 - keep public route data boundaries clean so SSR or pre-render can be added later if needed
 - keep page data reads on snapshots or aggregate tables when possible
 - do not expose an admin entry in the public site navigation
@@ -31,7 +31,7 @@ for each route, and the primary data source that should back it.
 |---|---|---|---|
 | `/probe` | Public `站点测试` flow with model-first auto detection and optional advanced override | CSR | `POST /public/probe/check` |
 
-## Admin Routes (`admin.relaynew.ai`)
+## Admin Routes (`a.relaynew.ai`)
 
 These routes live on the dedicated admin hostname. They are not mirrored under
 `relaynew.ai/admin`.
@@ -173,4 +173,4 @@ The test page is expected to include:
   relay-owned monitoring run so the public site can pick it up without a second manual step
 - `/submissions` may remain as a compatibility redirect to `/intake`, but new operator
   links should point at `/intake`
-- admin routes on `admin.relaynew.ai` should never rely on CDN-cached responses
+- admin routes on `a.relaynew.ai` should never rely on CDN-cached responses
