@@ -72,22 +72,35 @@ scripts/
 
 ## Document Index
 
+### 产品
+
 - Product visual direction: `DESIGN.md`
+- Development plan: `docs/DEVELOPMENT_PLAN.md`
+- Route map and rendering strategy: `docs/ROUTES.md`
+- Localization rules: `docs/LOCALIZATION_ZH_CN.md`
+- Issue tracker for unresolved design gaps: `docs/OPEN_DESIGN_ISSUES.md`
+
+### 技术
+
 - System architecture: `docs/ARCHITECTURE.md`
 - Database schema: `docs/DATABASE_SCHEMA.md`
 - Public API contract: `docs/API_CONTRACT_V1.md`
-- Cloudflare Workers Builds checklist: `docs/CLOUDFLARE_WORKERS_BUILDS.md`
-- Development plan: `docs/DEVELOPMENT_PLAN.md`
+- Public probe safety model: `docs/PROBE_SECURITY.md`
+- Testing strategy: `docs/TESTING_STRATEGY.md`
+- Database migration notes: `apps/api/db/README.md`
+
+### 运维
+
 - Deployment guide: `docs/DEPLOYMENT.md`
 - Technical operations manual: `docs/TECHNICAL_OPERATIONS.md`
-- Testing strategy: `docs/TESTING_STRATEGY.md`
-- Public probe safety model: `docs/PROBE_SECURITY.md`
-- Route map and rendering strategy: `docs/ROUTES.md`
-- Issue tracker for unresolved design gaps: `docs/OPEN_DESIGN_ISSUES.md`
+- Admin operations manual: `docs/ADMIN_OPERATIONS.md`
+- Cloudflare Workers Builds checklist: `docs/CLOUDFLARE_WORKERS_BUILDS.md`
+- API deployment ops guide: `ops/README.md`
+
+### 归档
+
 - Archived historical audits and mockups: `docs/archive/`
 - Agent collaboration guide: `AGENTS.md`
-- Database migration notes: `apps/api/db/README.md`
-- API deployment ops guide: `ops/README.md`
 
 ## Working Agreements
 
