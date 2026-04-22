@@ -79,6 +79,7 @@ scripts/
 - Cloudflare Workers Builds checklist: `docs/CLOUDFLARE_WORKERS_BUILDS.md`
 - Development plan: `docs/DEVELOPMENT_PLAN.md`
 - Deployment guide: `docs/DEPLOYMENT.md`
+- Technical operations manual: `docs/TECHNICAL_OPERATIONS.md`
 - Testing strategy: `docs/TESTING_STRATEGY.md`
 - Public probe safety model: `docs/PROBE_SECURITY.md`
 - Route map and rendering strategy: `docs/ROUTES.md`
