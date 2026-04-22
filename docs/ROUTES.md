@@ -31,6 +31,65 @@ for each route, and the primary data source that should back it.
 |---|---|---|---|
 | `/probe` | Public `站点测试` flow with model-first auto detection and optional advanced override | CSR | `POST /public/probe/check` |
 
+## API Surface Split
+
+The current backend transport boundary is split into three practical surfaces.
+
+### Public content APIs
+
+These are read-only, page-facing content endpoints:
+
+- `GET /public/home-summary`
+- `GET /public/leaderboard-directory`
+- `GET /public/leaderboard/:modelKey`
+- `GET /public/relay/:slug/overview`
+- `GET /public/relay/:slug/history`
+- `GET /public/relay/:slug/models`
+- `GET /public/relay/:slug/pricing-history`
+- `GET /public/relay/:slug/incidents`
+- `GET /public/methodology`
+
+Rules:
+
+- owned by `apps/api/src/routes/public.ts`
+- cacheable under the public CDN policy
+- should stay read-only and page-shaped rather than exposing raw monitoring rows
+
+### Public write-style endpoints
+
+These are still public-facing, but they behave like bounded write or diagnostic flows:
+
+- `POST /public/probe/check`
+- `POST /public/submissions`
+
+Rules:
+
+- not cacheable like content reads
+- `POST /public/probe/check` stays isolated for SSRF-sensitive self-check logic
+- `POST /public/submissions` belongs to the public boundary, not the admin boundary
+- user-supplied probe keys from `/probe` should not be persisted by default
+- submission-scoped `testApiKey` values may be persisted for the review workflow
+
+### Admin APIs
+
+These power the admin SPA and should never be CDN-cached:
+
+- `/admin/overview`
+- `/admin/relays`
+- `/admin/submissions`
+- `/admin/probe-credentials`
+- `/admin/sponsors`
+- `/admin/prices`
+- `/admin/models`
+- `/admin/refresh-public`
+
+Rules:
+
+- owned by `apps/api/src/routes/admin.ts`
+- protected by admin authorization
+- `GET /admin/overview` currently acts mainly as the auth/bootstrap probe before
+  the SPA lands on `/relays`
+
 ## Admin Routes (`a.relaynew.ai`)
 
 These routes live on the dedicated admin hostname. They are not mirrored under

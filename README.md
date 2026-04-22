@@ -84,6 +84,7 @@ scripts/
 - Public probe safety model: `docs/PROBE_SECURITY.md`
 - Route map and rendering strategy: `docs/ROUTES.md`
 - Issue tracker for unresolved design gaps: `docs/OPEN_DESIGN_ISSUES.md`
+- Archived historical audits and mockups: `docs/archive/`
 - Agent collaboration guide: `AGENTS.md`
 - Database migration notes: `apps/api/db/README.md`
 - API deployment ops guide: `ops/README.md`
