@@ -153,6 +153,13 @@ Use this checklist when turning on admin protection for a remote environment.
 6. Open `https://admin.relaynew.ai` and confirm the admin login screen appears before
    any control-deck data loads.
 
+Current app behavior:
+
+- after login, the admin SPA performs its bootstrap/auth check through
+  `GET /admin/overview`
+- the visible UI then lands on `/relays`; `/admin/overview` is currently a backend
+  auth/bootstrap surface rather than a standalone admin dashboard page
+
 Operational note:
 
 - `./ops/manage.sh health` only checks the public `/health` endpoint; it does not
@@ -375,6 +382,13 @@ tsconfig.base.json
 
 This keeps a change in `apps/web` from rebuilding `admin`, and vice versa, while
 still rebuilding both apps when shared contracts or workspace metadata change.
+
+Path syntax note:
+
+- these examples use Cloudflare Workers Builds wildcard semantics
+- keep `apps/web/*`, `apps/admin/*`, and `packages/shared/*` as written
+- Cloudflare treats `*` as matching nested paths too, so entries like
+  `apps/web/*` already cover files under `apps/web/src/...`
 
 ### Recommended Branch Behavior
 

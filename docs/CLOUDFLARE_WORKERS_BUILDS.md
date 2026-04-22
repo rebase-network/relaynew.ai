@@ -145,6 +145,13 @@ pnpm-workspace.yaml
 tsconfig.base.json
 ```
 
+Path syntax note:
+
+- these examples intentionally follow Cloudflare's wildcard matching rules
+- keep `apps/web/*`, `apps/admin/*`, and `packages/shared/*` as written
+- in Workers Builds, `*` already matches nested paths such as
+  `apps/web/src/pages/home-page.tsx`, so no extra `**` form is required here
+
 ## Post-Setup Verification
 
 After saving the configuration:
