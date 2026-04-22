@@ -43,8 +43,8 @@ These routes live on the dedicated admin hostname. They are not mirrored under
 | `/relays/history` | Archived Relay history and reactivation entry | CSR in admin SPA | `GET /admin/relays` |
 | `/intake` | Pending submission queue for new Relay submissions | CSR in admin SPA | `GET /admin/submissions` |
 | `/intake/history` | Approved / rejected / archived submission history | CSR in admin SPA | `GET /admin/submissions` |
-| `/sponsors` | Sponsor record management with relay link, placement, status, and time window | CSR in admin SPA | `GET /admin/sponsors` |
-| `/models` | Model catalog management for activation and price units | CSR in admin SPA | `GET /admin/models` |
+| `/sponsors` | Pick active Relay rows for the sponsor showcase and remove them when needed; the current UI does not expose placement or time-window editing | CSR in admin SPA | `GET /admin/sponsors` |
+| `/models` | Model catalog management centered on model key, inferred vendor/family, activation, price units, and delete actions | CSR in admin SPA | `GET /admin/models` |
 
 ### Secondary Admin Routes
 

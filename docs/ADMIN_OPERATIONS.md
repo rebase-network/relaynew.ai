@@ -78,8 +78,8 @@
 | Relay历史 | `/relays/history` | 查看 archived Relay，用右侧抽屉回看详情、编辑或重新激活 | `GET /admin/relays` |
 | 提交记录 | `/intake` | 处理当前待审核提交 | `GET /admin/submissions`、`POST /admin/submissions/:id/review` |
 | 提交历史 | `/intake/history` | 查看 approved / rejected / archived 的提交记录，并在右侧抽屉回看原始资料与审核结果 | `GET /admin/submissions` |
-| 赞助位 | `/sponsors` | 管理赞助记录；当前实现仍包含关联 Relay、placement、状态与起止时间窗口 | `GET/POST/PATCH/DELETE /admin/sponsors` |
-| 模型 | `/models` | 维护模型目录、价格单位与启停状态，并支持删除 | `GET/POST/PATCH/DELETE /admin/models` |
+| 赞助位 | `/sponsors` | 从 active Relay 中挑选前台赞助展示条目，并支持移除；当前页面不再暴露 placement / 时间窗口编辑 | `GET/POST/DELETE /admin/sponsors` |
+| 模型 | `/models` | 维护模型键值、价格单位与启停状态，并支持删除；厂商与分类由模型键值自动推导 | `GET/POST/PATCH/DELETE /admin/models` |
 
 ### 次级工具页面
 
@@ -244,17 +244,16 @@
 
 用途：
 
-- 查看已有赞助位列表
-- 新建赞助位
-- 编辑已有赞助位
-- 选择是否关联某个 Relay
-- 设置投放位标识、状态和时间窗口
+- 查看当前前台赞助展示列表
+- 从 `active` Relay 中选择一个加入赞助展示
+- 将某个 Relay 从赞助展示中移除
 
 注意：
 
 - 赞助位展示与自然排名严格分离。
 - 赞助不会改写榜单结果，也不会影响自动化测试分数。
-- 当前后台实现仍保留 `placement`、`status`、`startAt`、`endAt` 这些字段；如果后续要继续简化赞助管理，需要以实际代码变更为准。
+- 当前后台页面不再让运营手工填写 `placement`、`status`、`startAt`、`endAt`；这些值由系统按固定规则写入后台记录。
+- 只有 `active` Relay 才能被加入赞助展示列表。
 
 ### 8. 模型
 
@@ -263,12 +262,18 @@
 - 维护模型目录
 - 设置价格单位
 - 启用或停用某个模型
+- 删除不再需要的模型键
 
 适用场景：
 
 - 新增一个站点价格表中需要引用的新模型
 - 停用已经不再维护的模型键
-- 修正模型展示名称、厂商或价格单位
+- 修正模型键值或价格单位
+
+当前实现说明：
+
+- 模型键值是主输入。
+- 厂商与模型分类会根据键值自动推导，不需要单独维护。
 
 ## 当前限制与注意事项
 
@@ -316,5 +321,5 @@
 - 新批准的 Relay 是否已经是 `active`
 - 重要 Relay 是否被误设为 `paused` 或 `archived`
 - 公开榜单和目录是否只出现 `active` Relay
-- 赞助位是否在正确时间窗口内
+- 赞助展示中的 Relay 是否仍然是正确的 active 站点
 - 模型目录是否覆盖当前新提交里出现的模型键
