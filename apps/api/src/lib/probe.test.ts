@@ -51,7 +51,7 @@ test("probe sequence keeps trying adapters after a 2xx payload mismatch with JSO
   assert.equal(shouldContinueProbeSequence(result), true);
   assert.equal(
     buildProbeFailureMessage(result),
-    "Upstream returned 200, but the payload did not match OpenAI Responses",
+    "上游返回 HTTP 200，但响应内容不符合 OpenAI Responses",
   );
 });
 
@@ -109,7 +109,7 @@ test("failure message explains protocol conversion failures behind 5xx responses
 
   assert.equal(
     buildProbeFailureMessage(result),
-    "Upstream accepted OpenAI Responses, but the current model may not support this protocol on the site",
+    "站点接受了 OpenAI Responses 请求，但当前模型可能不支持这种协议形态",
   );
 });
 
@@ -222,7 +222,7 @@ test("public probe deep scan returns every matched mode in auto detection order"
     assert.equal(result.attemptTrace.filter((entry) => entry.matched).length, 3);
     assert.equal(
       result.attemptTrace.find((entry) => entry.mode === "openai-responses" && entry.httpStatus === 404)?.message,
-      "Upstream returned 404 while testing OpenAI Responses",
+      "测试 OpenAI Responses 时，上游返回了 HTTP 404",
     );
     assert.equal(seenUrls.some((url) => url.endsWith("/messages")), true);
     assert.equal(seenUrls.some((url) => url.includes(":generateContent") || url.includes(":streamGenerateContent")), true);

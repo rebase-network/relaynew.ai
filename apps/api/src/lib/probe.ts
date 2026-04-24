@@ -43,7 +43,7 @@ function sanitizeMessage(value: unknown) {
     return value.message.replaceAll(/sk-[a-zA-Z0-9_-]+/g, "[redacted]");
   }
 
-  return "Probe failed";
+  return "测试失败";
 }
 
 function sanitizeUpstreamText(value: string) {
@@ -118,7 +118,7 @@ function isBlockedIp(address: string) {
 
 async function validateTarget(url: URL) {
   if (url.protocol !== "https:") {
-    throw new Error("Only https targets are allowed");
+    throw new Error("仅允许测试 https 目标");
   }
 
   if (config.PUBLIC_PROBE_ALLOW_PRIVATE_HOSTS) {
@@ -127,12 +127,12 @@ async function validateTarget(url: URL) {
 
   const addresses = await lookup(url.hostname, { all: true, verbatim: true });
   if (addresses.length === 0) {
-    throw new Error("Unable to resolve target host");
+    throw new Error("无法解析目标主机");
   }
 
   for (const address of addresses) {
     if (isBlockedIp(address.address) || address.address === "169.254.169.254") {
-      throw new Error("Target resolves to a blocked network range");
+      throw new Error("目标主机解析到了受限网络范围");
     }
   }
 }
@@ -154,7 +154,7 @@ async function readLimitedText(stream: ReadableStream<Uint8Array> | null, limit:
 
     total += value.byteLength;
     if (total > limit) {
-      throw new Error("Response body exceeded the allowed size");
+      throw new Error("响应体超过允许大小");
     }
 
     chunks.push(value);
@@ -284,18 +284,18 @@ export function buildProbeFailureMessage(result: ProbeAttemptResult) {
   const label = probeCompatibilityModeLabels[result.attempt.mode];
 
   if (result.response.ok) {
-    return `Upstream returned ${result.response.status}, but the payload did not match ${label}`;
+    return `上游返回 HTTP ${result.response.status}，但响应内容不符合 ${label}`;
   }
 
   if (result.response.status >= 300 && result.response.status < 400) {
-    return `Upstream redirected with ${result.response.status} while testing ${label}`;
+    return `测试 ${label} 时，上游返回了 HTTP ${result.response.status} 重定向`;
   }
 
   if (result.response.status >= 500 && isProtocolConversionFailure(result)) {
-    return `Upstream accepted ${label}, but the current model may not support this protocol on the site`;
+    return `站点接受了 ${label} 请求，但当前模型可能不支持这种协议形态`;
   }
 
-  return `Upstream returned ${result.response.status} while testing ${label}`;
+  return `测试 ${label} 时，上游返回了 HTTP ${result.response.status}`;
 }
 
 async function executeProbeAttempt(attempt: ProbeAttempt, apiKey: string): Promise<ProbeAttemptResult> {
@@ -439,7 +439,7 @@ export async function runPublicProbe(input: PublicProbeRequest): Promise<PublicP
     }
 
     if (!bestFailure) {
-      throw new Error("Probe request did not produce a response");
+      throw new Error("本次测试未获得有效响应");
     }
 
     return publicProbeResponseSchema.parse({

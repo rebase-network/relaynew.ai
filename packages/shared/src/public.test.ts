@@ -297,7 +297,7 @@ test("admin probe credential schemas parse", () => {
     lastProbeOk: false,
     lastHealthStatus: "degraded",
     lastHttpStatus: 405,
-    lastMessage: "Upstream returned 405 while testing OpenAI Responses",
+    lastMessage: "测试 OpenAI Responses 时，上游返回了 HTTP 405",
     lastDetectionMode: "auto",
     lastUsedUrl: "https://northwind.example.ai/v1/responses",
     createdAt: "2026-04-15T09:00:00.000Z",

@@ -881,7 +881,7 @@ export function getProbeFailureGuidance(result: PublicProbeResponse) {
   }
 
   if (status >= 500) {
-    if (message.includes("may not support this protocol")) {
+    if (message.includes("当前模型可能不支持这种协议形态")) {
       return {
         source: "上游协议转换未实现",
         meaning: "该站点存在当前协议路由，但当前模型在这个协议形态下不可用。",
