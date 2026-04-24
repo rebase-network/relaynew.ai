@@ -94,6 +94,11 @@ export function ProbeResultPanel({
               },
             ]}
           />
+          {result.connectivity.firstTokenMs === null || typeof result.connectivity.firstTokenMs === "undefined" ? (
+            <p className="mt-3 text-xs leading-6 text-black/58">
+              “首个有效输出”为 - 表示本次虽然收到了响应，但没有观测到可见文本输出；常见于空响应、只返回状态事件，或模型未实际产出文本。
+            </p>
+          ) : null}
           <div className="mt-5 space-y-4">
             <div className="surface-card p-4">
               <p className="kicker">解析结果</p>
