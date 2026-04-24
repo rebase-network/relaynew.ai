@@ -46,6 +46,60 @@ function sanitizeMessage(value: unknown) {
   return "Probe failed";
 }
 
+function sanitizeUpstreamText(value: string) {
+  return value
+    .replaceAll(/sk-[a-zA-Z0-9_-]+/g, "[redacted]")
+    .replaceAll(/\s+/g, " ")
+    .trim();
+}
+
+function asErrorRecord(body: string) {
+  if (!body.trim()) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(body) as unknown;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      const record = parsed as Record<string, unknown>;
+      if (record.error && typeof record.error === "object" && !Array.isArray(record.error)) {
+        return record.error as Record<string, unknown>;
+      }
+
+      return record;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+function getUpstreamErrorText(result: ProbeAttemptResult) {
+  const record = asErrorRecord(result.body);
+  const message = typeof record?.message === "string" ? sanitizeUpstreamText(record.message) : null;
+  const code = typeof record?.code === "string" ? sanitizeUpstreamText(record.code) : null;
+  const type = typeof record?.type === "string" ? sanitizeUpstreamText(record.type) : null;
+
+  return {
+    code,
+    message,
+    type,
+  };
+}
+
+function isProtocolConversionFailure(result: ProbeAttemptResult) {
+  const error = getUpstreamErrorText(result);
+  const message = error.message?.toLowerCase() ?? "";
+  const code = error.code?.toLowerCase() ?? "";
+  const type = error.type?.toLowerCase() ?? "";
+
+  return code === "convert_request_failed"
+    || message.includes("not implemented")
+    || message.includes("convert request failed")
+    || type.includes("convert");
+}
+
 function isBlockedIp(address: string) {
   const parsed = ipaddr.parse(address);
   let normalized = parsed;
@@ -234,6 +288,10 @@ export function buildProbeFailureMessage(result: ProbeAttemptResult) {
 
   if (result.response.status >= 300 && result.response.status < 400) {
     return `Upstream redirected with ${result.response.status} while testing ${label}`;
+  }
+
+  if (result.response.status >= 500 && isProtocolConversionFailure(result)) {
+    return `Upstream accepted ${label}, but the current model may not support this protocol on the site`;
   }
 
   return `Upstream returned ${result.response.status} while testing ${label}`;

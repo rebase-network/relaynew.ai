@@ -101,6 +101,18 @@ test("preferred failure selection favors more actionable statuses", () => {
   assert.equal(pickPreferredProbeFailure(payloadMismatch, authFailure), authFailure);
 });
 
+test("failure message explains protocol conversion failures behind 5xx responses", () => {
+  const result = makeResult(500, {
+    mode: "openai-responses",
+    body: '{"error":{"message":"not implemented","type":"easy_router_error","code":"convert_request_failed"}}',
+  });
+
+  assert.equal(
+    buildProbeFailureMessage(result),
+    "Upstream accepted OpenAI Responses, but the current model may not support this protocol on the site",
+  );
+});
+
 test("public probe stops at the first matched mode during standard auto detection", async () => {
   const originalFetch = globalThis.fetch;
   const seenUrls: string[] = [];

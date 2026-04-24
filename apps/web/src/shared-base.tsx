@@ -818,6 +818,7 @@ export function getProbeFailureGuidance(result: PublicProbeResponse) {
   }
 
   const status = result.protocol.httpStatus ?? null;
+  const message = result.message?.toLowerCase() ?? "";
 
   if (!result.connectivity.ok || status === null) {
     return {
@@ -880,6 +881,14 @@ export function getProbeFailureGuidance(result: PublicProbeResponse) {
   }
 
   if (status >= 500) {
+    if (message.includes("may not support this protocol")) {
+      return {
+        source: "上游协议转换未实现",
+        meaning: "该站点存在当前协议路由，但当前模型在这个协议形态下不可用。",
+        nextStep: "请改用其他兼容模式，或更换在该协议下已实现支持的模型后再试。",
+      };
+    }
+
     return {
       source: "上游服务错误",
       meaning: "该站点已接收请求，但在处理时发生了内部错误。",
