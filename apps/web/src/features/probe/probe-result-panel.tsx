@@ -10,6 +10,7 @@ const {
   formatProbeHttpStatus,
   formatProbeMeasuredAt,
   formatProbeScanMode,
+  formatProbeTraceStatus,
   getConnectivityCardTone,
   getProtocolCardTone,
   getTraceCardTone,
@@ -194,7 +195,7 @@ export function ProbeResultPanel({
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-xs uppercase tracking-[0.16em]">#{index + 1} {attempt.label}</p>
                         <p className="text-xs uppercase tracking-[0.16em]">
-                          {attempt.matched ? "已匹配" : attempt.httpStatus ? `HTTP ${attempt.httpStatus}` : "无响应"}
+                          {formatProbeTraceStatus(attempt.httpStatus, attempt.matched)}
                         </p>
                       </div>
                       <p className="mt-2 break-all font-mono text-xs leading-5 opacity-80">{attempt.url}</p>

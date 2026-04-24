@@ -781,8 +781,12 @@ export function getProtocolCardTone(status: PublicProbeResponse["protocol"]["hea
 }
 
 export function getTraceCardTone(httpStatus: number | null, matched: boolean) {
-  if (matched || (httpStatus !== null && httpStatus >= 200 && httpStatus < 300)) {
+  if (matched) {
     return "border-emerald-700/12 bg-emerald-50/70 text-[#0b5c3b]";
+  }
+
+  if (httpStatus !== null && httpStatus >= 200 && httpStatus < 300) {
+    return "border-[#b54708]/15 bg-[#fff7e8] text-[#8a450c]";
   }
 
   if (httpStatus === 400 || httpStatus === 404 || httpStatus === 405 || httpStatus === 415) {
@@ -794,6 +798,18 @@ export function getTraceCardTone(httpStatus: number | null, matched: boolean) {
   }
 
   return "border-black/10 bg-white/75 text-black/72";
+}
+
+export function formatProbeTraceStatus(httpStatus: number | null, matched: boolean) {
+  if (matched) {
+    return "已匹配";
+  }
+
+  if (httpStatus !== null && httpStatus >= 200 && httpStatus < 300) {
+    return `HTTP ${httpStatus} · 未匹配`;
+  }
+
+  return httpStatus ? `HTTP ${httpStatus}` : "无响应";
 }
 
 export function getProbeFailureGuidance(result: PublicProbeResponse) {
