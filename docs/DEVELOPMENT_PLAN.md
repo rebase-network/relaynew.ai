@@ -329,6 +329,98 @@ Exit criteria:
 - browser coverage validates the public probe UX for success and failure states
 - probe security tests pass for the controls required by `docs/PROBE_SECURITY.md`
 
+### Phase 7A: Probe Timing And Credibility Signals
+
+Goal:
+- make public probe output closer to real user experience while keeping timing and
+  model-identity evidence explicitly separated
+
+Work items:
+- change the primary probe prompt from a loose `ping` payload to a strict
+  text-output instruction:
+  - `Reply with exactly one word: pong`
+- keep the primary probe as the only source of:
+  - protocol success / failure
+  - `TTFB`
+  - first visible text timing
+- run the primary relay-owned monitoring probe on a lower-frequency high-availability
+  schedule:
+  - every 15 minutes instead of every 5 minutes
+- rename first-token semantics in product copy to match the actual metric:
+  - treat it as `首个可见文本` / `首个有效输出`, not arbitrary first event timing
+- persist and expose probe timing fields separately:
+  - `latencyMs` as the current response-start timing
+  - `ttfbMs`
+  - `firstTokenMs`
+- store `first_token_ms` on raw relay-owned monitoring rows in PostgreSQL
+- add a separate credibility probe step for matched protocol modes only
+- keep credibility probe evidence out of the main latency metrics
+- run credibility probing as a separate low-frequency task:
+  - once per day
+  - only for relays that are currently available / healthy enough to complete the
+    primary probe
+- skip credibility probing for relays that are currently unavailable
+- collect credibility evidence from:
+  - requested model id
+  - response-reported model metadata when available
+  - model self-report via a structured JSON-only identity prompt
+- expose credibility evidence in probe results as explainable signals, not as absolute
+  truth
+- localize public probe diagnostics and trace messages for Chinese users
+
+Exit criteria:
+- the public probe page shows `TTFB` and first visible text timing from the primary
+  probe request
+- relay-owned primary monitoring runs operate on a 15-minute cadence
+- deep-scan results can list multiple compatible modes without collapsing them into a
+  single compatibility label
+- relay-owned monitoring rows persist `first_token_ms`
+- credibility probing runs on a separate daily cadence and only targets relays that
+  are currently available
+- credibility probe output is presented as evidence such as:
+  - requested model
+  - response-reported model
+  - self-reported model / version
+  - credibility level
+- timing metrics remain sourced only from the primary probe request, not from the
+  credibility probe
+
+### Phase 7B: Confidence And Output-Health Scoring
+
+Goal:
+- turn the new timing and credibility signals into stricter health and scoring policy
+
+Work items:
+- define a scoring rule that can incorporate credibility-probe evidence into relay
+  ranking inputs without making self-reported identity a single source of truth
+- add confidence levels such as:
+  - high
+  - medium
+  - low
+  - unknown
+- decide how response-reported model ids, self-reported model ids, and requested model
+  ids influence confidence
+- add product rules for text-output health when a protocol matches but no visible text
+  is observed
+- evaluate whether `firstTokenMs = null` under a matched protocol should classify the
+  probe as:
+  - degraded
+  - down
+  - a separate text-output anomaly state
+- if adopted, wire the stricter output-health rule into monitoring rollups and public
+  status presentation
+- add browser and adapter coverage for:
+  - confidence rendering
+  - no-visible-text matched responses
+  - credibility disagreements between response metadata and self-report
+
+Exit criteria:
+- ranking policy has an explicit, documented position on how credibility evidence
+  affects score computation
+- output-health handling for matched-but-textless responses is documented and
+  implemented consistently across probe UI and relay monitoring
+- confidence and output-health regressions are covered by automated tests
+
 ## Phase 8: Admin, Submit, And Sponsor Operations
 
 Goal:
