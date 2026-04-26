@@ -336,6 +336,78 @@ Required fields:
 Notes:
 - `startingInputPricePer1M` and `startingOutputPricePer1M` may be `null` when price
   data is unknown
+- the current public relay detail page uses this endpoint primarily for relay identity
+  and non-model aggregate metadata
+- model-specific health, availability, and latency should be read from
+  `GET /public/relay/:slug/model-health`
+
+### GET /public/relay/:slug/model-health
+
+Returns the model-by-model health board used by the public relay detail page.
+
+Query params:
+- `window` optional, currently only `7d`, default `7d`
+- `region` optional, default `global`
+
+Response:
+```json
+{
+  "relay": {
+    "slug": "sample-relay",
+    "name": "Sample Relay"
+  },
+  "window": "7d",
+  "rows": [
+    {
+      "modelKey": "gpt-5.4",
+      "modelName": "gpt-5.4",
+      "vendor": "gpt",
+      "supportStatus": "active",
+      "currentStatus": "healthy",
+      "availability7d": 0.991,
+      "latestLatencyP50Ms": 842,
+      "statusTrend7d": [
+        {
+          "dateKey": "2026-04-09",
+          "status": "healthy",
+          "availability": 1.0
+        },
+        {
+          "dateKey": "2026-04-10",
+          "status": "healthy",
+          "availability": 1.0
+        }
+      ],
+      "currentPrice": {
+        "currency": "USD",
+        "inputPricePer1M": 2.5,
+        "outputPricePer1M": 15
+      },
+      "lastVerifiedAt": "2026-04-15T10:00:00Z"
+    }
+  ],
+  "measuredAt": "2026-04-15T10:00:00Z"
+}
+```
+
+Required row fields:
+- `modelKey`
+- `modelName`
+- `vendor`
+- `supportStatus`
+- `currentStatus`
+- `availability7d`
+- `latestLatencyP50Ms`
+- `statusTrend7d`
+- `currentPrice`
+- `lastVerifiedAt`
+
+Notes:
+- `statusTrend7d` always returns 7 day buckets in ascending date order
+- `availability7d` may be `null` when no recent samples are available for that model
+- `currentPrice` may be `null` when price data is unknown
+- `latestLatencyP50Ms` may be `null` when no recent latency sample exists
+- this is the primary read contract for the public relay detail page's model health list
 
 ### GET /public/relay/:slug/history
 

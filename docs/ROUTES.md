@@ -20,7 +20,7 @@ for each route, and the primary data source that should back it.
 | `/leaderboard` | Directory for browsing all tracked model categories | CSR in public SPA | `GET /public/leaderboard-directory` |
 | `/leaderboard/directory` | Legacy compatibility redirect to `/leaderboard` | CSR redirect in public SPA | none |
 | `/leaderboard/:modelKey` | Main leaderboard for one model category | CSR in public SPA | `GET /public/leaderboard/:modelKey` |
-| `/relay/:slug` | Relay detail page with overview, 30-day history, and supported-model pricing summary | CSR in public SPA | `GET /public/relay/:slug/overview`, `GET /public/relay/:slug/history`, `GET /public/relay/:slug/models`, `GET /public/relay/:slug/pricing-history` |
+| `/relay/:slug` | Relay detail page with relay identity, model health board, and model-level pricing context | CSR in public SPA | `GET /public/relay/:slug/overview`, `GET /public/relay/:slug/model-health` |
 | `/methodology` | Public explanation of the `评测方式` page, plus merged sponsor separation, intake, and review rules | CSR in public SPA | static content or `GET /public/methodology` |
 | `/policy` | Legacy compatibility redirect to the merged `我们怎么做` section on `/methodology` | CSR redirect in public SPA | none |
 | `/submit` | Public submission entry with initial automated verification | CSR in public SPA | `POST /public/submissions` |
@@ -155,10 +155,15 @@ The leaderboard page is expected to include:
 
 The relay detail page is expected to include:
 - relay identity and endpoint summary
-- current health snapshot
-- 30-day latency and availability charts
-- supported models list enriched with the latest known input / output price
-- explanatory badges and score summary
+- supported model count and starting price summary
+- model-by-model health rows with:
+  - current status
+  - 7-day availability
+  - 7-day status mini trend
+  - one representative latency value
+  - current price
+  - last verified time
+- no relay-level latency or availability charts in the current shipped UI
 - no standalone `价格历史` or `事故时间线` block in the current shipped UI, even
   though the backend still exposes those APIs
 
@@ -166,14 +171,11 @@ The relay detail page is expected to include:
 
 First-paint critical:
 - overview identity and endpoint summary
-- current `healthStatus`
-- 24h summary metrics
-- score summary and badges
+- supported model count
+- starting price summary
 
 Hydration or secondary loads:
-- history chart buckets
-- supported models list
-- pricing enrichment for the supported-model table
+- model health list
 
 ## Test Page Modules (`/probe`)
 

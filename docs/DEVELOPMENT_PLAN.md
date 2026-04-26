@@ -33,9 +33,11 @@ Implemented and in daily use:
 - manual relay creation / edit flows with model-price rows and relay-owned test key
 - page and feature refactors that split oversized `web` / `admin` entry files into
   route pages, drawers, feature modules, and shared helpers
-- current relay detail UI trimmed to overview, 30-day history, and model support with
-  latest known pricing; standalone incident and full price-history sections remain API
-  surfaces rather than rendered public modules
+- current relay detail UI trimmed to overview identity plus a compact model health
+  board with model-level status, 7-day availability, status trend, representative
+  latency, and latest known pricing; standalone incident, full price-history, and
+  relay-level latency/status chart modules remain API surfaces rather than rendered
+  public modules
 - Playwright-first browser coverage for public flows, admin flows, metadata smoke,
   and deployed smoke modes
 
@@ -106,8 +108,8 @@ The latest shipped public UI baseline already includes:
 - leaderboard hero and model-switch surfaces that are more compact than earlier
   card-stack iterations
 - a merged methodology / governance page under `/methodology`
-- a simplified relay detail page that prioritizes history and model support over
-  extra secondary sections
+- a simplified relay detail page that prioritizes model-level health signals over
+  relay-level aggregate latency/status charts
 - a submit form with denser model-price rows and consumer-style flow instead of
   admin-like stacked controls
 
