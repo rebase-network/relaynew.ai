@@ -53,6 +53,17 @@ export interface RelayModelsTable {
   supports_vision: boolean;
   supports_reasoning: boolean;
   status: string;
+  monitoring_enabled: boolean;
+  monitoring_priority: number;
+  compatibility_mode_override: string | null;
+  last_compatibility_mode: string | null;
+  last_probe_ok: boolean | null;
+  last_health_status: string | null;
+  last_http_status: number | null;
+  last_message: string | null;
+  last_detection_mode: string | null;
+  last_used_url: string | null;
+  consecutive_failure_count: number;
   last_verified_at: string | null;
   created_at: Timestamp;
   updated_at: Timestamp;

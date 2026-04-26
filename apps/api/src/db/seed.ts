@@ -518,7 +518,20 @@ async function seedCoreCatalog(db: Kysely<Database>, now: Date) {
         created_at: now.toISOString(),
         updated_at: now.toISOString(),
       },
-    ])
+    ].map((row) => ({
+      monitoring_enabled: true,
+      monitoring_priority: 100,
+      compatibility_mode_override: null,
+      last_compatibility_mode: null,
+      last_probe_ok: null,
+      last_health_status: null,
+      last_http_status: null,
+      last_message: null,
+      last_detection_mode: null,
+      last_used_url: null,
+      consecutive_failure_count: 0,
+      ...row,
+    })))
     .execute();
 
   await db

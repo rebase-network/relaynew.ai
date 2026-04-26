@@ -1,6 +1,11 @@
-import type { ProbeCompatibilityMode, PublicProbeResponse } from "@relaynews/shared";
+import type {
+  ProbeCompatibilityMode,
+  ProbeResolvedCompatibilityMode,
+  PublicProbeResponse,
+} from "@relaynews/shared";
 import { sql, type Kysely, type Transaction } from "kysely";
 
+import { config } from "../config";
 import type { Database } from "../db/types";
 import { runPublicProbe } from "./probe";
 import { toProbeCredentialVerification } from "./probe-credentials";
@@ -44,8 +49,33 @@ export type RelayMonitoringRunResult = {
   relayId: string;
   relaySlug: string;
   relayName: string;
+  modelId: string | null;
+  modelKey: string;
+  requestedModel: string;
   probe: PublicProbeResponse;
   resolvedModelId: string | null;
+};
+
+export type RelayMonitoringTarget = {
+  credentialId: string;
+  relayId: string;
+  relaySlug: string;
+  relayName: string;
+  baseUrl: string;
+  apiKey: string;
+  credentialTestModel: string;
+  credentialCompatibilityMode: ProbeCompatibilityMode;
+  modelId: string;
+  modelKey: string;
+  modelName: string;
+  remoteModelName: string | null;
+  supportStatus: string;
+  monitoringPriority: number;
+  compatibilityModeOverride: ProbeCompatibilityMode | null;
+  lastCompatibilityMode: ProbeResolvedCompatibilityMode | null;
+  lastVerifiedAt: string | null;
+  lastProbeOk: boolean | null;
+  consecutiveFailureCount: number;
 };
 
 function clamp(value: number, min: number, max: number) {
@@ -125,6 +155,128 @@ async function loadActiveModels(db: DbExecutor) {
     .select(["id", "key", "name", "family"])
     .where("is_active", "=", true)
     .execute();
+}
+
+function getMonitoringStatusRank(status: string) {
+  return status === "active"
+    ? 0
+    : status === "degraded"
+      ? 1
+      : status === "pending"
+        ? 2
+        : 3;
+}
+
+export function resolveMonitoringCompatibilityMode(target: RelayMonitoringTarget): ProbeCompatibilityMode {
+  if (target.compatibilityModeOverride) {
+    return target.compatibilityModeOverride;
+  }
+
+  if (target.lastCompatibilityMode) {
+    return target.lastCompatibilityMode;
+  }
+
+  return target.credentialCompatibilityMode;
+}
+
+export function shouldBackoffMonitoringTarget(target: RelayMonitoringTarget, now: Date) {
+  if (target.lastProbeOk !== false) {
+    return false;
+  }
+
+  if (target.consecutiveFailureCount < config.MONITORING_FAILURE_BACKOFF_THRESHOLD) {
+    return false;
+  }
+
+  if (!target.lastVerifiedAt) {
+    return false;
+  }
+
+  const lastVerifiedAt = new Date(target.lastVerifiedAt);
+  if (Number.isNaN(lastVerifiedAt.getTime())) {
+    return false;
+  }
+
+  const backoffWindowMs = config.MONITORING_FAILURE_BACKOFF_MINUTES * 60 * 1_000;
+  return now.getTime() - lastVerifiedAt.getTime() < backoffWindowMs;
+}
+
+export function getRequestedModelForTarget(target: RelayMonitoringTarget) {
+  return target.remoteModelName?.trim() || target.modelKey || target.credentialTestModel;
+}
+
+export function selectRelayMonitoringTargets(targets: RelayMonitoringTarget[], now: Date) {
+  const grouped = new Map<string, RelayMonitoringTarget[]>();
+
+  for (const target of targets) {
+    const current = grouped.get(target.relayId) ?? [];
+    current.push(target);
+    grouped.set(target.relayId, current);
+  }
+
+  const selected: RelayMonitoringTarget[] = [];
+  const skippedBackoff: RelayMonitoringTarget[] = [];
+
+  for (const relayTargets of grouped.values()) {
+    const eligible = relayTargets.filter((target) => {
+      const backoff = shouldBackoffMonitoringTarget(target, now);
+      if (backoff) {
+        skippedBackoff.push(target);
+      }
+      return !backoff;
+    });
+
+    eligible.sort((left, right) =>
+      left.monitoringPriority - right.monitoringPriority
+      || getMonitoringStatusRank(left.supportStatus) - getMonitoringStatusRank(right.supportStatus)
+      || (left.lastVerifiedAt ?? "").localeCompare(right.lastVerifiedAt ?? "")
+      || left.modelName.localeCompare(right.modelName),
+    );
+
+    selected.push(...eligible.slice(0, config.MONITORING_MAX_MODELS_PER_RELAY));
+  }
+
+  return {
+    selected,
+    skippedBackoff,
+  };
+}
+
+async function loadRelayMonitoringTargets(db: Kysely<Database>) {
+  const rows = await db
+    .selectFrom("probe_credentials as pc")
+    .innerJoin("relays as r", "r.id", "pc.relay_id")
+    .innerJoin("relay_models as rm", "rm.relay_id", "r.id")
+    .innerJoin("models as m", "m.id", "rm.model_id")
+    .select([
+      "pc.id as credentialId",
+      "pc.api_key as apiKey",
+      "pc.test_model as credentialTestModel",
+      "pc.compatibility_mode as credentialCompatibilityMode",
+      "r.id as relayId",
+      "r.slug as relaySlug",
+      "r.name as relayName",
+      "r.base_url as baseUrl",
+      "rm.model_id as modelId",
+      "m.key as modelKey",
+      "m.name as modelName",
+      "rm.remote_model_name as remoteModelName",
+      "rm.status as supportStatus",
+      "rm.monitoring_priority as monitoringPriority",
+      "rm.compatibility_mode_override as compatibilityModeOverride",
+      "rm.last_compatibility_mode as lastCompatibilityMode",
+      "rm.last_verified_at as lastVerifiedAt",
+      "rm.last_probe_ok as lastProbeOk",
+      "rm.consecutive_failure_count as consecutiveFailureCount",
+    ])
+    .where("pc.status", "=", "active")
+    .where("r.status", "=", "active")
+    .where("m.is_active", "=", true)
+    .where("rm.monitoring_enabled", "=", true)
+    .where("rm.status", "in", ["active", "degraded", "pending"])
+    .execute();
+
+  return rows as RelayMonitoringTarget[];
 }
 
 function floorToFiveMinuteBucket(value: Date) {
@@ -244,6 +396,8 @@ async function upsertRelayModel(
 ) {
   const status = input.probe.ok ? "active" : "degraded";
   const verifiedAt = input.probe.measuredAt;
+  const compatibilityMode = input.probe.compatibilityMode;
+  const consecutiveFailureCount = input.probe.ok ? 0 : 1;
 
   await db
     .insertInto("relay_models")
@@ -256,6 +410,17 @@ async function upsertRelayModel(
       supports_vision: false,
       supports_reasoning: false,
       status,
+      monitoring_enabled: true,
+      monitoring_priority: 100,
+      compatibility_mode_override: null,
+      last_compatibility_mode: compatibilityMode,
+      last_probe_ok: input.probe.ok,
+      last_health_status: input.probe.protocol.healthStatus,
+      last_http_status: input.probe.protocol.httpStatus ?? null,
+      last_message: input.probe.message,
+      last_detection_mode: input.probe.detectionMode ?? null,
+      last_used_url: input.probe.usedUrl ?? null,
+      consecutive_failure_count: consecutiveFailureCount,
       last_verified_at: verifiedAt,
       created_at: verifiedAt,
       updated_at: verifiedAt,
@@ -265,11 +430,55 @@ async function upsertRelayModel(
         remote_model_name: input.remoteModelName,
         supports_stream: Boolean(input.probe.compatibilityMode),
         status,
+        last_compatibility_mode: compatibilityMode,
+        last_probe_ok: input.probe.ok,
+        last_health_status: input.probe.protocol.healthStatus,
+        last_http_status: input.probe.protocol.httpStatus ?? null,
+        last_message: input.probe.message,
+        last_detection_mode: input.probe.detectionMode ?? null,
+        last_used_url: input.probe.usedUrl ?? null,
+        consecutive_failure_count: consecutiveFailureCount,
         last_verified_at: verifiedAt,
         updated_at: verifiedAt,
       }),
     )
     .execute();
+}
+
+async function updateRelayModelMonitoringState(
+  db: DbExecutor,
+  input: {
+    relayId: string;
+    modelId: string;
+    remoteModelName: string;
+    probe: PublicProbeResponse;
+    previousConsecutiveFailureCount: number;
+  },
+) {
+  const nextConsecutiveFailureCount = input.probe.ok
+    ? 0
+    : input.previousConsecutiveFailureCount + 1;
+
+  await db
+    .updateTable("relay_models")
+    .set({
+      remote_model_name: input.remoteModelName,
+      status: input.probe.ok ? "active" : "degraded",
+      supports_stream: Boolean(input.probe.compatibilityMode),
+      last_compatibility_mode: input.probe.compatibilityMode,
+      last_probe_ok: input.probe.ok,
+      last_health_status: input.probe.protocol.healthStatus,
+      last_http_status: input.probe.protocol.httpStatus ?? null,
+      last_message: input.probe.message,
+      last_detection_mode: input.probe.detectionMode ?? null,
+      last_used_url: input.probe.usedUrl ?? null,
+      consecutive_failure_count: nextConsecutiveFailureCount,
+      last_verified_at: input.probe.measuredAt,
+      updated_at: input.probe.measuredAt,
+    })
+    .where("relay_id", "=", input.relayId)
+    .where("model_id", "=", input.modelId)
+    .executeTakeFirst();
 }
 
 async function upsertRelayStatusBucket(
@@ -539,6 +748,71 @@ async function persistRelayMonitoringProbe(
   });
 }
 
+async function persistRelayMonitoringTargetProbe(
+  db: DbExecutor,
+  target: RelayMonitoringTarget,
+  requestedModel: string,
+  compatibilityMode: ProbeCompatibilityMode,
+  probe: PublicProbeResponse,
+) {
+  await db.transaction().execute(async (trx) => {
+    await trx
+      .updateTable("probe_credentials")
+      .set(toProbeCredentialVerification(probe))
+      .where("id", "=", target.credentialId)
+      .executeTakeFirst();
+
+    await trx
+      .insertInto("probe_results_raw")
+      .values({
+        probed_at: probe.measuredAt,
+        relay_id: target.relayId,
+        model_id: target.modelId,
+        probe_kind: "relay-monitor",
+        probe_region: "global",
+        target_host: probe.targetHost,
+        success: probe.ok,
+        http_status: probe.protocol.httpStatus ?? null,
+        latency_ms: probe.connectivity.latencyMs,
+        ttfb_ms: probe.connectivity.ttfbMs ?? probe.connectivity.latencyMs,
+        first_token_ms: probe.connectivity.firstTokenMs ?? null,
+        dns_ms: null,
+        tls_ms: null,
+        request_tokens: null,
+        response_tokens: null,
+        error_code: probe.ok ? null : "probe_failed",
+        error_message: probe.message,
+        protocol_consistency_score: probe.ok ? 100 : 0,
+        response_model_name: requestedModel,
+        sample_key: `${target.credentialId}:${target.modelId}`,
+        created_at: probe.measuredAt,
+      })
+      .execute();
+
+    await updateRelayModelMonitoringState(trx, {
+      relayId: target.relayId,
+      modelId: target.modelId,
+      remoteModelName: requestedModel,
+      probe: {
+        ...probe,
+        compatibilityMode: probe.compatibilityMode ?? (compatibilityMode === "auto" ? null : compatibilityMode),
+      },
+      previousConsecutiveFailureCount: target.consecutiveFailureCount,
+    });
+
+    await refreshScopeAggregates(trx, {
+      relayId: target.relayId,
+      modelId: target.modelId,
+      measuredAt: probe.measuredAt,
+    });
+    await refreshScopeAggregates(trx, {
+      relayId: target.relayId,
+      modelId: null,
+      measuredAt: probe.measuredAt,
+    });
+  });
+}
+
 export async function runRelayCredentialMonitoring(
   db: Kysely<Database>,
   credential: RelayMonitoringCredential,
@@ -565,6 +839,9 @@ export async function runRelayCredentialMonitoring(
     relayId: credential.relayId,
     relaySlug: credential.relaySlug,
     relayName: credential.relayName,
+    modelId: resolvedModel?.id ?? null,
+    modelKey: resolvedModel?.key ?? credential.testModel,
+    requestedModel: credential.testModel,
     probe,
     resolvedModelId: resolvedModel?.id ?? null,
   };
@@ -600,38 +877,51 @@ export async function runRelayCredentialMonitoringById(
   return runRelayCredentialMonitoring(db, credential as RelayMonitoringCredential, options);
 }
 
+async function runRelayModelMonitoring(
+  db: Kysely<Database>,
+  target: RelayMonitoringTarget,
+): Promise<RelayMonitoringRunResult> {
+  const compatibilityMode = resolveMonitoringCompatibilityMode(target);
+  const requestedModel = getRequestedModelForTarget(target);
+  const probe = await runPublicProbe({
+    baseUrl: target.baseUrl,
+    apiKey: target.apiKey,
+    model: requestedModel,
+    compatibilityMode,
+    scanMode: "standard",
+  });
+
+  await persistRelayMonitoringTargetProbe(db, target, requestedModel, compatibilityMode, probe);
+
+  return {
+    credentialId: target.credentialId,
+    relayId: target.relayId,
+    relaySlug: target.relaySlug,
+    relayName: target.relayName,
+    modelId: target.modelId,
+    modelKey: target.modelKey,
+    requestedModel,
+    probe,
+    resolvedModelId: target.modelId,
+  };
+}
+
 export async function runRelayMonitoringCycle(db: Kysely<Database>) {
-  const credentials = (await db
-    .selectFrom("probe_credentials as pc")
-    .innerJoin("relays as r", "r.id", "pc.relay_id")
-    .select([
-      "pc.id as id",
-      "pc.api_key as apiKey",
-      "pc.test_model as testModel",
-      "pc.compatibility_mode as compatibilityMode",
-      "r.id as relayId",
-      "r.slug as relaySlug",
-      "r.name as relayName",
-      "r.base_url as baseUrl",
-    ])
-    .where("pc.status", "=", "active")
-    .where("r.status", "=", "active")
-    .orderBy("r.updated_at", "desc")
-    .execute()) as RelayMonitoringCredential[];
+  const loadedTargets = await loadRelayMonitoringTargets(db);
+  const { selected, skippedBackoff } = selectRelayMonitoringTargets(loadedTargets, new Date());
 
   const results: RelayMonitoringRunResult[] = [];
-  const errors: Array<{ credentialId: string; relaySlug: string; message: string }> = [];
+  const errors: Array<{ credentialId: string; relaySlug: string; modelKey: string; message: string }> = [];
 
-  for (const credential of credentials) {
+  for (const target of selected) {
     try {
-      const result = await runRelayCredentialMonitoring(db, credential, {
-        refreshPublicSnapshots: false,
-      });
+      const result = await runRelayModelMonitoring(db, target);
       results.push(result);
     } catch (error) {
       errors.push({
-        credentialId: credential.id,
-        relaySlug: credential.relaySlug,
+        credentialId: target.credentialId,
+        relaySlug: target.relaySlug,
+        modelKey: target.modelKey,
         message: error instanceof Error ? error.message : "Unknown monitoring error",
       });
     }
@@ -640,9 +930,10 @@ export async function runRelayMonitoringCycle(db: Kysely<Database>) {
   await refreshPublicData(db);
 
   return {
-    total: credentials.length,
+    total: selected.length,
     succeeded: results.length,
     failed: errors.length,
+    skipped: skippedBackoff.length,
     measuredAt: new Date().toISOString(),
     results,
     errors,
