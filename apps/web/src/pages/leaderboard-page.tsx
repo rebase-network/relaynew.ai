@@ -9,7 +9,6 @@ const {
   useSearchParams,
   useState,
   BADGE_COPY,
-  DEFAULT_LEADERBOARD_MODEL_KEY,
   DEFAULT_PROBE_STATE,
   ErrorPanel,
   HEALTH_STATUS_COPY,
@@ -76,16 +75,16 @@ const {
 } = Shared;
 
 export function LeaderboardPage() {
-  const { modelKey = DEFAULT_LEADERBOARD_MODEL_KEY } = useParams();
+  const { modelKey } = useParams();
   const directory = useLoadable<Shared.LeaderboardDirectoryResponse>(
     "/public/leaderboard-directory",
     () => fetchJson("/public/leaderboard-directory"),
     [],
   );
-  const leaderboardCacheKey = `/public/leaderboard/${modelKey}?limit=50`;
+  const leaderboardCacheKey = modelKey ? `/public/leaderboard/${modelKey}?limit=50` : null;
   const { data, loading, error } = useLoadable<Shared.LeaderboardResponse>(
     leaderboardCacheKey,
-    () => fetchJson(leaderboardCacheKey),
+    () => fetchJson(leaderboardCacheKey!),
     [modelKey],
   );
   const rows = data?.rows ?? [];
@@ -101,6 +100,7 @@ export function LeaderboardPage() {
         : "查看站点评测排名与实测数据，理解健康状态、延迟表现与赞助方展示分离规则。",
   });
 
+  if (!modelKey) return <ErrorPanel message="未选择模型，请先从目录进入具体榜单。" />;
   if (loading) return <LeaderboardPageSkeleton />;
   if (error || !data) return <ErrorPanel message={error ?? "榜单加载失败。"} />;
 

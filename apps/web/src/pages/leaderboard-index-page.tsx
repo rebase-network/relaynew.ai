@@ -9,7 +9,6 @@ const {
   useSearchParams,
   useState,
   BADGE_COPY,
-  DEFAULT_LEADERBOARD_MODEL_KEY,
   DEFAULT_PROBE_STATE,
   ErrorPanel,
   HEALTH_STATUS_COPY,
@@ -141,7 +140,7 @@ export function LeaderboardIndexPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2.5 xl:justify-end">
-            <Link className="button-dark" to="/leaderboard">打开实时榜单</Link>
+            <Link className="button-dark" to="/">返回首页</Link>
             <Link className="button-cream" to="/probe">开始测试</Link>
           </div>
         </div>

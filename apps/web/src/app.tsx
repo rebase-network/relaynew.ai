@@ -14,8 +14,8 @@ export function App() {
     <AppShell>
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/leaderboard" element={<LeaderboardPage />} />
         <Route path={LEADERBOARD_DIRECTORY_PATH} element={<LeaderboardIndexPage />} />
+        <Route path="/leaderboard/directory" element={<Navigate replace to={LEADERBOARD_DIRECTORY_PATH} />} />
         <Route path="/leaderboard/:modelKey" element={<LeaderboardPage />} />
         <Route path="/relay/:slug" element={<RelayPage />} />
         <Route path="/methodology" element={<MethodologyPage />} />

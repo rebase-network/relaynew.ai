@@ -17,8 +17,8 @@ for each route, and the primary data source that should back it.
 | Route | Purpose | Render | Primary Data Source |
 |---|---|---|---|
 | `/` | Homepage with hero CTA, quick test entry, leaderboard previews, and sponsor highlights | CSR in public SPA | `GET /public/home-summary` |
-| `/leaderboard` | Default full leaderboard view for the primary model category | CSR in public SPA | `GET /public/leaderboard/:modelKey` |
-| `/leaderboard/directory` | Directory for browsing all tracked model categories | CSR in public SPA | `GET /public/leaderboard-directory` |
+| `/leaderboard` | Directory for browsing all tracked model categories | CSR in public SPA | `GET /public/leaderboard-directory` |
+| `/leaderboard/directory` | Legacy compatibility redirect to `/leaderboard` | CSR redirect in public SPA | none |
 | `/leaderboard/:modelKey` | Main leaderboard for one model category | CSR in public SPA | `GET /public/leaderboard/:modelKey` |
 | `/relay/:slug` | Relay detail page with overview, 30-day history, and supported-model pricing summary | CSR in public SPA | `GET /public/relay/:slug/overview`, `GET /public/relay/:slug/history`, `GET /public/relay/:slug/models`, `GET /public/relay/:slug/pricing-history` |
 | `/methodology` | Public explanation of the `评测方式` page, plus merged sponsor separation, intake, and review rules | CSR in public SPA | static content or `GET /public/methodology` |

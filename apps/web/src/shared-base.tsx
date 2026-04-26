@@ -151,8 +151,7 @@ export const PROBE_OUTPUT_CARDS = [
 ] as const;
 
 export const HOME_LEADERBOARD_ROW_LIMIT = 3;
-export const DEFAULT_LEADERBOARD_MODEL_KEY = "openai-gpt-5.4";
-export const LEADERBOARD_DIRECTORY_PATH = "/leaderboard/directory";
+export const LEADERBOARD_DIRECTORY_PATH = "/leaderboard";
 export const LOADABLE_CACHE_MAX_AGE_MS = 60_000;
 export const THIRTY_DAY_BAR_COUNT = 30;
 
@@ -510,7 +509,7 @@ export function getModelVendorLabel(modelKey: string) {
 }
 
 export function getLeaderboardPath(modelKey: string) {
-  return modelKey === DEFAULT_LEADERBOARD_MODEL_KEY ? "/leaderboard" : `/leaderboard/${modelKey}`;
+  return `/leaderboard/${modelKey}`;
 }
 
 export type LoadableCacheEntry<T> = {
@@ -601,16 +600,10 @@ export function prefetchPublicRoute(target: string) {
 
   if (pathname === "/") {
     prefetches.push(["/public/home-summary", () => fetchJson("/public/home-summary")]);
-  } else if (pathname === "/leaderboard") {
+  } else if (pathname === LEADERBOARD_DIRECTORY_PATH || pathname === "/leaderboard/directory") {
     prefetches.push(
       ["/public/leaderboard-directory", () => fetchJson("/public/leaderboard-directory")],
-      [
-        `/public/leaderboard/${DEFAULT_LEADERBOARD_MODEL_KEY}?limit=${limit}`,
-        () => fetchJson(`/public/leaderboard/${DEFAULT_LEADERBOARD_MODEL_KEY}?limit=${limit}`),
-      ],
     );
-  } else if (pathname === LEADERBOARD_DIRECTORY_PATH) {
-    prefetches.push(["/public/leaderboard-directory", () => fetchJson("/public/leaderboard-directory")]);
   } else if (pathname.startsWith("/leaderboard/")) {
     const modelKey = pathname.slice("/leaderboard/".length);
 

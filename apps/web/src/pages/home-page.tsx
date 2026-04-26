@@ -9,7 +9,6 @@ const {
   useSearchParams,
   useState,
   BADGE_COPY,
-  DEFAULT_LEADERBOARD_MODEL_KEY,
   DEFAULT_PROBE_STATE,
   ErrorPanel,
   HEALTH_STATUS_COPY,
@@ -100,10 +99,10 @@ export function HomePage() {
               发现优质AI服务商，快速测试API，建立公开目录
             </h1>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-black/72 md:mt-4 md:text-base md:leading-7">
-              你可以查看各模型站点榜单、快速检测站点，或在需要更深入诊断时进入完整测试工作台。
+              你可以先浏览模型目录，再进入具体榜单比较站点表现；也可以直接快速检测站点。
             </p>
             <div className="mt-5 flex flex-wrap gap-2.5">
-              <Link className="button-dark" to="/leaderboard">查看榜单</Link>
+              <Link className="button-dark" to="/leaderboard">查看目录</Link>
               <Link className="button-cream" to="/probe">开始测试</Link>
               <Link className="button-cream" to="/submit">提交站点</Link>
             </div>
@@ -167,7 +166,7 @@ export function HomePage() {
             </p>
           </div>
           <Link className="button-cream" to={LEADERBOARD_DIRECTORY_PATH}>
-            查看全部站点
+            查看全部模型
           </Link>
         </div>
         <div className="grid gap-4 xl:grid-cols-2">

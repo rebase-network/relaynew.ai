@@ -9,7 +9,6 @@ const {
   useSearchParams,
   useState,
   BADGE_COPY,
-  DEFAULT_LEADERBOARD_MODEL_KEY,
   DEFAULT_PROBE_STATE,
   ErrorPanel,
   HEALTH_STATUS_COPY,
@@ -88,4 +87,3 @@ export function NotFoundPage() {
   }, [navigate]);
   return <ErrorPanel message="页面不存在，正在返回首页..." />;
 }
-
