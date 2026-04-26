@@ -13,6 +13,7 @@ export type ProbeAttempt = {
   body: string;
   headers?: Record<string, string>;
   useBearerAuth?: boolean;
+  timeoutMs?: number;
 };
 
 export type ProbeAttemptResult = {
@@ -34,7 +35,11 @@ export type ProbeAdapter = {
   key: ProbeResolvedCompatibilityMode;
   label: string;
   buildAttempts: (targetUrl: URL, request: PublicProbeRequest) => ProbeAttempt[];
-  buildCredibilityAttempt: (attempt: ProbeAttempt, request: PublicProbeRequest) => ProbeAttempt;
+  buildCredibilityAttempt: (
+    attempt: ProbeAttempt,
+    request: PublicProbeRequest,
+    observed: ProbeReportedModelMetadata,
+  ) => ProbeAttempt;
   matches: (result: ProbeAttemptResult) => boolean;
   hasFirstTokenText: (body: string, contentType: string) => boolean;
   extractTextOutput: (body: string, contentType: string) => string | null;
@@ -46,7 +51,6 @@ const OPENAI_CHAT = "openai-chat-completions" as const;
 const ANTHROPIC_MESSAGES = "anthropic-messages" as const;
 const GOOGLE_GEMINI_GENERATE_CONTENT = "google-gemini-generate-content" as const;
 const PRIMARY_PROBE_PROMPT = "Reply with exactly one word: pong";
-const CREDIBILITY_PROBE_PROMPT = 'Return compact JSON only: {"provider":null,"model_name":null,"model_version":null}. If your runtime or provider metadata exposes these values, report them exactly. If a value is unavailable, use null. Do not guess. Do not add fields.';
 const ALL_PROBE_MODES = [
   OPENAI_RESPONSES,
   OPENAI_CHAT,
@@ -218,6 +222,27 @@ function hasEventStreamContentType(contentType: string) {
 function hasNonEmptyJsonStringField(body: string, field: string) {
   const pattern = new RegExp(`"${field}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)+)"`);
   return pattern.test(body);
+}
+
+function buildCredibilityPrompt(observed: ProbeReportedModelMetadata) {
+  const observedModel = observed.model ?? "null";
+  const observedVersion = observed.version ?? "null";
+
+  return [
+    "Return exactly one compact JSON object on a single line.",
+    'Use these keys only: {"provider":null,"model_name":null,"model_version":null,"matches_observed":null}.',
+    `Observed API-reported model: ${observedModel}.`,
+    `Observed API-reported version: ${observedVersion}.`,
+    "If the observed model or version matches your runtime identity, repeat it exactly and set matches_observed to true.",
+    "If it does not match but you know your runtime identity, provide the correct exact values and set matches_observed to false.",
+    "If a value is truly unavailable, use null.",
+    "Do not guess.",
+    "Do not omit any key.",
+    "Do not add any extra key.",
+    "Do not use markdown.",
+    "Do not use code fences.",
+    "Do not add explanation.",
+  ].join(" ");
 }
 
 function extractJsonStringField(body: string, field: string) {
@@ -591,13 +616,14 @@ export const probeAdapterRegistry: Record<ProbeResolvedCompatibilityMode, ProbeA
     label: probeCompatibilityModeLabels[OPENAI_RESPONSES],
     buildAttempts: (targetUrl, request) =>
       buildModeAttempts(OPENAI_RESPONSES, targetUrl, "/responses", buildOpenAiResponsesBody(request.model)),
-    buildCredibilityAttempt: (attempt, request) => ({
+    buildCredibilityAttempt: (attempt, request, observed) => ({
       ...attempt,
       url: normalizeMatchedUrl(attempt),
-      body: buildOpenAiResponsesBody(request.model, CREDIBILITY_PROBE_PROMPT, {
+      body: buildOpenAiResponsesBody(request.model, buildCredibilityPrompt(observed), {
         stream: false,
-        maxOutputTokens: 192,
+        maxOutputTokens: 2048,
       }),
+      timeoutMs: 16_000,
     }),
     matches: matchOpenAiResponses,
     hasFirstTokenText: hasOpenAiResponsesFirstToken,
@@ -609,13 +635,14 @@ export const probeAdapterRegistry: Record<ProbeResolvedCompatibilityMode, ProbeA
     label: probeCompatibilityModeLabels[OPENAI_CHAT],
     buildAttempts: (targetUrl, request) =>
       buildModeAttempts(OPENAI_CHAT, targetUrl, "/chat/completions", buildOpenAiChatBody(request.model)),
-    buildCredibilityAttempt: (attempt, request) => ({
+    buildCredibilityAttempt: (attempt, request, observed) => ({
       ...attempt,
       url: normalizeMatchedUrl(attempt),
-      body: buildOpenAiChatBody(request.model, CREDIBILITY_PROBE_PROMPT, {
+      body: buildOpenAiChatBody(request.model, buildCredibilityPrompt(observed), {
         stream: false,
-        maxTokens: 192,
+        maxTokens: 2048,
       }),
+      timeoutMs: 16_000,
     }),
     matches: matchOpenAiChatCompletions,
     hasFirstTokenText: hasOpenAiChatCompletionsFirstToken,
@@ -636,13 +663,14 @@ export const probeAdapterRegistry: Record<ProbeResolvedCompatibilityMode, ProbeA
           "x-api-key": request.apiKey,
         },
     ),
-    buildCredibilityAttempt: (attempt, request) => ({
+    buildCredibilityAttempt: (attempt, request, observed) => ({
       ...attempt,
       url: normalizeMatchedUrl(attempt),
-      body: buildAnthropicMessagesBody(request.model, CREDIBILITY_PROBE_PROMPT, {
+      body: buildAnthropicMessagesBody(request.model, buildCredibilityPrompt(observed), {
         stream: false,
-        maxTokens: 192,
+        maxTokens: 2048,
       }),
+      timeoutMs: 16_000,
     }),
     matches: matchAnthropicMessages,
     hasFirstTokenText: hasAnthropicMessagesFirstToken,
@@ -653,7 +681,7 @@ export const probeAdapterRegistry: Record<ProbeResolvedCompatibilityMode, ProbeA
     key: GOOGLE_GEMINI_GENERATE_CONTENT,
     label: probeCompatibilityModeLabels[GOOGLE_GEMINI_GENERATE_CONTENT],
     buildAttempts: buildGoogleGeminiAttempts,
-    buildCredibilityAttempt: (attempt) => {
+    buildCredibilityAttempt: (attempt, _request, observed) => {
       const url = normalizeMatchedUrl(attempt);
       url.pathname = url.pathname.replace(/:streamGenerateContent$/i, ":generateContent");
       url.searchParams.delete("alt");
@@ -661,9 +689,10 @@ export const probeAdapterRegistry: Record<ProbeResolvedCompatibilityMode, ProbeA
       return {
         ...attempt,
         url,
-        body: buildGoogleGeminiGenerateContentBody(CREDIBILITY_PROBE_PROMPT, {
-          maxOutputTokens: 192,
+        body: buildGoogleGeminiGenerateContentBody(buildCredibilityPrompt(observed), {
+          maxOutputTokens: 2048,
         }),
+        timeoutMs: 16_000,
       };
     },
     matches: matchGoogleGeminiGenerateContent,

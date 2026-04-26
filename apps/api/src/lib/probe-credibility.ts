@@ -4,6 +4,7 @@ export type ProbeSelfReportedIdentity = {
   provider: string | null;
   modelName: string | null;
   modelVersion: string | null;
+  matchesObserved: boolean | null;
   confidence: number | null;
   notes: string | null;
 };
@@ -18,6 +19,10 @@ function asNumberOrNull(value: unknown) {
 
 function asStringOrNull(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function asBooleanOrNull(value: unknown) {
+  return typeof value === "boolean" ? value : null;
 }
 
 function extractJsonCandidate(text: string) {
@@ -47,6 +52,7 @@ export function parseSelfReportedIdentity(text: string | null): ProbeSelfReporte
       provider: asStringOrNull(parsed.provider),
       modelName: asStringOrNull(parsed.model_name),
       modelVersion: asStringOrNull(parsed.model_version),
+      matchesObserved: asBooleanOrNull(parsed.matches_observed),
       confidence: asNumberOrNull(parsed.confidence),
       notes: asStringOrNull(parsed.notes),
     };

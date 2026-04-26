@@ -255,7 +255,7 @@ async function buildCredibilityForMatchedResult(
 ): Promise<NonNullable<PublicProbeMatchedMode["credibility"]>> {
   const adapter = probeAdapterRegistry[result.attempt.mode];
   const responseReported = adapter.extractReportedModel(result.body, result.contentType);
-  const credibilityAttempt = adapter.buildCredibilityAttempt(result.attempt, request);
+  const credibilityAttempt = adapter.buildCredibilityAttempt(result.attempt, request, responseReported);
 
   try {
     const identityResult = await executeProbeAttempt(credibilityAttempt, request.apiKey);
@@ -453,6 +453,7 @@ function failureHealthStatus(result: ProbeAttemptResult) {
 
 async function executeProbeAttempt(attempt: ProbeAttempt, apiKey: string): Promise<ProbeAttemptResult> {
   const startedAt = Date.now();
+  const timeoutMs = attempt.timeoutMs ?? REQUEST_TIMEOUT_MS;
   const headers: Record<string, string> = {
     accept: "text/event-stream,application/json,text/plain;q=0.9,*/*;q=0.8",
     "content-type": "application/json",
@@ -467,7 +468,7 @@ async function executeProbeAttempt(attempt: ProbeAttempt, apiKey: string): Promi
     method: attempt.method,
     body: attempt.body,
     redirect: "manual",
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    signal: AbortSignal.timeout(timeoutMs),
     headers: {
       ...headers,
       ...(attempt.headers ?? {}),
