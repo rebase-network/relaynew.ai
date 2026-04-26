@@ -49,17 +49,19 @@ async function gotoHome(page: Page) {
 }
 
 async function expectRelayDetailModules(page: Page) {
+  const heroPanel = page.locator(".relay-hero-panel");
   const modelTable = page.locator(".data-table").last();
 
   await expect(page.getByRole("heading", { name: "Aurora Relay" })).toBeVisible();
-  await expect(page.getByText("Balanced relay focused on low latency and stable uptime.")).toBeVisible();
-  await expect(page.getByText("联系方式")).toBeVisible();
+  await expect(page.getByText("🌍 聚合全球顶尖模型：汇聚各厂商的主流大模型")).toBeVisible();
+  await expect(page.getByText("联系")).toBeVisible();
   await expect(page.getByText("Telegram：@aurora_ops")).toBeVisible();
-  await expect(page.getByText("以下状态、可用性与延迟均按模型展示", { exact: false })).toBeVisible();
-  await expect(page.getByText("模型数")).toBeVisible();
-  await expect(page.getByText("24h 可用性")).toBeVisible();
-  await expect(page.getByText("P50 延迟").first()).toBeVisible();
-  await expect(page.getByText("最近快照")).toBeVisible();
+  await expect(page.getByText("官网")).toBeVisible();
+  await expect(page.getByRole("link", { name: "aurora.relaynew.ai" })).toBeVisible();
+  await expect(heroPanel.getByText("已跟踪模型")).toHaveCount(0);
+  await expect(heroPanel.getByText("最近快照")).toHaveCount(0);
+  await expect(heroPanel.getByText("24h 可用性")).toHaveCount(0);
+  await expect(heroPanel.getByText("P50 延迟")).toHaveCount(0);
   await expect(page.getByText("起始输入 / 1M")).toHaveCount(0);
   await expect(page.getByText("起始输出 / 1M")).toHaveCount(0);
   await expect(modelTable.getByText(/^openai-gpt-4\.1$/)).toBeVisible();
@@ -144,7 +146,7 @@ test("public site renders the main discovery flow", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "站点榜单" })).toHaveCount(0);
   await page.getByRole("link", { name: "查看全部模型" }).click();
   await expect(page).toHaveURL(/\/leaderboard$/);
-  await expect(page.getByText("模型目录")).toBeVisible();
+  await expect(page.getByText("按模型分类浏览已跟踪的 Relay 站点。")).toBeVisible();
   await expect(page.getByLabel("Search lanes")).toHaveCount(0);
   await page.getByRole("button", { name: "Google" }).click();
   await expect(page.getByRole("heading", { name: "google-gemini-3.1" })).toBeVisible();

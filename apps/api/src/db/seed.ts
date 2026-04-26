@@ -128,7 +128,22 @@ async function seedCoreCatalog(db: Kysely<Database>, now: Date) {
         base_url: "https://aurora.relaynew.ai/v1",
         provider_name: "Aurora Labs",
         contact_info: "Telegram：@aurora_ops",
-        description: "Balanced relay focused on low latency and stable uptime.",
+        description: `🌍 聚合全球顶尖模型：汇聚各厂商的主流大模型
+🔗 统一兼容格式：OpenAI 和 Anthropic 完全兼容
+⚡ 即插即用：仅需替换 URL 接口，零改业务逻辑
+应用场景
+💻 代码编写、企业内自研 Agent、工作流编排 都是非常好的使用场景！
+为什么选择 EasyRouter？
+✅ 精选模型库：每款都经过亲测和优化
+✅ 流畅体验：不卡顿、不降智、稳定可靠
+✅ 企业级保障：原厂或大型云服务商驱动，API 速率有保障
+✅ 超越竞品：相比 OpenRouter，优势明显
+🌟 独家特色
+🔐 Claude 系列企业高可用：
+原厂供应，企业级保障
+无需经过 Anthropic 身份验证，没有封号风险
+只需要 Google 账号就可畅享，无需考虑网络问题
+这是业界独家！`,
         website_url: "https://aurora.relaynew.ai",
         docs_url: "https://aurora.relaynew.ai/docs",
         status: "active",

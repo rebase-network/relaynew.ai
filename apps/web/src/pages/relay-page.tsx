@@ -6,8 +6,6 @@ const {
   ErrorPanel,
   RelayPageSkeleton,
   fetchJson,
-  formatAvailability,
-  formatLatency,
   useLoadable,
   usePageMetadata,
   useParams,
@@ -38,16 +36,9 @@ export function RelayPage() {
   if (overview.loading) return <RelayPageSkeleton />;
   if (overview.error || !overview.data) return <ErrorPanel message={overview.error ?? "Relay 详情加载失败。"} />;
 
-  const snapshotMetrics = [
-    { label: "模型数", value: overview.data.supportedModelsCount },
-    { label: "24h 可用性", value: formatAvailability(overview.data.availability24h) },
-    { label: "P50 延迟", value: formatLatency(overview.data.latencyP50Ms) },
-    { label: "最近快照", value: Shared.formatProbeMeasuredAt(overview.data.measuredAt) },
-  ];
-
   return (
     <div className="space-y-4">
-      <RelayHeroSection overview={overview.data} snapshotMetrics={snapshotMetrics} />
+      <RelayHeroSection overview={overview.data} />
       <RelayModelHealthSection
         error={modelHealth.error}
         loading={modelHealth.loading}
