@@ -337,6 +337,22 @@ test("public probe flow returns a diagnostic result", async ({ page }) => {
   await expect(page.getByTestId("probe-measured-at-value")).toHaveText(/\S+/);
 });
 
+test("public probe validates required fields in Chinese", async ({ page }) => {
+  await page.goto("/probe");
+  await page.getByRole("button", { name: "开始测试" }).click();
+
+  await expect(page.getByText("请先补全高亮字段后再开始测试。")).toBeVisible();
+  await expect(page.getByText("请填写 Base URL。")).toBeVisible();
+  await expect(page.getByText("请填写 API Key。")).toBeVisible();
+  await expect(page.getByText("请填写要测试的模型。")).toBeVisible();
+  await expect(page.getByText("Please fill out this field.")).toHaveCount(0);
+
+  await gotoHome(page);
+  await page.getByRole("button", { name: "立即测试" }).click();
+  await expect(page.getByText("请先补全高亮字段后再开始测试。")).toBeVisible();
+  await expect(page.getByText("Please fill out this field.")).toHaveCount(0);
+});
+
 test("public probe supports manual compatibility override", async ({ page }) => {
   test.skip(!probeConfigured, "Probe E2E requires API_URL and API_KEY in .env.");
   test.skip(!manualCompatibilityLabels[manualCompatibilityMode], "Set LLM_API_TYPE to a supported manual compatibility mode.");
@@ -363,6 +379,32 @@ test("public probe supports manual compatibility override", async ({ page }) => 
   await page.getByTestId("probe-copy-endpoint-button").click();
   await expect(page.getByTestId("probe-copy-endpoint-button")).toHaveText("已复制");
   await expect(page.getByText(/^Upstream returned /)).toHaveCount(0);
+});
+
+test("public not-found states are durable and localized", async ({ page }) => {
+  await page.goto("/not-a-real-page");
+  await expect(page.getByRole("heading", { name: "页面不存在" })).toBeVisible();
+  await expect(page.getByText("页面不存在，正在返回首页...")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "返回首页" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "查看目录" })).toBeVisible();
+  await page.waitForTimeout(2_300);
+  await expect(page).toHaveURL(/\/not-a-real-page$/);
+
+  const footerBox = await page.locator(".site-footer").boundingBox();
+  const viewport = page.viewportSize();
+  expect(footerBox).not.toBeNull();
+  expect(viewport).not.toBeNull();
+  expect(Math.abs((footerBox!.y + footerBox!.height) - viewport!.height)).toBeLessThanOrEqual(4);
+
+  await page.goto("/leaderboard/not-a-real-model");
+  await expect(page.getByRole("heading", { name: "这个模型暂未进入公开目录" })).toBeVisible();
+  await expect(page.getByText("Model not found")).toHaveCount(0);
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex,follow");
+
+  await page.goto("/relay/not-a-real-relay");
+  await expect(page.getByRole("heading", { name: "这个站点暂未进入公开目录" })).toBeVisible();
+  await expect(page.getByText("Relay not found")).toHaveCount(0);
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex,follow");
 });
 
 test("public mobile navigation routes to the primary pages", async ({ page }) => {
@@ -394,7 +436,7 @@ test("public mobile navigation routes to the primary pages", async ({ page }) =>
   await expect(page.getByRole("heading", { name: "运行测试" })).toBeVisible();
 });
 
-test("homepage prioritizes quick probe on mobile", async ({ page }) => {
+test("homepage presents product story before quick probe on mobile", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await gotoHome(page);
 
@@ -405,7 +447,7 @@ test("homepage prioritizes quick probe on mobile", async ({ page }) => {
 
   expect(quickProbeBox).not.toBeNull();
   expect(heroHeadingBox).not.toBeNull();
-  expect(quickProbeBox!.y).toBeLessThan(heroHeadingBox!.y);
+  expect(heroHeadingBox!.y).toBeLessThan(quickProbeBox!.y);
 });
 
 test("probe page stays compact on mobile", async ({ page }) => {

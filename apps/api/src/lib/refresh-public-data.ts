@@ -96,7 +96,7 @@ function computeBadges({
 }) {
   const badges = new Set<string>();
 
-  if (latencyP50Ms !== null && latencyP50Ms <= 900) {
+  if (availability24h >= 0.96 && latencyP50Ms !== null && latencyP50Ms <= 900) {
     badges.add("low-latency");
   }
 

@@ -93,9 +93,9 @@ export function HomePage() {
     <div className="space-y-5">
       <section className="panel hero-panel home-hero-panel min-h-0">
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.14fr)_24rem] xl:items-start">
-          <div className="order-2 md:order-1">
+          <div className="home-hero-copy">
             <p className="kicker !mb-3 !text-black/60">公开目录与实测榜单</p>
-            <h1 className="max-w-4xl text-[3rem] leading-[0.92] tracking-[-0.07em] md:text-5xl xl:text-[3.6rem]">
+            <h1 className="max-w-4xl text-[2.55rem] leading-[0.96] tracking-[-0.045em] md:text-5xl md:leading-[0.92] md:tracking-[-0.07em] xl:text-[3.6rem]">
               发现优质AI服务商，快速测试API，建立公开目录
             </h1>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-black/72 md:mt-4 md:text-base md:leading-7">
@@ -121,8 +121,8 @@ export function HomePage() {
               </div>
             </div>
           </div>
-          <aside className="order-1 md:order-2">
-            <form className="quick-probe-card quick-probe-form" onSubmit={quickProbe.handleSubmit}>
+          <aside className="home-hero-probe">
+            <form className="quick-probe-card quick-probe-form" noValidate onSubmit={quickProbe.handleSubmit}>
               <div className="quick-probe-header">
                 <div>
                   <p className="quick-probe-heading">快速测试</p>
@@ -138,6 +138,7 @@ export function HomePage() {
               </div>
               <ProbeFormFields
                 compact
+                errors={quickProbe.errors}
                 setState={quickProbe.setState}
                 showHelpers={false}
                 state={quickProbe.state}

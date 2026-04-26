@@ -129,6 +129,9 @@ textarea {
 
 .site-shell {
   position: relative;
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
   isolation: isolate;
 }
 
@@ -224,8 +227,9 @@ textarea {
 .site-main {
   position: relative;
   z-index: 1;
+  flex: 1;
   padding-top: 1.1rem;
-  padding-bottom: 4.5rem;
+  padding-bottom: 2.75rem;
 }
 
 .site-footer {
@@ -267,6 +271,10 @@ textarea {
 
 .site-footer-mark-link,
 .site-footer-github {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
   transition:
     color 160ms ease,
     transform 160ms ease,
@@ -276,7 +284,6 @@ textarea {
 
 .site-footer-mark-link {
   display: inline-flex;
-  align-items: center;
   text-decoration: none;
 }
 
@@ -288,8 +295,6 @@ textarea {
 
 .site-footer-github {
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
   width: fit-content;
   color: rgba(255, 255, 255, 0.82);
   text-decoration: none;
@@ -643,9 +648,27 @@ textarea {
 }
 
 .home-sponsor-card {
+  position: relative;
   min-height: 5rem;
+  border-color: rgba(250, 82, 15, 0.24);
+  background:
+    linear-gradient(135deg, rgba(255, 226, 149, 0.78), rgba(255, 250, 235, 0.9) 58%, rgba(255, 255, 255, 0.84));
   text-decoration: none;
   color: inherit;
+}
+
+.home-sponsor-card::before {
+  content: "赞助展示";
+  position: absolute;
+  inset: 0.72rem 0.8rem auto auto;
+  border: 1px solid rgba(250, 82, 15, 0.22);
+  background: rgba(255, 255, 255, 0.72);
+  padding: 0.2rem 0.42rem;
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(122, 50, 13, 0.72);
 }
 
 .home-sponsor-label {
@@ -951,8 +974,19 @@ textarea {
 }
 
 .leaderboard-switch-panel {
+  position: relative;
+  overflow: hidden;
   background:
     linear-gradient(180deg, rgba(255, 245, 212, 0.72), rgba(255, 250, 235, 0.96));
+}
+
+.leaderboard-switch-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 3rem;
+  background: linear-gradient(90deg, rgba(255, 250, 235, 0), rgba(255, 250, 235, 0.96));
+  pointer-events: none;
 }
 
 .leaderboard-note-band {
@@ -1006,6 +1040,15 @@ textarea {
   max-width: 100%;
 }
 
+.leaderboard-row-muted {
+  opacity: 0.72;
+}
+
+.leaderboard-row-muted .signal-chip {
+  background: rgba(255, 255, 255, 0.52);
+  color: rgba(31, 31, 31, 0.62);
+}
+
 .status-dot {
   border-radius: 999px;
   box-shadow: currentColor 0 0 0 3px inset;
@@ -1038,9 +1081,9 @@ textarea {
 .submit-hero-title {
   max-width: 12.2em;
   margin: 0;
-  font-size: clamp(2rem, 4.4vw, 3rem);
-  line-height: 0.96;
-  letter-spacing: -0.045em;
+  font-size: clamp(1.85rem, 8vw, 2.8rem);
+  line-height: 1.04;
+  letter-spacing: -0.035em;
 }
 
 .submit-hero-copy {
@@ -1359,6 +1402,34 @@ textarea {
   font-size: 0.92rem;
   line-height: 1.5;
   color: rgba(31, 31, 31, 0.86);
+}
+
+.relay-trend-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.8rem;
+  margin-bottom: 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(31, 31, 31, 0.54);
+}
+
+.relay-trend-legend-item,
+.relay-model-status-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+}
+
+.relay-model-status-line {
+  margin-top: 0.55rem;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(31, 31, 31, 0.58);
 }
 
 .methodology-hero {
@@ -1855,6 +1926,11 @@ textarea {
     rgba(127, 99, 21, 0.1) 0 12px 24px;
 }
 
+.input-shell-error {
+  border-color: rgba(180, 35, 24, 0.46);
+  background: rgba(255, 242, 239, 0.82);
+}
+
 .input-helper {
   display: block;
   margin-top: 0.45rem;
@@ -1934,6 +2010,35 @@ textarea {
   text-transform: none;
   letter-spacing: normal;
   font-family: var(--font-display);
+}
+
+.not-found-panel {
+  display: grid;
+  align-content: center;
+  min-height: min(34rem, calc(100vh - 16rem));
+}
+
+.not-found-title {
+  max-width: 48rem;
+  margin: 0;
+  font-size: clamp(2.7rem, 7vw, 5rem);
+  line-height: 0.94;
+  letter-spacing: -0.055em;
+}
+
+.not-found-copy {
+  max-width: 42rem;
+  margin: 1rem 0 0;
+  font-size: 1rem;
+  line-height: 1.74;
+  color: rgba(31, 31, 31, 0.68);
+}
+
+.not-found-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.72rem;
+  margin-top: 1.4rem;
 }
 
 .form-feedback-success {
@@ -2313,5 +2418,9 @@ textarea {
   .leaderboard-model-switcher {
     flex-wrap: wrap;
     overflow: visible;
+  }
+
+  .leaderboard-switch-panel::after {
+    display: none;
   }
 }

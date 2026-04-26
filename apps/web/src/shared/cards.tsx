@@ -8,6 +8,7 @@ import {
   formatHealthStatusLabel,
   formatIncidentSeverityLabel,
   formatLatency,
+  getDisplayBadges,
   getIncidentToneClasses,
   getLeaderboardPath,
   getStatusToneClass,
@@ -102,7 +103,15 @@ export function LeaderboardPreviewCard({
                 <p className="text-[0.65rem] uppercase tracking-[0.18em] text-black/50">#{row.rank}</p>
                 <p className="leaderboard-preview-name">{row.relay.name}</p>
               </div>
-              <CompactBadgeList badges={row.badges.map(formatBadgeLabel)} className="leaderboard-preview-badges" limit={1} />
+              <CompactBadgeList
+                badges={getDisplayBadges({
+                  availability: row.availability24h,
+                  badges: row.badges,
+                  healthStatus: row.healthStatus,
+                }).map(formatBadgeLabel)}
+                className="leaderboard-preview-badges"
+                limit={1}
+              />
             </div>
             <div className="leaderboard-preview-score">
               <p className="leaderboard-preview-score-value">{row.score.toFixed(1)}</p>
@@ -157,15 +166,21 @@ export function HomeIncidentCard({
 }
 
 export function LeaderboardRowCard({ row }: { row: LeaderboardResponse["rows"][number] }) {
+  const displayBadges = getDisplayBadges({
+    availability: row.availability24h,
+    badges: row.badges,
+    healthStatus: row.healthStatus,
+  });
+
   return (
-    <article className="surface-card leaderboard-mobile-row p-3.5 md:hidden">
+    <article className={clsx("surface-card leaderboard-mobile-row p-3.5 md:hidden", row.healthStatus !== "healthy" && "leaderboard-row-muted")}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs uppercase tracking-[0.16em] text-black/55">#{row.rank}</p>
           <Link to={`/relay/${row.relay.slug}`} className="mt-1 block text-[1.5rem] leading-[0.96] tracking-[-0.04em] hover:underline">
             {row.relay.name}
           </Link>
-          <CompactBadgeList badges={row.badges.map(formatBadgeLabel)} className="mt-3" />
+          <CompactBadgeList badges={displayBadges.map(formatBadgeLabel)} className="mt-3" />
         </div>
         <div className="shrink-0 text-right">
           <div className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-black/62">

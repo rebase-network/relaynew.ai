@@ -20,6 +20,15 @@ function formatLastVerifiedAt(value: string | null) {
   return value ? `北京时间 ${Shared.formatDateTime(value)}` : "尚未验证";
 }
 
+function getTrendSampleCoverage(trend: Shared.RelayModelHealthRow["statusTrend7d"]) {
+  const observedDays = trend.filter((point) => point.availability !== null && point.status !== "unknown").length;
+  return {
+    observedDays,
+    totalDays: trend.length,
+    label: `样本覆盖 ${observedDays}/${trend.length} 天`,
+  };
+}
+
 function RelayModelStatusTrend({ trend }: { trend: Shared.RelayModelHealthRow["statusTrend7d"] }) {
   return (
     <div className="flex min-w-[7.75rem] items-center gap-1">
@@ -29,6 +38,26 @@ function RelayModelStatusTrend({ trend }: { trend: Shared.RelayModelHealthRow["s
           className={clsx("h-6 flex-1 rounded-[3px]", getStatusToneClass(point.status))}
           title={`${formatDate(`${point.dateKey}T00:00:00.000Z`)} · ${formatHealthStatusLabel(point.status)}${point.availability === null ? "" : ` · ${formatAvailability(point.availability)}`}`}
         />
+      ))}
+    </div>
+  );
+}
+
+function RelayTrendLegend() {
+  const items = [
+    ["healthy", "健康"],
+    ["degraded", "降级"],
+    ["down", "不可用"],
+    ["unknown", "无样本"],
+  ] as const;
+
+  return (
+    <div className="relay-trend-legend" aria-label="7 天状态图例">
+      {items.map(([status, label]) => (
+        <span key={status} className="relay-trend-legend-item">
+          <span className={clsx("h-2.5 w-2.5 rounded-full", getStatusToneClass(status))} />
+          {label}
+        </span>
       ))}
     </div>
   );
@@ -56,23 +85,30 @@ export function RelayModelHealthSection({
         ) : null}
         {!error && !loading && rows.length > 0 ? (
           <>
+            <RelayTrendLegend />
             <div className="space-y-2.5 lg:hidden">
-              {rows.map((row) => (
-                <div key={row.modelKey} className="surface-card p-3.5">
+              {rows.map((row) => {
+                const coverage = getTrendSampleCoverage(row.statusTrend7d);
+
+                return (
+                <div key={row.modelKey} className="surface-card relay-model-card p-3.5">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-lg tracking-[-0.03em]">{row.modelKey}</p>
                       <p className="mt-1 font-mono text-[0.68rem] uppercase tracking-[0.16em] text-black/44">{row.vendor}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[0.68rem] uppercase tracking-[0.16em] text-black/48">{formatHealthStatusLabel(row.currentStatus)}</p>
-                      <p className="mt-1 text-[0.68rem] uppercase tracking-[0.16em] text-black/40">{formatSupportStatusLabel(row.supportStatus)}</p>
+                      <div className="relay-model-status-line">
+                        <span className="inline-flex items-center gap-2">
+                          <span className={clsx("h-2.5 w-2.5 rounded-full", getStatusToneClass(row.currentStatus))} />
+                          {formatHealthStatusLabel(row.currentStatus)} · {formatSupportStatusLabel(row.supportStatus)}
+                        </span>
+                      </div>
                     </div>
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     <div className="border border-black/8 bg-white/72 px-3 py-2.5">
-                      <p className="font-mono text-[0.64rem] uppercase tracking-[0.18em] text-black/46">7d 可用性</p>
+                      <p className="font-mono text-[0.64rem] uppercase tracking-[0.18em] text-black/46">已观测可用性</p>
                       <p className="mt-2 text-sm leading-5 text-black/78">{formatAvailabilityOrEmpty(row.availability7d)}</p>
+                      <p className="mt-1 text-[0.68rem] leading-5 text-black/48">{coverage.label}</p>
                     </div>
                     <div className="border border-black/8 bg-white/72 px-3 py-2.5">
                       <p className="font-mono text-[0.64rem] uppercase tracking-[0.18em] text-black/46">P50 延迟</p>
@@ -97,11 +133,13 @@ export function RelayModelHealthSection({
                       <div className="mt-2">
                         <RelayModelStatusTrend trend={row.statusTrend7d} />
                       </div>
+                      <p className="mt-2 text-xs leading-5 text-black/52">{coverage.observedDays < coverage.totalDays ? "灰色代表无样本或未知状态。" : coverage.label}</p>
                     </div>
                     <p className="text-xs leading-5 text-black/56">最近验证：{formatLastVerifiedAt(row.lastVerifiedAt)}</p>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="data-table hidden lg:block">
@@ -119,7 +157,10 @@ export function RelayModelHealthSection({
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((row) => (
+                  {rows.map((row) => {
+                    const coverage = getTrendSampleCoverage(row.statusTrend7d);
+
+                    return (
                     <tr key={row.modelKey} className="leaderboard-table-row align-top">
                       <td className="py-3 pr-3">
                         <p className="text-[0.98rem] leading-5 tracking-[-0.03em]">{row.modelKey}</p>
@@ -133,7 +174,10 @@ export function RelayModelHealthSection({
                           {formatHealthStatusLabel(row.currentStatus)}
                         </span>
                       </td>
-                      <td className="py-3 pr-3 text-sm text-black/76">{formatAvailabilityOrEmpty(row.availability7d)}</td>
+                      <td className="py-3 pr-3 text-sm text-black/76">
+                        <span>{formatAvailabilityOrEmpty(row.availability7d)}</span>
+                        <span className="mt-1 block text-[0.68rem] leading-4 text-black/48">{coverage.label}</span>
+                      </td>
                       <td className="py-3 pr-3">
                         <RelayModelStatusTrend trend={row.statusTrend7d} />
                       </td>
@@ -146,7 +190,8 @@ export function RelayModelHealthSection({
                       </td>
                       <td className="py-3 text-right text-xs leading-5 text-black/56">{formatLastVerifiedAt(row.lastVerifiedAt)}</td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
