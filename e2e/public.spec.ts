@@ -66,8 +66,9 @@ async function expectRelayDetailModules(page: Page) {
   await expect(heroPanel.getByText("P50 延迟")).toHaveCount(0);
   await expect(page.getByText("起始输入 / 1M")).toHaveCount(0);
   await expect(page.getByText("起始输出 / 1M")).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "支持模型健康概览" })).toBeVisible();
-  await expect(page.getByText("已观测模型")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "支持模型" })).toBeVisible();
+  await expect(page.getByText("支持模型健康概览")).toHaveCount(0);
+  await expect(page.getByText("已观测模型")).toHaveCount(0);
   await expect(modelTable.getByText(/^openai-gpt-4\.1$/)).toBeVisible();
   await expect(modelTable.getByText(/^anthropic-claude-sonnet-4\.6$/)).toBeVisible();
   await expect(page.getByRole("heading", { name: "价格历史" })).toHaveCount(0);
