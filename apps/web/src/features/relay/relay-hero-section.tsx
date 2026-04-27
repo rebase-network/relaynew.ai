@@ -11,11 +11,46 @@ function getRelayWebsiteLabel(value: string) {
   }
 }
 
+function normalizeContactInfo(value: string | null | undefined) {
+  const trimmed = value?.trim();
+
+  if (!trimmed || ["暂无", "无", "none", "n/a", "-"].includes(trimmed.toLowerCase())) {
+    return null;
+  }
+
+  return trimmed;
+}
+
+function getContactHref(value: string) {
+  const urlMatch = value.match(/https?:\/\/[^\s，,]+/i);
+
+  if (urlMatch) {
+    return urlMatch[0];
+  }
+
+  const emailMatch = value.match(/[^\s@:：]+@[^\s@:：]+\.[^\s@:：]+/);
+
+  if (emailMatch) {
+    return `mailto:${emailMatch[0]}`;
+  }
+
+  const telegramMatch = value.match(/@([a-zA-Z0-9_]{4,32})/);
+
+  if (telegramMatch?.[1]) {
+    return `https://t.me/${telegramMatch[1]}`;
+  }
+
+  return null;
+}
+
 export function RelayHeroSection({
   overview,
 }: {
   overview: Shared.RelayOverviewResponse;
 }) {
+  const contactInfo = normalizeContactInfo(overview.relay.contactInfo);
+  const contactHref = contactInfo ? getContactHref(contactInfo) : null;
+
   return (
     <section className="panel relay-hero-panel bg-[linear-gradient(135deg,rgba(255,240,194,1),rgba(255,184,62,0.75))]">
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(15rem,18rem)] xl:items-start">
@@ -31,7 +66,7 @@ export function RelayHeroSection({
               </p>
             ) : null}
           </div>
-          {overview.relay.contactInfo || overview.relay.websiteUrl ? (
+          {contactInfo || overview.relay.websiteUrl ? (
             <div className="relay-hero-meta-strip">
               {overview.relay.websiteUrl ? (
                 <a
@@ -40,15 +75,27 @@ export function RelayHeroSection({
                   rel="noreferrer"
                   target="_blank"
                 >
-                  <span className="relay-hero-meta-label">官网</span>
+                  <span className="relay-hero-meta-label">官网地址</span>
                   <span className="relay-hero-meta-value">{getRelayWebsiteLabel(overview.relay.websiteUrl)}</span>
                 </a>
               ) : null}
-              {overview.relay.contactInfo ? (
-                <div className="relay-hero-meta-item">
-                  <span className="relay-hero-meta-label">联系</span>
-                  <span className="relay-hero-meta-value break-words">{overview.relay.contactInfo}</span>
-                </div>
+              {contactInfo ? (
+                contactHref ? (
+                  <a
+                    className="relay-hero-meta-item relay-hero-meta-link"
+                    href={contactHref}
+                    rel={contactHref.startsWith("http") ? "noreferrer" : undefined}
+                    target={contactHref.startsWith("http") ? "_blank" : undefined}
+                  >
+                    <span className="relay-hero-meta-label">联系方式</span>
+                    <span className="relay-hero-meta-value break-words">{getRelayWebsiteLabel(contactInfo)}</span>
+                  </a>
+                ) : (
+                  <div className="relay-hero-meta-item">
+                    <span className="relay-hero-meta-label">联系方式</span>
+                    <span className="relay-hero-meta-value break-words">{contactInfo}</span>
+                  </div>
+                )
               ) : null}
             </div>
           ) : null}

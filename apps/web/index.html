@@ -24,9 +24,28 @@
       name="twitter:description"
       content="面向中国用户的大模型API服务站目录与评测平台，提供站点榜单、API 测试与站点提交入口。"
     />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.svg" />
+    <link rel="manifest" href="/site.webmanifest" />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main style="max-width: 72rem; margin: 3rem auto; padding: 0 1.25rem; font-family: Arial, sans-serif;">
+        <p style="letter-spacing: 0.18em; text-transform: uppercase; color: #6d5b28;">relaynew.ai</p>
+        <h1 style="font-size: clamp(2.4rem, 8vw, 4.5rem); line-height: 0.95; letter-spacing: -0.05em; margin: 0;">
+          发现优质AI服务商，快速测试API，建立公开目录
+        </h1>
+        <p style="max-width: 42rem; margin-top: 1rem; line-height: 1.8; color: rgba(31,31,31,0.72);">
+          relaynew.ai 提供大模型 API Relay 的公开榜单、健康度监控、延迟与价格信号，并提供站点提交和自助测试入口。
+        </p>
+        <p style="margin-top: 1.5rem;">
+          <a href="/leaderboard" style="color: #1f1f1f;">查看站点目录</a>
+          <span aria-hidden="true"> · </span>
+          <a href="/probe" style="color: #1f1f1f;">开始站点测试</a>
+        </p>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

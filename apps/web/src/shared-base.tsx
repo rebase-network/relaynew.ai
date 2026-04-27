@@ -160,7 +160,8 @@ export const THIRTY_DAY_BAR_COUNT = 30;
 export type PageMetadata = {
   title: string;
   description: string;
-  canonicalPath?: string;
+  canonicalPath?: string | null | undefined;
+  robots?: string | undefined;
 };
 
 export const LEADERBOARD_VENDOR_LABELS: Record<string, string> = {
@@ -212,22 +213,29 @@ export function upsertCanonicalLink(href: string) {
 
 export function usePageMetadata(metadata: PageMetadata) {
   const location = useLocation();
-  const canonicalUrl = buildCanonicalUrl(metadata.canonicalPath ?? location.pathname);
+  const canonicalUrl = metadata.canonicalPath === null
+    ? null
+    : buildCanonicalUrl(metadata.canonicalPath ?? location.pathname);
 
   useEffect(() => {
     document.title = metadata.title;
     upsertNamedMeta("description", metadata.description);
-    upsertCanonicalLink(canonicalUrl);
+    if (canonicalUrl) {
+      upsertCanonicalLink(canonicalUrl);
+    } else {
+      document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.remove();
+    }
+    upsertNamedMeta("robots", metadata.robots ?? "index,follow");
     upsertPropertyMeta("og:title", metadata.title);
     upsertPropertyMeta("og:description", metadata.description);
     upsertPropertyMeta("og:type", "website");
-    upsertPropertyMeta("og:url", canonicalUrl);
+    upsertPropertyMeta("og:url", canonicalUrl ?? buildCanonicalUrl("/"));
     upsertPropertyMeta("og:site_name", "relaynew.ai");
     upsertPropertyMeta("og:locale", "zh_CN");
     upsertNamedMeta("twitter:card", "summary");
     upsertNamedMeta("twitter:title", metadata.title);
     upsertNamedMeta("twitter:description", metadata.description);
-  }, [canonicalUrl, metadata.description, metadata.title]);
+  }, [canonicalUrl, metadata.description, metadata.robots, metadata.title]);
 }
 
 export function formatProbeCompatibilityMode(mode: ProbeResolvedCompatibilityMode | null | undefined) {
@@ -315,6 +323,49 @@ export function formatBadgeLabel(badge: string) {
       "under-observation": "观察中",
     }[badge] ?? badge
   );
+}
+
+function capitalizeModelSegment(segment: string) {
+  return segment.length ? `${segment[0]!.toUpperCase()}${segment.slice(1)}` : segment;
+}
+
+export function formatModelDisplayName(modelKey: string) {
+  const parts = modelKey.split("-").filter(Boolean);
+  const vendor = parts[0] ?? "";
+  const modelParts = LEADERBOARD_VENDOR_LABELS[vendor] ? parts.slice(1) : parts;
+
+  if (modelParts.length === 0) {
+    return modelKey;
+  }
+
+  return modelParts
+    .map((part) => {
+      const upperPart = part.toUpperCase();
+
+      if (["gpt", "api"].includes(part.toLowerCase())) {
+        return upperPart;
+      }
+
+      return capitalizeModelSegment(part);
+    })
+    .join(" ");
+}
+
+export function getDisplayBadges({
+  availability,
+  badges,
+  healthStatus,
+}: {
+  availability?: number | null;
+  badges: string[];
+  healthStatus: string;
+}) {
+  const isUnavailable =
+    healthStatus === "down" ||
+    healthStatus === "unknown" ||
+    (typeof availability === "number" && availability < 0.96);
+
+  return badges.filter((badge) => !isUnavailable || badge !== "low-latency");
 }
 
 export function formatProbeMeasuredAt(value: string) {
@@ -1076,6 +1127,8 @@ export type ProbeFormState = {
   compatibilityMode: ProbeCompatibilityMode;
 };
 
+export type ProbeFormErrors = Partial<Record<"baseUrl" | "apiKey" | "model", string>>;
+
 export const DEFAULT_PROBE_STATE: ProbeFormState = {
   baseUrl: "",
   apiKey: "",
@@ -1100,14 +1153,57 @@ export function getProbeStateFromSearchParams(searchParams: URLSearchParams): Pr
   };
 }
 
+export function validateProbeForm(state: ProbeFormState) {
+  const errors: ProbeFormErrors = {};
+  const baseUrl = state.baseUrl.trim();
+  const apiKey = state.apiKey.trim();
+  const model = state.model.trim();
+
+  if (!baseUrl) {
+    errors.baseUrl = "请填写 Base URL。";
+  } else if (!isValidHttpUrl(baseUrl) || !baseUrl.startsWith("https://")) {
+    errors.baseUrl = "请输入完整的 HTTPS Base URL，例如 https://relay.example.ai/v1。";
+  }
+
+  if (!apiKey) {
+    errors.apiKey = "请填写 API Key。";
+  }
+
+  if (!model) {
+    errors.model = "请填写要测试的模型。";
+  }
+
+  return {
+    errors,
+    payload: {
+      ...state,
+      baseUrl,
+      apiKey,
+      model,
+    },
+  };
+}
+
 export function useProbeController(initialState: ProbeFormState = DEFAULT_PROBE_STATE) {
   const [state, setState] = useState<ProbeFormState>(() => ({ ...initialState }));
+  const [errors, setErrors] = useState<ProbeFormErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<PublicProbeResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
 
   async function submitProbe(scanMode: PublicProbeScanMode) {
+    const validation = validateProbeForm(state);
+
+    if (Object.keys(validation.errors).length > 0) {
+      setErrors(validation.errors);
+      setError("请先补全高亮字段后再开始测试。");
+      setResult(null);
+      setCopyState("idle");
+      return;
+    }
+
+    setErrors({});
     setSubmitting(true);
     setError(null);
     setResult(null);
@@ -1117,6 +1213,7 @@ export function useProbeController(initialState: ProbeFormState = DEFAULT_PROBE_
         method: "POST",
         body: JSON.stringify({
           ...state,
+          ...validation.payload,
           scanMode,
         }),
       });
@@ -1178,6 +1275,7 @@ export function useProbeController(initialState: ProbeFormState = DEFAULT_PROBE_
   return {
     attemptTrace,
     copyState,
+    errors,
     error,
     failureGuidance,
     handleDeepScan,

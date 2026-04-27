@@ -51,6 +51,7 @@ const {
   formatHealthStatusLabel,
   formatIncidentSeverityLabel,
   formatLatency,
+  formatModelDisplayName,
   formatPricePerMillion,
   formatPricingSourceLabel,
   formatProbeCompatibilityMode,
@@ -60,6 +61,7 @@ const {
   formatScoreMetricLabel,
   formatSupportStatusLabel,
   getConnectivityCardTone,
+  getDisplayBadges,
   getIncidentToneClasses,
   getLeaderboardPath,
   getModelVendorKey,
@@ -92,26 +94,49 @@ export function LeaderboardPage() {
   const healthyRelayCount = rows.filter((row) => row.healthStatus === "healthy").length;
   const degradedRelayCount = rows.filter((row) => row.healthStatus === "degraded").length;
   const modelLabel = data?.model.key ?? "Relay";
+  const modelDisplayName = data ? formatModelDisplayName(data.model.key) : modelLabel;
+  const isNotFound = !loading && Boolean(error && /not found|404/i.test(error));
   usePageMetadata({
-    title: `${modelLabel} 站点榜单｜relaynew.ai`,
+    title: isNotFound ? "模型榜单不存在｜relaynew.ai" : `${modelLabel} 站点榜单｜relaynew.ai`,
     description:
-      data
+      isNotFound
+        ? "这个模型榜单暂未收录，可以返回模型目录查看当前已跟踪的榜单。"
+        : data
         ? `查看 ${data.model.key} 模型分类下的站点评测排名，基于可用性、延迟、稳定性、价格与可信度；赞助方展示与排名严格分离。`
         : "查看站点评测排名与实测数据，理解健康状态、延迟表现与赞助方展示分离规则。",
+    canonicalPath: isNotFound ? LEADERBOARD_DIRECTORY_PATH : undefined,
+    robots: isNotFound ? "noindex,follow" : undefined,
   });
 
   if (!modelKey) return <ErrorPanel message="未选择模型，请先从目录进入具体榜单。" />;
   if (loading) return <LeaderboardPageSkeleton />;
+  if (isNotFound) {
+    return (
+      <section className="panel not-found-panel">
+        <p className="kicker">未找到模型榜单</p>
+        <h1 className="not-found-title">这个模型暂未进入公开目录</h1>
+        <p className="not-found-copy">
+          当前没有找到 `{modelKey}` 对应的榜单。请返回模型目录查看已跟踪模型，或提交你希望补充的 Relay 站点。
+        </p>
+        <div className="not-found-actions">
+          <Link className="button-dark" to={LEADERBOARD_DIRECTORY_PATH}>返回模型目录</Link>
+          <Link className="button-cream" to="/submit">提交站点</Link>
+          <Link className="button-cream" to="/probe">开始测试</Link>
+        </div>
+      </section>
+    );
+  }
   if (error || !data) return <ErrorPanel message={error ?? "榜单加载失败。"} />;
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       <section className="panel leaderboard-hero-panel bg-[#fff0c2]">
         <div className="leaderboard-hero-shell">
           <div className="space-y-3">
             <p className="kicker !mb-1">榜单</p>
             <div className="space-y-2">
-              <h1 className="text-[2.6rem] leading-[0.94] tracking-[-0.05em] md:text-[3.1rem]">{data.model.key}</h1>
+              <h1 className="leaderboard-model-title" title={data.model.key}>{modelDisplayName}</h1>
+              <p className="leaderboard-model-key">{data.model.key}</p>
               <p className="text-sm leading-6 text-black/64">
                 以最近一轮自动化测试为基础，综合可用性、延迟、稳定性、价格与可信度生成当前排名。
               </p>
@@ -143,9 +168,11 @@ export function LeaderboardPage() {
                   "leaderboard-model-pill",
                   board.modelKey === data.model.key && "leaderboard-model-pill-active",
                 )}
+                title={board.modelKey}
                 to={getLeaderboardPath(board.modelKey)}
               >
-                {board.modelKey}
+                <span>{formatModelDisplayName(board.modelKey)}</span>
+                <span className="leaderboard-model-pill-key">{board.modelKey}</span>
               </Link>
             ))}
           </div>
@@ -192,11 +219,18 @@ export function LeaderboardPage() {
                 </thead>
                 <tbody>
                   {rows.map((row) => (
-                    <tr key={row.relay.slug} className="leaderboard-table-row align-top">
+                    <tr key={row.relay.slug} className={clsx("leaderboard-table-row align-top", row.healthStatus !== "healthy" && "leaderboard-row-muted")}>
                       <td className="py-2.5 text-[1.6rem] tracking-[-0.04em]">#{row.rank}</td>
                       <td className="py-2.5">
                         <Link to={`/relay/${row.relay.slug}`} className="text-[1.02rem] tracking-[-0.03em] hover:underline">{row.relay.name}</Link>
-                        <CompactBadgeList badges={row.badges.map(formatBadgeLabel)} className="mt-1.5" />
+                        <CompactBadgeList
+                          badges={getDisplayBadges({
+                            availability: row.availability24h,
+                            badges: row.badges,
+                            healthStatus: row.healthStatus,
+                          }).map(formatBadgeLabel)}
+                          className="mt-1.5"
+                        />
                       </td>
                       <td className="py-2.5 text-sm uppercase tracking-[0.14em]"><span className="inline-flex items-center gap-2"><StatusDot status={row.healthStatus} /> {formatHealthStatusLabel(row.healthStatus)}</span></td>
                       <td className="py-2.5 text-[1.02rem] tracking-[-0.03em]">{row.score.toFixed(1)}</td>

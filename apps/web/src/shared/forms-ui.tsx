@@ -10,11 +10,13 @@ const {
 export function ProbeFormFields({
   state,
   setState,
+  errors,
   compact = false,
   showHelpers = true,
 }: {
   state: Shared.ProbeFormState;
   setState: React.Dispatch<React.SetStateAction<Shared.ProbeFormState>>;
+  errors?: Shared.ProbeFormErrors | undefined;
   compact?: boolean;
   showHelpers?: boolean;
 }) {
@@ -31,7 +33,9 @@ export function ProbeFormFields({
           <span>{label}</span>
           <div>
             <input
-              className={clsx("input-shell", compact ? "quick-probe-input" : "mt-2")}
+              aria-invalid={Boolean(errors?.[key])}
+              aria-describedby={errors?.[key] ? `probe-${key}-error` : undefined}
+              className={clsx("input-shell", compact ? "quick-probe-input" : "mt-2", errors?.[key] && "input-shell-error")}
               type={key === "apiKey" ? "password" : "text"}
               placeholder={PROBE_FIELD_META[key].placeholder}
               value={state[key]}
@@ -39,8 +43,12 @@ export function ProbeFormFields({
               autoComplete={PROBE_FIELD_META[key].autoComplete}
               inputMode={PROBE_FIELD_META[key].inputMode}
               spellCheck={false}
-              required
             />
+            {errors?.[key] ? (
+              <span className="field-error" id={`probe-${key}-error`} role="alert">
+                {errors[key]}
+              </span>
+            ) : null}
             {showHelpers ? (
               <>
                 <span className="input-helper input-helper-mobile">{PROBE_FIELD_META[key].helperCompact}</span>

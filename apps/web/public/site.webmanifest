@@ -1,0 +1,21 @@
+{
+  "name": "relaynew.ai",
+  "short_name": "relaynew.ai",
+  "description": "大模型 API Relay 公开榜单、健康监控与站点测试。",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fffaeb",
+  "theme_color": "#fa520f",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "64x64",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/apple-touch-icon.svg",
+      "sizes": "180x180",
+      "type": "image/svg+xml"
+    }
+  ]
+}

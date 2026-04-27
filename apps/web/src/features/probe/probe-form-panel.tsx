@@ -11,12 +11,14 @@ export function ProbeFormPanel({
   submitting,
   onDeepScan,
   onSubmit,
+  errors,
 }: {
   state: Shared.ProbeFormState;
   setState: React.Dispatch<React.SetStateAction<Shared.ProbeFormState>>;
   submitting: boolean;
   onDeepScan: () => Promise<void> | void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+  errors?: Shared.ProbeFormErrors | undefined;
 }) {
   const deepScanEnabled = state.compatibilityMode === "auto";
 
@@ -30,8 +32,8 @@ export function ProbeFormPanel({
       <p className="probe-privacy-note">
         自助测试的API Key等信息不会留存，如果担心泄漏可以使用单独的Key进行测试。
       </p>
-      <form className="form-shell mt-4" onSubmit={onSubmit}>
-        <ProbeFormFields setState={setState} showHelpers={false} state={state} />
+      <form className="form-shell mt-4" noValidate onSubmit={onSubmit}>
+        <ProbeFormFields errors={errors} setState={setState} showHelpers={false} state={state} />
         <details className="surface-card probe-advanced-card p-4">
           <summary className="cursor-pointer font-mono text-sm uppercase tracking-[0.16em] text-black/70">高级选项 / 接口类型</summary>
           <div className="probe-advanced-grid">

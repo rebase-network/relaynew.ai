@@ -14,6 +14,7 @@ export function ProbePage() {
   const {
     attemptTrace,
     copyState,
+    errors,
     error,
     failureGuidance,
     handleDeepScan,
@@ -41,6 +42,7 @@ export function ProbePage() {
           submitting={submitting}
           onDeepScan={handleDeepScan}
           onSubmit={handleSubmit}
+          errors={errors}
         />
         <ProbeResultPanel
           attemptTrace={attemptTrace}

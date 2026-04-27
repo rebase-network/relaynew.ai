@@ -75,15 +75,25 @@ const {
 } = Shared;
 
 export function NotFoundPage() {
-  const navigate = useNavigate();
   usePageMetadata({
     title: "页面不存在｜relaynew.ai",
-    description: "你访问的页面不存在，系统将返回 relaynew.ai 首页。",
+    description: "你访问的页面不存在，可以返回首页、查看站点目录或开始站点测试。",
+    canonicalPath: null,
+    robots: "noindex,follow",
   });
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => navigate("/"), 2000);
-    return () => window.clearTimeout(timer);
-  }, [navigate]);
-  return <ErrorPanel message="页面不存在，正在返回首页..." />;
+  return (
+    <section className="panel not-found-panel">
+      <p className="kicker">404</p>
+      <h1 className="not-found-title">页面不存在</h1>
+      <p className="not-found-copy">
+        这个地址没有对应的公开页面。你可以回到首页，查看当前模型目录，或者直接测试一个 Relay 站点。
+      </p>
+      <div className="not-found-actions">
+        <Link className="button-dark" to="/">返回首页</Link>
+        <Link className="button-cream" to="/leaderboard">查看目录</Link>
+        <Link className="button-cream" to="/probe">开始测试</Link>
+      </div>
+    </section>
+  );
 }

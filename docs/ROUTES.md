@@ -154,9 +154,9 @@ The leaderboard page is expected to include:
 ## Relay Detail Page Modules
 
 The relay detail page is expected to include:
-- relay identity and endpoint summary
+- relay identity and public contact summary
 - relay introduction and contact info when available
-- supported model count plus recent health snapshot summary
+- supported model list with recent model-level health signals
 - model-by-model health rows with:
   - current status
   - 7-day availability
@@ -171,9 +171,9 @@ The relay detail page is expected to include:
 ### Relay Detail Loading Boundary
 
 First-paint critical:
-- overview identity and endpoint summary
+- overview identity, official website, and contact context
 - relay introduction and contact info
-- supported model count plus recent health snapshot summary
+- supported model list with recent model-level health signals
 
 Hydration or secondary loads:
 - model health list
